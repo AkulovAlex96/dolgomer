@@ -40,7 +40,8 @@ object ScheduleGenerator {
         return result
     }
 
-    private fun dateAt(rule: ScheduleRule, index: Int): LocalDate {
+    /** Дата платежа с номером [index] (с нуля). Для повторяющихся событий, например подписок. */
+    fun dateAt(rule: ScheduleRule, index: Int): LocalDate {
         if (index == 0) return rule.firstDate
         val step = rule.interval.toLong() * index
         return when (rule.periodicity) {
