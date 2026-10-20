@@ -42,7 +42,11 @@ import app.kvity.ui.people.PeopleScreen
 import app.kvity.ui.people.PersonDetailScreen
 import app.kvity.ui.reminder.ReminderContext
 import app.kvity.ui.reminder.ReminderDialog
+import androidx.fragment.app.FragmentActivity
+import app.kvity.security.Biometrics
 import app.kvity.ui.settings.GeneralSettingsScreen
+import app.kvity.ui.settings.NotificationsSection
+import app.kvity.ui.settings.SecuritySection
 import app.kvity.ui.settings.RatesScreen
 import app.kvity.ui.settings.TemplatesScreen
 import app.kvity.ui.subscription.SubscriptionDetailScreen
@@ -82,7 +86,8 @@ private val tabs = listOf(
 
 @Composable
 fun AppNavigation() {
-    val app = LocalContext.current.applicationContext as KvityApp
+    val context = LocalContext.current
+    val app = context.applicationContext as KvityApp
     val nav = rememberNavController()
     val scope = rememberCoroutineScope()
     val settings by app.settings.settings.collectAsStateWithLifecycle()
@@ -291,6 +296,14 @@ fun AppNavigation() {
                     onBack = { nav.popBackStack() },
                     onOpenRates = { nav.navigate(Routes.RATES) },
                     onOpenTemplates = { nav.navigate(Routes.TEMPLATES) },
+                    sections = {
+                        NotificationsSection(settings) { app.settings.update(it) }
+                        SecuritySection(
+                            settings = settings, pinStore = app.pin,
+                            biometricAvailable = (context as? FragmentActivity)?.let { Biometrics.isAvailable(it) } == true,
+                            onChange = { app.settings.update(it) },
+                        )
+                    },
                 )
             }
 

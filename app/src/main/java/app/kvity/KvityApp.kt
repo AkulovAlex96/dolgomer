@@ -7,6 +7,8 @@ import app.kvity.data.PeopleRepository
 import app.kvity.data.ReferenceRepository
 import app.kvity.data.SettingsStore
 import app.kvity.data.SubscriptionRepository
+import app.kvity.security.LockManager
+import app.kvity.security.PinStore
 import kotlinx.coroutines.launch
 
 class KvityApp : Application() {
@@ -22,6 +24,10 @@ class KvityApp : Application() {
         private set
     lateinit var reference: ReferenceRepository
         private set
+    lateinit var pin: PinStore
+        private set
+    lateinit var lock: LockManager
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -31,6 +37,8 @@ class KvityApp : Application() {
         people = PeopleRepository(db)
         settings = SettingsStore(this)
         reference = ReferenceRepository(db)
+        pin = PinStore(this)
+        lock = LockManager(initiallyLocked = settings.current.pinEnabled && pin.isSet)
         kotlinx.coroutines.MainScope().launch { reference.seedDefaults() }
     }
 }
