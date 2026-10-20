@@ -151,7 +151,7 @@ private fun MonthGrid(
                 for (col in 0 until 7) {
                     val dayNum = r * 7 + col - offset + 1
                     if (dayNum < 1 || dayNum > days) {
-                        Box(Modifier.weight(1f).height(62.dp))
+                        Box(Modifier.weight(1f).height(70.dp))
                     } else {
                         val date = month.atDay(dayNum)
                         DayCell(date, today, date == selected, byDate[date].orEmpty(), mainCurrency, Modifier.weight(1f)) { onSelect(date) }
@@ -185,7 +185,7 @@ private fun DayCell(
 
     Column(
         modifier = modifier
-            .height(62.dp)
+            .height(70.dp)
             .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(9.dp))
             .border(
                 if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
@@ -210,11 +210,11 @@ private fun DayCell(
         Box(Modifier.weight(1f))
         Text(
             if (incoming > 0) "+" + AmountFormatter.compact(incoming, digits) else "",
-            color = c.income, fontWeight = FontWeight.Bold, fontSize = 10.sp, maxLines = 1, modifier = Modifier.height(13.dp),
+            color = c.income, fontWeight = FontWeight.Bold, fontSize = 10.sp, maxLines = 1, modifier = Modifier.height(15.dp),
         )
         Text(
             if (outgoing > 0) "−" + AmountFormatter.compact(outgoing, digits) else "",
-            color = c.expense, fontWeight = FontWeight.Bold, fontSize = 10.sp, maxLines = 1, modifier = Modifier.height(13.dp),
+            color = c.expense, fontWeight = FontWeight.Bold, fontSize = 10.sp, maxLines = 1, modifier = Modifier.height(15.dp),
         )
     }
 }

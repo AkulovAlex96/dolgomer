@@ -181,7 +181,8 @@ private fun ShareCard(
                 )
             }
             if (overdue.isNotEmpty()) Pill("не оплатил: ${overdue.size}", c.expenseBg, c.expense)
-            else Pill("оплачено", c.incomeBg, c.income)
+            else if (upcoming != null && upcoming.periodDate == today) Pill("срок сегодня", c.warnBg, c.warn)
+            else Pill("в срок", c.incomeBg, c.income)
         }
         overdue.forEach { d -> DueRow(sh, d.periodDate, "просрочено", c.expense, paid = false, onMarkPaid, onMarkUnpaid, onRemind) }
         upcoming?.let { d -> DueRow(sh, d.periodDate, "ожидается", MaterialTheme.colorScheme.onSurface, paid = false, onMarkPaid, onMarkUnpaid, onRemind) }

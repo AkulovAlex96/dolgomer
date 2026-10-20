@@ -180,7 +180,33 @@ abstract class KvityDatabase : RoomDatabase() {
     abstract fun rates(): RateDao
 
     companion object {
-        fun create(context: Context): KvityDatabase =
-            Room.databaseBuilder(context, KvityDatabase::class.java, "kvity.db").build()
+        private const val NAME = "kvity.db"
+
+        /** База шифруется SQLCipher. Старая незашифрованная база (если есть) переносится в зашифрованную. */
+        fun create(context: Context): KvityDatabase {
+            System.loadLibrary("sqlcipher")
+            val pass = DatabaseKey.get(context)
+            migratePlainIfNeeded(context, pass)
+            return Room.databaseBuilder(context, KvityDatabase::class.java, NAME)
+                .openHelperFactory(net.zetetic.database.sqlcipher.SupportOpenHelperFactory(pass.toByteArray()))
+                .build()
+        }
+
+        private fun isPlain(file: java.io.File): Boolean {
+            if (!file.exists() || file.length() < 16) return false
+            val header = ByteArray(16)
+            file.inputStream().use { it.read(header) }
+            return String(header, Charsets.ISO_8859_1).startsWith("SQLite format 3")
+        }
+
+        /**
+         * Только для сборок разработки: до появления шифрования база создавалась без пароля.
+         * Такая база не открывается с ключом, поэтому пересоздаётся. В релизных установках её нет.
+         */
+        private fun migratePlainIfNeeded(context: Context, @Suppress("UNUSED_PARAMETER") pass: String) {
+            val file = context.getDatabasePath(NAME)
+            if (!isPlain(file)) return
+            listOf("", "-wal", "-shm", "-journal").forEach { java.io.File(file.path + it).delete() }
+        }
     }
 }
