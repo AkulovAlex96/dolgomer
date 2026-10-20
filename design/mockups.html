@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Квиты — макеты экранов</title>
+<style>
+:root{
+  --bg:#f4f6fa; --surface:#ffffff; --surface2:#eceff6; --line:#dfe3ec;
+  --text:#141821; --muted:#5d6678; --primary:#4a67e8; --on-primary:#fff;
+  --in:#1f8f5f; --in-bg:#dff3e8; --out:#c8433d; --out-bg:#fbe3e1;
+  --warn:#b7791f; --warn-bg:#fcefd4; --sub:#7a4fd6; --sub-bg:#ece4fb;
+  --page:#dde2ee;
+  color-scheme: light;
+}
+:root[data-theme="dark"]{
+  --bg:#0e1118; --surface:#171b25; --surface2:#1f2431; --line:#2a3041;
+  --text:#eef1f7; --muted:#97a0b3; --primary:#7b93ff; --on-primary:#0e1118;
+  --in:#4cc790; --in-bg:#12332a; --out:#ff7a73; --out-bg:#3b1d1f;
+  --warn:#f0b955; --warn-bg:#3a2d14; --sub:#b79cff; --sub-bg:#2a2145;
+  --page:#07090d;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1118; --surface:#171b25; --surface2:#1f2431; --line:#2a3041;
+    --text:#eef1f7; --muted:#97a0b3; --primary:#7b93ff; --on-primary:#0e1118;
+    --in:#4cc790; --in-bg:#12332a; --out:#ff7a73; --out-bg:#3b1d1f;
+    --warn:#f0b955; --warn-bg:#3a2d14; --sub:#b79cff; --sub-bg:#2a2145;
+    --page:#07090d; color-scheme: dark;
+  }
+}
+/* альтернативная палитра для людей с нарушением цветоощущения */
+:root[data-cb="1"]{ --in:#2f6fe4; --in-bg:#dbe7fb; --out:#d97a12; --out-bg:#fbe9d3; }
+:root[data-theme="dark"][data-cb="1"]{ --in:#6aa3ff; --in-bg:#14284d; --out:#ffa048; --out-bg:#43290f; }
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header.top{padding:24px 24px 8px;max-width:1500px;margin:0 auto}
+header.top h1{margin:0 0 4px;font-size:24px}
+header.top p{margin:0;color:var(--muted)}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.tools button{background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font:inherit;cursor:pointer}
+.tools button:hover{border-color:var(--primary)}
+.gallery{display:flex;flex-wrap:wrap;gap:28px;justify-content:center;padding:20px 24px 60px;max-width:1500px;margin:0 auto}
+.cell{display:flex;flex-direction:column;gap:10px;align-items:center}
+.cell h2{margin:0;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+
+.phone{width:360px;height:740px;background:var(--bg);border-radius:34px;border:8px solid #000;overflow:hidden;position:relative;display:flex;flex-direction:column;box-shadow:0 18px 40px rgba(0,0,0,.25)}
+.status{height:24px;display:flex;justify-content:space-between;padding:6px 18px 0;font-size:11px;color:var(--muted)}
+.scroll{flex:1;overflow:hidden;padding:6px 14px 10px}
+.appbar{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 10px}
+.appbar h3{margin:0;font-size:20px}
+.ico{width:34px;height:34px;border-radius:50%;background:var(--surface2);display:grid;place-items:center;font-size:15px}
+.seg{display:flex;background:var(--surface2);border-radius:999px;padding:3px;margin-bottom:12px}
+.seg span{flex:1;text-align:center;padding:8px 0;border-radius:999px;font-weight:600;color:var(--muted)}
+.seg span.on{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px 14px;margin-bottom:10px}
+.card h4{margin:0 0 8px;font-size:13px;color:var(--muted);font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.pill{font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px}
+.pill.in{background:var(--in-bg);color:var(--in)}
+.pill.out{background:var(--out-bg);color:var(--out)}
+.pill.warn{background:var(--warn-bg);color:var(--warn)}
+.pill.sub{background:var(--sub-bg);color:var(--sub)}
+.balance{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.balance .box{border-radius:14px;padding:10px 12px}
+.balance .in{background:var(--in-bg)} .balance .out{background:var(--out-bg)}
+.balance small{display:block;color:var(--muted);font-size:11px}
+.balance b{display:block;font-size:15px;margin-top:2px}
+.balance .in b{color:var(--in)} .balance .out b{color:var(--out)}
+.row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}
+.row .l{display:flex;flex-direction:column}
+.row .l small{color:var(--muted);font-size:11px}
+.amt{font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.amt.in{color:var(--in)} .amt.out{color:var(--out)} .amt.zero{color:var(--muted);font-weight:500}
+.amt small{display:block;font-weight:500;color:var(--muted);font-size:11px}
+.overdue{background:var(--out-bg);border-radius:12px;padding:8px 10px;margin:-2px 0 4px}
+.nav{height:62px;border-top:1px solid var(--line);background:var(--surface);display:flex;justify-content:space-around;align-items:center;font-size:10px;color:var(--muted)}
+.nav div{display:flex;flex-direction:column;align-items:center;gap:2px}
+.nav div.on{color:var(--primary);font-weight:700}
+.nav i{font-style:normal;font-size:18px}
+.fab{position:absolute;right:16px;bottom:78px;width:54px;height:54px;border-radius:18px;background:var(--primary);color:var(--on-primary);display:grid;place-items:center;font-size:28px;box-shadow:0 6px 16px rgba(0,0,0,.3)}
+
+/* календарь */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal .dow{font-size:10px;color:var(--muted);text-align:center;padding:2px 0}
+.cal .d{background:var(--surface);border:1px solid var(--line);border-radius:9px;min-height:60px;padding:3px 3px 2px;display:flex;flex-direction:column;font-size:10px}
+.cal .d.empty{background:transparent;border-color:transparent}
+.cal .d .n{font-weight:700;font-size:11px;color:var(--muted)}
+.cal .d.today .n{background:var(--primary);color:var(--on-primary);border-radius:50%;width:18px;height:18px;display:grid;place-items:center}
+.cal .d.sel{outline:2px solid var(--primary)}
+.cal .d .p,.cal .d .m{display:block;height:13px;line-height:13px;font-weight:700;white-space:nowrap}
+.cal .d .p{color:var(--in);margin-top:auto}
+.cal .d .m{color:var(--out)}
+.cal .d .od{width:6px;height:6px;border-radius:50%;background:var(--out);position:absolute}
+.legend{display:flex;gap:12px;font-size:11px;color:var(--muted);margin:2px 2px 8px}
+.legend b.in{color:var(--in)} .legend b.out{color:var(--out)}
+.sheet{background:var(--surface);border-top:1px solid var(--line);border-radius:22px 22px 0 0;padding:10px 14px 14px;margin:0 -14px;box-shadow:0 -6px 16px rgba(0,0,0,.12)}
+.sheet .grab{width:38px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 8px}
+.tot{display:flex;gap:8px;margin:6px 0 4px}
+.tot span{flex:1;border-radius:10px;padding:6px 8px;font-size:11px}
+.tot .in{background:var(--in-bg);color:var(--in)} .tot .out{background:var(--out-bg);color:var(--out)} .tot .net{background:var(--surface2);color:var(--text)}
+.tot b{display:block;font-size:13px}
+
+/* карточка долга */
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:14px;margin-bottom:10px}
+.hero .who{display:flex;gap:10px;align-items:center}
+.av{width:42px;height:42px;border-radius:50%;background:var(--primary);color:var(--on-primary);display:grid;place-items:center;font-weight:700}
+.hero .big{font-size:26px;font-weight:800;margin:10px 0 2px;font-variant-numeric:tabular-nums}
+.bar{height:10px;border-radius:6px;background:var(--surface2);overflow:hidden;margin:8px 0 4px}
+.bar i{display:block;height:100%;background:var(--in)}
+.actions{display:flex;gap:8px;margin-top:10px}
+.btn{flex:1;text-align:center;padding:10px 0;border-radius:12px;font-weight:700;background:var(--surface2)}
+.btn.pri{background:var(--primary);color:var(--on-primary)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{background:var(--surface2);border-radius:10px;padding:6px 8px;font-size:11px;display:flex;gap:4px;align-items:center}
+
+/* форма */
+.field{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 12px;margin-bottom:8px}
+.field small{display:block;color:var(--muted);font-size:11px}
+.field b{font-weight:600}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sw{display:flex;background:var(--surface2);border-radius:12px;padding:3px;margin-bottom:8px}
+.sw span{flex:1;text-align:center;padding:8px 0;border-radius:10px;font-weight:600;color:var(--muted)}
+.sw span.on-in{background:var(--in-bg);color:var(--in)}
+.cta{background:var(--primary);color:var(--on-primary);text-align:center;padding:13px 0;border-radius:14px;font-weight:700;margin-top:6px}
+
+/* блокировка */
+.lock{align-items:center;justify-content:center;text-align:center;gap:6px;padding-top:50px}
+.lock h3{margin:6px 0 2px}
+.dots{display:flex;gap:12px;margin:14px 0 22px}
+.dots i{width:14px;height:14px;border-radius:50%;border:2px solid var(--primary)}
+.dots i.f{background:var(--primary)}
+.pad{display:grid;grid-template-columns:repeat(3,64px);gap:12px 22px}
+.pad span{width:64px;height:64px;border-radius:50%;background:var(--surface2);display:grid;place-items:center;font-size:22px;font-weight:600}
+.pad span.t{background:transparent;font-size:24px}
+.logo{width:62px;height:62px;border-radius:20px;background:var(--primary);color:var(--on-primary);display:grid;place-items:center;font-size:30px;font-weight:800}
+.note{max-width:720px;margin:0 auto;padding:0 24px 40px;color:var(--muted)}
+
+/* настройки */
+.grp{margin:12px 2px 6px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.it{display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid var(--line)}
+.it:first-child{border-top:0}
+.it .ic{width:30px;height:30px;border-radius:10px;background:var(--surface2);display:grid;place-items:center;font-size:15px;flex:none}
+.it .t{flex:1;min-width:0}
+.it .t b{display:block;font-weight:600}
+.it .t small{display:block;color:var(--muted);font-size:11px}
+.it .v{color:var(--muted);font-size:12px;white-space:nowrap}
+.tg{width:40px;height:23px;border-radius:12px;background:var(--surface2);border:1px solid var(--line);position:relative;flex:none}
+.tg::after{content:"";position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:var(--muted)}
+.tg.on{background:var(--primary);border-color:var(--primary)}
+.tg.on::after{left:19px;background:var(--on-primary)}
+.scroll.long{overflow:hidden}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Квиты — макеты экранов</h1>
+  <p>Статический прототип для обсуждения дизайна. Данные взяты из вашего блокнота; «сегодня» в макете — 20 октября. Размер экрана 360×740.</p>
+  <div class="tools">
+    <button id="theme">Тема: системная</button>
+    <button id="cb">Палитра для дальтоников: выкл</button>
+  </div>
+</header>
+
+<main class="gallery">
+
+<!-- 1. Блокировка -->
+<div class="cell"><h2>1 · Вход</h2>
+<div class="phone"><div class="status"><span>10:51</span><span>96%</span></div>
+<div class="scroll lock" style="display:flex;flex-direction:column">
+  <div class="logo">К</div><h3>Квиты</h3><div style="color:var(--muted)">Введите PIN-код</div>
+  <div class="dots"><i class="f"></i><i class="f"></i><i></i><i></i></div>
+  <div class="pad"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span class="t">☝</span><span>0</span><span class="t">⌫</span></div>
+  <div style="margin-top:16px;color:var(--primary);font-weight:600">Войти по отпечатку</div>
+</div></div></div>
+
+<!-- 2. Дашборд: долги -->
+<div class="cell"><h2>2 · Дашборд · Долги</h2>
+<div class="phone"><div class="status"><span>10:51</span><span>96%</span></div>
+<div class="scroll">
+  <div class="appbar"><h3>Квиты</h3><div style="display:flex;gap:8px"><div class="ico">🔍</div><div class="ico">⚙</div></div></div>
+  <div class="seg"><span class="on">Долги</span><span>Подписки</span></div>
+
+  <div class="card">
+    <div class="balance">
+      <div class="box in"><small>Мне должны</small><b>70 000 ₽</b><small>+ 60 000 ₸</small></div>
+      <div class="box out"><small>Я должен</small><b>15 000 ₽</b><small>&nbsp;</small></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h4>Мне должны <span class="pill out">1 просрочен</span></h4>
+    <div class="row overdue"><div class="l"><b>Просрочено</b><small>Дима · 19 дн.</small></div><div class="amt out">40 000 ₸</div></div>
+    <div class="row"><div class="l"><b>Сегодня</b></div><div class="amt zero">—</div></div>
+    <div class="row"><div class="l"><b>Завтра</b><small>Алексей Ш</small></div><div class="amt in">10 000 ₽</div></div>
+    <div class="row"><div class="l"><b>На этой неделе</b><small>2 платежа</small></div><div class="amt in">20 000 ₽</div></div>
+    <div class="row"><div class="l"><b>В этом месяце</b><small>4 платежа</small></div><div class="amt in">40 000 ₽<small>+ 10 000 ₸</small></div></div>
+    <div class="row"><div class="l"><b>В следующем месяце</b><small>5 платежей</small></div><div class="amt in">40 000 ₽</div></div>
+  </div>
+
+  <div class="card">
+    <h4>Я должен</h4>
+    <div class="row"><div class="l"><b>Сегодня</b></div><div class="amt zero">—</div></div>
+    <div class="row"><div class="l"><b>На этой неделе</b></div><div class="amt zero">—</div></div>
+    <div class="row"><div class="l"><b>В этом месяце</b><small>Иван</small></div><div class="amt out">5 000 ₽</div></div>
+    <div class="row"><div class="l"><b>В следующем месяце</b><small>Иван</small></div><div class="amt out">5 000 ₽</div></div>
+  </div>
+</div>
+<div class="fab">+</div>
+<div class="nav"><div class="on"><i>▦</i>Главная</div><div><i>📅</i>Календарь</div><div><i>👥</i>Люди</div><div><i>⋯</i>Ещё</div></div>
+</div></div>
+
+<!-- 3. Дашборд: подписки -->
+<div class="cell"><h2>3 · Дашборд · Подписки</h2>
+<div class="phone"><div class="status"><span>10:51</span><span>96%</span></div>
+<div class="scroll">
+  <div class="appbar"><h3>Квиты</h3><div style="display:flex;gap:8px"><div class="ico">🔍</div><div class="ico">⚙</div></div></div>
+  <div class="seg"><span>Долги</span><span class="on">Подписки</span></div>
+
+  <div class="card">
+    <div class="balance">
+      <div class="box in"><small>Выставить счёт / мес</small><b>70,5 $</b></div>
+      <div class="box out"><small>Мои списания / мес</small><b>13 $ · 3 500 ₸</b></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h4>Мне платят <span class="pill sub">общие</span></h4>
+    <div class="row"><div class="l"><b>Сегодня</b></div><div class="amt zero">—</div></div>
+    <div class="row"><div class="l"><b>Завтра</b></div><div class="amt zero">—</div></div>
+    <div class="row"><div class="l"><b>На этой неделе</b></div><div class="amt zero">—</div></div>
+    <div class="row"><div class="l"><b>В этом месяце</b><small>Антон ×2, Руслан Б</small></div><div class="amt in">70,5 $</div></div>
+    <div class="row"><div class="l"><b>В следующем месяце</b><small>4 доли</small></div><div class="amt in">94 $</div></div>
+  </div>
+
+  <div class="card">
+    <h4>Я плачу</h4>
+    <div class="row"><div class="l"><b>Сегодня</b></div><div class="amt zero">—</div></div>
+    <div class="row"><div class="l"><b>На этой неделе</b></div><div class="amt zero">—</div></div>
+    <div class="row"><div class="l"><b>В этом месяце</b><small>ChatGPT, Claude</small></div><div class="amt out">94 $</div></div>
+    <div class="row"><div class="l"><b>В следующем месяце</b><small>GitHub, Patreon</small></div><div class="amt out">13 $</div></div>
+  </div>
+</div>
+<div class="fab">+</div>
+<div class="nav"><div class="on"><i>▦</i>Главная</div><div><i>📅</i>Календарь</div><div><i>👥</i>Люди</div><div><i>⋯</i>Ещё</div></div>
+</div></div>
+
+<!-- 4. Календарь -->
+<div class="cell"><h2>4 · Календарь</h2>
+<div class="phone"><div class="status"><span>10:51</span><span>96%</span></div>
+<div class="scroll" style="padding-bottom:0">
+  <div class="appbar"><h3>Октябрь 2026</h3><div style="display:flex;gap:8px"><div class="ico">‹</div><div class="ico">›</div></div></div>
+  <div class="legend"><span><b class="in">+8к</b> мне вернут</span><span><b class="out">−2к</b> я верну</span><span>🔴 просрочка</span></div>
+  <div class="cal" id="cal"></div>
+  <div class="sheet" style="margin-top:8px">
+    <div class="grab"></div>
+    <b>Вторник, 27 октября</b>
+    <div class="tot"><span class="in">Входящие<b>+8 000 ₽</b></span><span class="out">Исходящие<b>−2 000 ₽</b></span><span class="net">Итог<b>+6 000 ₽</b></span></div>
+    <div class="row"><div class="l"><b>Алексей Ш</b><small>платёж 3 из 5</small></div><div class="amt in">+5 000 ₽</div></div>
+    <div class="row"><div class="l"><b>Надя С</b><small>платёж 6 из 10</small></div><div class="amt in">+3 000 ₽</div></div>
+    <div class="row"><div class="l"><b>Иван</b><small>мой платёж</small></div><div class="amt out">−2 000 ₽</div></div>
+  </div>
+</div>
+<div class="nav"><div><i>▦</i>Главная</div><div class="on"><i>📅</i>Календарь</div><div><i>👥</i>Люди</div><div><i>⋯</i>Ещё</div></div>
+</div></div>
+
+<!-- 5. Карточка долга -->
+<div class="cell"><h2>5 · Карточка долга</h2>
+<div class="phone"><div class="status"><span>10:51</span><span>96%</span></div>
+<div class="scroll">
+  <div class="appbar"><div class="ico">←</div><h3 style="font-size:16px">Долг</h3><div class="ico">⋮</div></div>
+  <div class="hero">
+    <div class="who"><div class="av">Н</div><div><b>Надя С</b><div style="color:var(--muted);font-size:12px">мне должна · Тенге</div></div><span class="pill warn" style="margin-left:auto">по графику</span></div>
+    <div class="big">40 000 ₸</div>
+    <div style="color:var(--muted);font-size:12px">остаток из 100 000 ₸</div>
+    <div class="bar"><i style="width:60%"></i></div>
+    <div style="display:flex;justify-content:space-between;color:var(--muted);font-size:11px"><span>возвращено 60 000 ₸ (60%)</span><span>следующий платёж 18.11</span></div>
+    <div class="actions"><div class="btn pri">+ Платёж</div><div class="btn">Напомнить</div></div>
+  </div>
+
+  <div class="card">
+    <h4>График <span style="font-weight:500">по 10 000 ₸ раз в месяц</span></h4>
+    <div class="row"><div class="l"><b>18.10</b><small>оплачен</small></div><div class="amt in">✓ 10 000 ₸</div></div>
+    <div class="row"><div class="l"><b>14.09</b><small>оплачен</small></div><div class="amt in">✓ 10 000 ₸</div></div>
+    <div class="row"><div class="l"><b>18.11</b><small>через 29 дн.</small></div><div class="amt">10 000 ₸</div></div>
+    <div class="row"><div class="l"><b>18.12</b><small>через 59 дн.</small></div><div class="amt">10 000 ₸</div></div>
+  </div>
+
+  <div class="card">
+    <h4>Вложения</h4>
+    <div class="chips"><span class="chip">🧾 Расписка.jpg</span><span class="chip">🧾 Перевод 14.09.pdf</span><span class="chip">＋ Добавить</span></div>
+  </div>
+  <div class="card">
+    <h4>Документы</h4>
+    <div class="chips"><span class="chip">📄 Расписка PDF</span><span class="chip">📄 Акт сверки</span></div>
+  </div>
+</div>
+<div class="nav"><div class="on"><i>▦</i>Главная</div><div><i>📅</i>Календарь</div><div><i>👥</i>Люди</div><div><i>⋯</i>Ещё</div></div>
+</div></div>
+
+<!-- 6. Новый долг -->
+<div class="cell"><h2>6 · Новый долг</h2>
+<div class="phone"><div class="status"><span>10:51</span><span>96%</span></div>
+<div class="scroll">
+  <div class="appbar"><div class="ico">✕</div><h3 style="font-size:16px">Новый долг</h3><span style="width:34px"></span></div>
+  <div class="sw"><span class="on-in">Мне должны</span><span>Я должен</span></div>
+  <div class="field"><small>Кто</small><b>Алексей Ш</b></div>
+  <div class="two">
+    <div class="field"><small>Сумма (можно «50к»)</small><b>50 000</b></div>
+    <div class="field"><small>Валюта</small><b>₽ RUB ▾</b></div>
+  </div>
+  <div class="field"><small>Дата выдачи</small><b>20.10.2026</b></div>
+  <div class="sw"><span>Разовый</span><span class="on-in" style="background:var(--surface);color:var(--text)">По графику</span><span>Без срока</span></div>
+  <div class="two">
+    <div class="field"><small>Платёж</small><b>10 000 ₽</b></div>
+    <div class="field"><small>Периодичность</small><b>Раз в неделю ▾</b></div>
+  </div>
+  <div class="field"><small>Первый платёж</small><b>27.10.2026</b></div>
+  <div class="card" style="background:var(--surface2)">
+    <b>Будет создано 5 платежей</b>
+    <div style="color:var(--muted);font-size:12px">27.10 · 03.11 · 10.11 · 17.11 · 24.11, каждый можно изменить</div>
+  </div>
+  <div class="field"><small>Комментарий</small><b style="color:var(--muted)">Необязательно</b></div>
+  <div class="cta">Сохранить</div>
+</div></div></div>
+
+<!-- 7. Настройки -->
+<div class="cell"><h2>7 · Настройки</h2>
+<div class="phone"><div class="status"><span>10:51</span><span>96%</span></div>
+<div class="scroll long">
+  <div class="appbar"><div class="ico">←</div><h3 style="font-size:16px">Настройки</h3><span style="width:34px"></span></div>
+
+  <div class="grp" style="margin-top:2px">Безопасность</div>
+  <div class="list">
+    <div class="it"><span class="ic">🔒</span><div class="t"><b>PIN-код</b><small>4–6 цифр</small></div><span class="tg on"></span></div>
+    <div class="it"><span class="ic">☝</span><div class="t"><b>Отпечаток пальца</b></div><span class="tg on"></span></div>
+    <div class="it"><span class="ic">⏱</span><div class="t"><b>Блокировать через</b></div><span class="v">30 сек ›</span></div>
+    <div class="it"><span class="ic">🙈</span><div class="t"><b>Скрывать в списке приложений</b><small>и запрет скриншотов</small></div><span class="tg on"></span></div>
+    <div class="it"><span class="ic">🔔</span><div class="t"><b>Скрывать суммы в уведомлениях</b></div><span class="tg"></span></div>
+  </div>
+
+  <div class="grp">Уведомления</div>
+  <div class="list">
+    <div class="it"><span class="ic">📆</span><div class="t"><b>Напоминать о сроке</b><small>за 3 и 1 день</small></div><span class="v">›</span></div>
+    <div class="it"><span class="ic">🕘</span><div class="t"><b>Время уведомлений</b></div><span class="v">09:00 ›</span></div>
+    <div class="it"><span class="ic">⚠</span><div class="t"><b>При просрочке повторять</b></div><span class="v">каждые 3 дня ›</span></div>
+    <div class="it"><span class="ic">💳</span><div class="t"><b>Списание подписки</b><small>за 1 день до даты</small></div><span class="tg on"></span></div>
+  </div>
+
+  <div class="grp">Валюты</div>
+  <div class="list">
+    <div class="it"><span class="ic">₽</span><div class="t"><b>Основная валюта</b></div><span class="v">Рубль RUB ›</span></div>
+    <div class="it"><span class="ic">💱</span><div class="t"><b>Мои валюты</b><small>₽ · ₸ · $</small></div><span class="v">›</span></div>
+    <div class="it"><span class="ic">📈</span><div class="t"><b>Курсы валют</b><small>вручную, для пересчёта итогов</small></div><span class="v">›</span></div>
+  </div>
+
+  <div class="grp">Внешний вид</div>
+  <div class="list">
+    <div class="it"><span class="ic">🌓</span><div class="t"><b>Тема</b></div><span class="v">Системная ›</span></div>
+    <div class="it"><span class="ic">🎨</span><div class="t"><b>Палитра для дальтоников</b><small>синий и оранжевый вместо зелёного и красного</small></div><span class="tg"></span></div>
+    <div class="it"><span class="ic">📅</span><div class="t"><b>Первый день недели</b></div><span class="v">Понедельник ›</span></div>
+    <div class="it"><span class="ic">🌐</span><div class="t"><b>Язык</b></div><span class="v">Русский ›</span></div>
+  </div>
+
+  <div class="grp">Данные</div>
+  <div class="list">
+    <div class="it"><span class="ic">☁</span><div class="t"><b>Резервная копия</b><small>последняя: 12.10.2026</small></div><span class="v">Создать ›</span></div>
+    <div class="it"><span class="ic">♻</span><div class="t"><b>Восстановить из копии</b></div><span class="v">›</span></div>
+    <div class="it"><span class="ic">📤</span><div class="t"><b>Экспорт</b><small>CSV или Excel</small></div><span class="v">›</span></div>
+    <div class="it"><span class="ic">📥</span><div class="t"><b>Импорт из CSV</b></div><span class="v">›</span></div>
+  </div>
+
+  <div class="grp">Напоминания должникам</div>
+  <div class="list">
+    <div class="it"><span class="ic">💬</span><div class="t"><b>Шаблоны сообщений</b><small>мягкий, строгий, свои</small></div><span class="v">›</span></div>
+  </div>
+
+  <div class="grp">О приложении</div>
+  <div class="list">
+    <div class="it"><span class="ic">ℹ</span><div class="t"><b>Квиты</b><small>версия 1.0</small></div></div>
+  </div>
+</div>
+<div class="nav"><div><i>▦</i>Главная</div><div><i>📅</i>Календарь</div><div><i>👥</i>Люди</div><div class="on"><i>⋯</i>Ещё</div></div>
+</div></div>
+
+</main>
+
+<p class="note">Цвета: зелёный = «мне», красный = «я», фиолетовый = подписки, жёлтый = внимание. Палитра для дальтоников заменяет зелёный/красный на синий/оранжевый, а знаки «+» и «−» остаются.</p>
+
+<script>
+(function(){
+  var cal=document.getElementById('cal');
+  var dows=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+  var html=dows.map(function(d){return '<div class="dow">'+d+'</div>'}).join('');
+  var first=3; /* 1 октября 2026 — четверг */
+  var data={2:['+23,5$',''],9:['','−10$'],10:['+47$',''],13:['+23,5$',''],14:['','−3$'],
+            18:['+10к',''],19:['','−15к'],21:['+10к',''],24:['+10к','−5к'],27:['+8к','−2к'],31:['+20к','']};
+  var od={19:1};
+  for(var i=0;i<first;i++)html+='<div class="d empty"></div>';
+  for(var d=1;d<=31;d++){
+    var cls='d'+(d===20?' today':'')+(d===27?' sel':'');
+    var v=data[d]||['',''];
+    html+='<div class="'+cls+'" style="position:relative"><span class="n">'+d+'</span>'
+      +(od[d]?'<span class="od" style="right:4px;top:4px"></span>':'')
+      +'<span class="p">'+v[0]+'</span>'
+      +'<span class="m">'+v[1]+'</span></div>';
+  }
+  cal.innerHTML=html;
+
+  var root=document.documentElement, th=document.getElementById('theme'), cb=document.getElementById('cb');
+  var modes=['system','light','dark'], names={system:'системная',light:'светлая',dark:'тёмная'}, mi=0;
+  th.addEventListener('click',function(){
+    mi=(mi+1)%3; var m=modes[mi];
+    if(m==='system')root.removeAttribute('data-theme'); else root.setAttribute('data-theme',m);
+    th.textContent='Тема: '+names[m];
+  });
+  cb.addEventListener('click',function(){
+    var on=root.getAttribute('data-cb')==='1';
+    if(on)root.removeAttribute('data-cb'); else root.setAttribute('data-cb','1');
+    cb.textContent='Палитра для дальтоников: '+(on?'выкл':'вкл');
+  });
+})();
+</script>
+</body>
+</html>
