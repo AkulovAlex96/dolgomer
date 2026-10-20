@@ -29,7 +29,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import app.kvity.data.DebtView
 import app.kvity.data.NewDebt
+import app.kvity.domain.AmountFormatter
 import app.kvity.domain.AmountParser
 import app.kvity.domain.Currencies
 import app.kvity.domain.Direction
@@ -42,6 +44,7 @@ import app.kvity.ui.components.SectionCard
 import app.kvity.ui.currencyOf
 import app.kvity.ui.formatDate
 import app.kvity.ui.formatMoney
+import app.kvity.ui.minorToInput
 import java.time.LocalDate
 
 private val periodicities = listOf(
@@ -52,17 +55,26 @@ private val periodicities = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NewDebtScreen(onSave: (NewDebt) -> Unit, onBack: () -> Unit) {
-    var direction by rememberSaveable { mutableStateOf(Direction.OWED_TO_ME) }
-    var name by rememberSaveable { mutableStateOf("") }
-    var amountText by rememberSaveable { mutableStateOf("") }
-    var currencyCode by rememberSaveable { mutableStateOf(Currencies.RUB.code) }
-    var termType by rememberSaveable { mutableStateOf(TermType.ONE_TIME) }
-    var dueEpoch by rememberSaveable { mutableStateOf<Long?>(null) }
-    var installmentText by rememberSaveable { mutableStateOf("") }
-    var periodicity by rememberSaveable { mutableStateOf(Periodicity.MONTH) }
-    var firstEpoch by rememberSaveable { mutableStateOf<Long?>(null) }
-    var note by rememberSaveable { mutableStateOf("") }
+fun NewDebtScreen(
+    onSave: (NewDebt) -> Unit,
+    onBack: () -> Unit,
+    initial: DebtView? = null,
+    defaultCurrency: String = Currencies.RUB.code,
+    currencies: List<String> = Currencies.defaults.map { it.code },
+    knownNames: List<String> = emptyList(),
+) {
+    val d = initial?.debt
+    fun minorText(minor: Long?, code: String) = minorToInput(minor, code)
+    var direction by rememberSaveable { mutableStateOf(d?.direction ?: Direction.OWED_TO_ME) }
+    var name by rememberSaveable { mutableStateOf(initial?.counterpartyName ?: "") }
+    var amountText by rememberSaveable { mutableStateOf(minorText(d?.principalMinor, d?.currency ?: defaultCurrency)) }
+    var currencyCode by rememberSaveable { mutableStateOf(d?.currency ?: defaultCurrency) }
+    var termType by rememberSaveable { mutableStateOf(d?.termType ?: TermType.ONE_TIME) }
+    var dueEpoch by rememberSaveable { mutableStateOf<Long?>(d?.dueDate?.toEpochDay()) }
+    var installmentText by rememberSaveable { mutableStateOf(minorText(d?.installmentMinor, d?.currency ?: defaultCurrency)) }
+    var periodicity by rememberSaveable { mutableStateOf(d?.periodicity ?: Periodicity.MONTH) }
+    var firstEpoch by rememberSaveable { mutableStateOf<Long?>(d?.firstDate?.toEpochDay()) }
+    var note by rememberSaveable { mutableStateOf(d?.note ?: "") }
 
     val currency = currencyOf(currencyCode)
     val principal = AmountParser.parseMinor(amountText, currency.fractionDigits)
@@ -80,7 +92,7 @@ fun NewDebtScreen(onSave: (NewDebt) -> Unit, onBack: () -> Unit) {
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Новый долг") },
+                title = { Text(if (initial == null) "Новый долг" else "Изменить долг") },
                 navigationIcon = { TextButton(onClick = onBack) { Text("Отмена") } },
             )
         },
@@ -115,6 +127,12 @@ fun NewDebtScreen(onSave: (NewDebt) -> Unit, onBack: () -> Unit) {
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+            val suggestions = knownNames.filter { it.contains(name.trim(), ignoreCase = true) && !it.equals(name.trim(), ignoreCase = true) }.take(4)
+            if (name.isNotBlank() && suggestions.isNotEmpty()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    suggestions.forEach { n -> androidx.compose.material3.AssistChip(onClick = { name = n }, label = { Text(n) }) }
+                }
+            }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
@@ -125,7 +143,7 @@ fun NewDebtScreen(onSave: (NewDebt) -> Unit, onBack: () -> Unit) {
                     isError = amountText.isNotBlank() && principal == null,
                     modifier = Modifier.weight(1f),
                 )
-                CurrencyMenu(currencyCode, onSelect = { currencyCode = it }, modifier = Modifier.weight(0.6f))
+                CurrencyMenu(currencyCode, currencies, onSelect = { currencyCode = it }, modifier = Modifier.weight(0.6f))
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -184,7 +202,7 @@ fun NewDebtScreen(onSave: (NewDebt) -> Unit, onBack: () -> Unit) {
                             direction = direction,
                             principalMinor = principal!!,
                             currency = currencyCode,
-                            startDate = LocalDate.now(),
+                            startDate = d?.startDate ?: LocalDate.now(),
                             termType = termType,
                             dueDate = dueDate.takeIf { termType == TermType.ONE_TIME },
                             periodicity = periodicity.takeIf { termType == TermType.SCHEDULE },
@@ -225,14 +243,14 @@ private fun SchedulePreview(
 }
 
 @Composable
-private fun CurrencyMenu(selectedCode: String, onSelect: (String) -> Unit, modifier: Modifier = Modifier) {
+private fun CurrencyMenu(selectedCode: String, codes: List<String>, onSelect: (String) -> Unit, modifier: Modifier = Modifier) {
     var open by remember { mutableStateOf(false) }
     Box(modifier) {
         OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) {
             Text("${currencyOf(selectedCode).symbol} $selectedCode")
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            Currencies.defaults.forEach { c ->
+            codes.map(::currencyOf).forEach { c ->
                 DropdownMenuItem(
                     text = { Text("${c.symbol} ${c.code}") },
                     onClick = { onSelect(c.code); open = false },

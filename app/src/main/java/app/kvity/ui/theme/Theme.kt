@@ -59,9 +59,29 @@ private val LocalKvityColors = staticCompositionLocalOf { LightKvity }
 val MaterialTheme.kvity: KvityColors
     @Composable @ReadOnlyComposable get() = LocalKvityColors.current
 
+// Палитра для людей с нарушением цветоощущения: синий и оранжевый вместо зелёного и красного.
+private val LightKvityCb = LightKvity.copy(
+    income = Color(0xFF2F6FE4), incomeBg = Color(0xFFDBE7FB),
+    expense = Color(0xFFD97A12), expenseBg = Color(0xFFFBE9D3),
+)
+private val DarkKvityCb = DarkKvity.copy(
+    income = Color(0xFF6AA3FF), incomeBg = Color(0xFF14284D),
+    expense = Color(0xFFFFA048), expenseBg = Color(0xFF43290F),
+)
+
 @Composable
-fun KvityTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalKvityColors provides if (darkTheme) DarkKvity else LightKvity) {
+fun KvityTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    colorBlind: Boolean = false,
+    content: @Composable () -> Unit,
+) {
+    val palette = when {
+        darkTheme && colorBlind -> DarkKvityCb
+        darkTheme -> DarkKvity
+        colorBlind -> LightKvityCb
+        else -> LightKvity
+    }
+    CompositionLocalProvider(LocalKvityColors provides palette) {
         MaterialTheme(colorScheme = if (darkTheme) DarkScheme else LightScheme, content = content)
     }
 }

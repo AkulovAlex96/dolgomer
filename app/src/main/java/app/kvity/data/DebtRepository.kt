@@ -8,12 +8,14 @@ import java.time.LocalDate
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 /** Долг вместе с именем контрагента, платежами и рассчитанной сводкой. */
 data class DebtView(
     val debt: DebtEntity,
     val counterpartyName: String,
+    val counterpartyPhone: String?,
     val payments: List<PaymentEntity>,
     val summary: DebtSummary,
 )
@@ -40,10 +42,10 @@ class DebtRepository(private val db: KvityDatabase) {
             db.counterparties().observeAll(),
             db.payments().observeAll(),
         ) { debts, people, payments ->
-            val names = people.associate { it.id to it.name }
+            val byId = people.associateBy { it.id }
             val byDebt = payments.groupBy { it.debtId }
             val now = today()
-            debts.map { toView(it, names[it.counterpartyId].orEmpty(), byDebt[it.id].orEmpty(), now) }
+            debts.map { toView(it, byId[it.counterpartyId], byDebt[it.id].orEmpty(), now) }
         }
 
     fun observeDebt(id: String, today: () -> LocalDate = LocalDate::now): Flow<DebtView?> =
@@ -53,8 +55,7 @@ class DebtRepository(private val db: KvityDatabase) {
             db.payments().observeAll(),
         ) { debt, people, payments ->
             debt?.let { d ->
-                val name = people.firstOrNull { it.id == d.counterpartyId }?.name.orEmpty()
-                toView(d, name, payments.filter { it.debtId == d.id }, today())
+                toView(d, people.firstOrNull { it.id == d.counterpartyId }, payments.filter { it.debtId == d.id }, today())
             }
         }
 
@@ -86,6 +87,24 @@ class DebtRepository(private val db: KvityDatabase) {
         return id
     }
 
+    suspend fun updateDebt(id: String, input: NewDebt) {
+        val old = db.debts().observe(id).first() ?: return
+        val name = input.counterpartyName.trim()
+        val person = db.counterparties().findByName(name)
+            ?: CounterpartyEntity(UUID.randomUUID().toString(), name, createdAt = System.currentTimeMillis())
+                .also { db.counterparties().insert(it) }
+        db.debts().update(
+            old.copy(
+                counterpartyId = person.id, direction = input.direction, principalMinor = input.principalMinor,
+                currency = input.currency, termType = input.termType, dueDate = input.dueDate,
+                periodicity = input.periodicity, installmentMinor = input.installmentMinor,
+                firstDate = input.firstDate, note = input.note,
+            ),
+        )
+    }
+
+    suspend fun setArchived(id: String, archived: Boolean) = db.debts().setArchived(id, archived)
+
     suspend fun addPayment(debtId: String, date: LocalDate, amountMinor: Long, note: String? = null) {
         db.payments().insert(
             PaymentEntity(UUID.randomUUID().toString(), debtId, date, amountMinor, note, System.currentTimeMillis()),
@@ -96,10 +115,11 @@ class DebtRepository(private val db: KvityDatabase) {
 
     suspend fun deleteDebt(id: String) = db.debts().delete(id)
 
-    private fun toView(debt: DebtEntity, name: String, payments: List<PaymentEntity>, today: LocalDate) =
+    private fun toView(debt: DebtEntity, person: CounterpartyEntity?, payments: List<PaymentEntity>, today: LocalDate) =
         DebtView(
             debt = debt,
-            counterpartyName = name,
+            counterpartyName = person?.name.orEmpty(),
+            counterpartyPhone = person?.phone,
             payments = payments.sortedByDescending { it.date },
             summary = DebtCalculator.summarize(
                 principalMinor = debt.principalMinor,

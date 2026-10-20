@@ -55,6 +55,9 @@ fun DebtDetailScreen(
     onAddPayment: (LocalDate, Long) -> Unit,
     onDeletePayment: (String) -> Unit,
     onDeleteDebt: () -> Unit,
+    onEdit: () -> Unit = {},
+    onRemind: () -> Unit = {},
+    extra: @Composable () -> Unit = {},
 ) {
     var paymentDialog by remember { mutableStateOf(false) }
     var deleteDialog by remember { mutableStateOf(false) }
@@ -65,7 +68,10 @@ fun DebtDetailScreen(
             TopAppBar(
                 title = { Text("Долг") },
                 navigationIcon = { TextButton(onClick = onBack) { Text("Назад") } },
-                actions = { TextButton(onClick = { deleteDialog = true }) { Text("Удалить") } },
+                actions = {
+                    TextButton(onClick = onEdit) { Text("Изменить") }
+                    TextButton(onClick = { deleteDialog = true }) { Text("Удалить") }
+                },
             )
         },
     ) { padding ->
@@ -84,9 +90,10 @@ fun DebtDetailScreen(
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Hero(view, onAddPayment = { paymentDialog = true })
+            Hero(view, onAddPayment = { paymentDialog = true }, onRemind = onRemind)
             ScheduleCard(view)
             PaymentsCard(view, onDeletePayment)
+            extra()
         }
 
         if (paymentDialog) {
@@ -114,7 +121,7 @@ fun DebtDetailScreen(
 }
 
 @Composable
-private fun Hero(view: DebtView, onAddPayment: () -> Unit) {
+private fun Hero(view: DebtView, onAddPayment: () -> Unit, onRemind: () -> Unit) {
     val c = MaterialTheme.kvity
     val s = view.summary
     val mine = view.debt.direction == Direction.OWED_TO_ME
@@ -188,7 +195,10 @@ private fun Hero(view: DebtView, onAddPayment: () -> Unit) {
         }
 
         if (s.status != DebtStatus.CLOSED) {
-            Button(onClick = onAddPayment, modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) { Text("+ Платёж") }
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onAddPayment, modifier = Modifier.weight(1f)) { Text("+ Платёж") }
+                if (mine) OutlinedButton(onClick = onRemind, modifier = Modifier.weight(1f)) { Text("Напомнить") }
+            }
         }
     }
 }

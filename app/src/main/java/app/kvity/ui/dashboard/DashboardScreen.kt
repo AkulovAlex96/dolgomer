@@ -48,14 +48,17 @@ fun DashboardScreen(
     state: DashboardState,
     onAddDebt: () -> Unit,
     onOpenDebt: (String) -> Unit,
+    onAddSubscription: () -> Unit,
+    onOpenSubscription: (String) -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     var tab by remember { mutableIntStateOf(0) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = {
-            if (tab == 0) {
-                FloatingActionButton(onClick = onAddDebt, containerColor = MaterialTheme.colorScheme.primary) {
+            run {
+                FloatingActionButton(onClick = if (tab == 0) onAddDebt else onAddSubscription, containerColor = MaterialTheme.colorScheme.primary) {
                     Text("+", fontSize = 28.sp, color = MaterialTheme.colorScheme.onPrimary)
                 }
             }
@@ -69,20 +72,33 @@ fun DashboardScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             item {
-                Text(
-                    "Квиты",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Квиты", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
+                    androidx.compose.material3.TextButton(onClick = onOpenSettings) { Text("Настройки") }
+                }
             }
             item { Tabs(selected = tab, onSelect = { tab = it }) }
 
             if (tab == 1) {
-                item {
-                    SectionCard {
-                        Text("Подписки появятся на следующем этапе", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                item { SubsBalanceCard(state) }
+                item { BucketsCard("Мне платят", state.subsIncoming, MaterialTheme.kvity.income) }
+                item { BucketsCard("Я плачу", state.subsOutgoing, MaterialTheme.kvity.expense) }
+                if (state.loaded && state.subs.isEmpty()) {
+                    item {
+                        SectionCard {
+                            Text("Подписок пока нет. Нажмите «+», чтобы добавить.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
+                } else if (state.subs.isNotEmpty()) {
+                    item {
+                        Text("Все подписки", fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
+                    }
+                    items(state.subs, key = { it.subscription.id }) { SubRow(it, onClick = { onOpenSubscription(it.subscription.id) }) }
                 }
             } else {
                 item { BalanceCard(state) }
@@ -213,6 +229,46 @@ private fun DebtRow(view: DebtView, onClick: () -> Unit) {
                     color = if (mine) c.income else c.expense,
                 )
                 StatusPill(s.status, s.overdueDays)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SubsBalanceCard(state: DashboardState) {
+    val c = MaterialTheme.kvity
+    SectionCard {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BalanceBox("Выставить счёт / мес", state.subsIncomingMonthly, c.incomeBg, c.income, Modifier.weight(1f))
+            BalanceBox("Мои списания / мес", state.subsOutgoingMonthly, c.expenseBg, c.expense, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun SubRow(view: app.kvity.data.SubscriptionView, onClick: () -> Unit) {
+    val s = view.subscription
+    val c = MaterialTheme.kvity
+    val today = java.time.LocalDate.now()
+    val next = app.kvity.domain.SubscriptionCalc.occurrences(s.anchorDate, s.periodicity, s.interval, today, today.plusYears(2)).firstOrNull()
+    val unpaid = view.shares.flatMap { sh -> sh.dues.filter { !it.paid && it.periodDate.isBefore(today) } }.size
+    SectionCard(modifier = Modifier.clickable(onClick = onClick)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(s.name, fontWeight = FontWeight.SemiBold)
+                val who = if (s.payer == app.kvity.data.SubscriptionPayer.ME) {
+                    if (view.shares.isEmpty()) "личная" else "общая · ${view.shares.size} уч."
+                } else "платит ${view.payerName ?: "другой"}"
+                val state = when (s.state) {
+                    app.kvity.data.SubscriptionState.ACTIVE -> next?.let { "след. ${formatDate(it)}" } ?: ""
+                    app.kvity.data.SubscriptionState.PAUSED -> "на паузе"
+                    app.kvity.data.SubscriptionState.CANCELLED -> "отменена"
+                }
+                Text("$who · $state", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(formatMoney(s.amountMinor, s.currency), fontWeight = FontWeight.Bold)
+                if (unpaid > 0) app.kvity.ui.components.Pill("не оплатили: $unpaid", c.expenseBg, c.expense)
             }
         }
     }

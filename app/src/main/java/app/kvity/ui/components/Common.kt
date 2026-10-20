@@ -1,6 +1,7 @@
 package app.kvity.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -77,10 +78,11 @@ fun MoneyLines(amounts: Map<String, Long>, color: Color, bold: Boolean = true) {
 }
 
 @Composable
-fun LabelRow(label: String, trailing: @Composable () -> Unit, subtitle: String? = null) {
+fun LabelRow(label: String, trailing: @Composable () -> Unit, subtitle: String? = null, onClick: (() -> Unit)? = null) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(vertical = 7.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
