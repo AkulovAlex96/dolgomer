@@ -1,0 +1,111 @@
+package app.kvity.data
+
+import app.kvity.domain.DebtCalculator
+import app.kvity.domain.DebtSummary
+import app.kvity.domain.Direction
+import app.kvity.domain.TermType
+import java.time.LocalDate
+import java.util.UUID
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+
+/** Долг вместе с именем контрагента, платежами и рассчитанной сводкой. */
+data class DebtView(
+    val debt: DebtEntity,
+    val counterpartyName: String,
+    val payments: List<PaymentEntity>,
+    val summary: DebtSummary,
+)
+
+class NewDebt(
+    val counterpartyName: String,
+    val direction: Direction,
+    val principalMinor: Long,
+    val currency: String,
+    val startDate: LocalDate,
+    val termType: TermType,
+    val dueDate: LocalDate? = null,
+    val periodicity: app.kvity.domain.Periodicity? = null,
+    val installmentMinor: Long? = null,
+    val firstDate: LocalDate? = null,
+    val note: String? = null,
+)
+
+class DebtRepository(private val db: KvityDatabase) {
+
+    fun observeDebts(today: () -> LocalDate = LocalDate::now): Flow<List<DebtView>> =
+        combine(
+            db.debts().observeActive(),
+            db.counterparties().observeAll(),
+            db.payments().observeAll(),
+        ) { debts, people, payments ->
+            val names = people.associate { it.id to it.name }
+            val byDebt = payments.groupBy { it.debtId }
+            val now = today()
+            debts.map { toView(it, names[it.counterpartyId].orEmpty(), byDebt[it.id].orEmpty(), now) }
+        }
+
+    fun observeDebt(id: String, today: () -> LocalDate = LocalDate::now): Flow<DebtView?> =
+        combine(
+            db.debts().observe(id),
+            db.counterparties().observeAll(),
+            db.payments().observeAll(),
+        ) { debt, people, payments ->
+            debt?.let { d ->
+                val name = people.firstOrNull { it.id == d.counterpartyId }?.name.orEmpty()
+                toView(d, name, payments.filter { it.debtId == d.id }, today())
+            }
+        }
+
+    suspend fun addDebt(input: NewDebt): String {
+        val now = System.currentTimeMillis()
+        val name = input.counterpartyName.trim()
+        val person = db.counterparties().findByName(name)
+            ?: CounterpartyEntity(UUID.randomUUID().toString(), name, createdAt = now)
+                .also { db.counterparties().insert(it) }
+
+        val id = UUID.randomUUID().toString()
+        db.debts().insert(
+            DebtEntity(
+                id = id,
+                counterpartyId = person.id,
+                direction = input.direction,
+                principalMinor = input.principalMinor,
+                currency = input.currency,
+                startDate = input.startDate,
+                termType = input.termType,
+                dueDate = input.dueDate,
+                periodicity = input.periodicity,
+                installmentMinor = input.installmentMinor,
+                firstDate = input.firstDate,
+                note = input.note,
+                createdAt = now,
+            ),
+        )
+        return id
+    }
+
+    suspend fun addPayment(debtId: String, date: LocalDate, amountMinor: Long, note: String? = null) {
+        db.payments().insert(
+            PaymentEntity(UUID.randomUUID().toString(), debtId, date, amountMinor, note, System.currentTimeMillis()),
+        )
+    }
+
+    suspend fun deletePayment(id: String) = db.payments().delete(id)
+
+    suspend fun deleteDebt(id: String) = db.debts().delete(id)
+
+    private fun toView(debt: DebtEntity, name: String, payments: List<PaymentEntity>, today: LocalDate) =
+        DebtView(
+            debt = debt,
+            counterpartyName = name,
+            payments = payments.sortedByDescending { it.date },
+            summary = DebtCalculator.summarize(
+                principalMinor = debt.principalMinor,
+                planned = debt.plannedPayments(),
+                paymentsMinor = payments.map { it.amountMinor },
+                today = today,
+            ),
+        )
+}
