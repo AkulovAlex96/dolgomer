@@ -176,6 +176,8 @@ fun NotificationsSection(settings: Settings, onChange: ((Settings) -> Settings) 
                 "Скрывать суммы и имена", "В тексте уведомлений, чтобы не было видно на экране блокировки",
                 settings.hideAmountsInNotifications, { v -> onChange { it.copy(hideAmountsInNotifications = v) } },
             )
+            val context = androidx.compose.ui.platform.LocalContext.current
+            TextButton(onClick = { app.kvity.notify.ReminderWorker.runNow(context) }) { Text("Проверить сейчас") }
         }
     }
 }

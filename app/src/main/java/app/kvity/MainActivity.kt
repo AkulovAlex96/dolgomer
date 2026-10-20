@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kvity.data.ThemeMode
+import app.kvity.notify.Notifier
 import app.kvity.security.Biometrics
 import app.kvity.security.LockScreen
 import app.kvity.ui.AppNavigation
@@ -21,6 +22,10 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (android.os.Build.VERSION.SDK_INT >= 33 && !Notifier.canPost(this)) {
+            registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
+                .launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
         setContent {
             val settings by app.settings.settings.collectAsStateWithLifecycle()
             val locked by app.lock.locked.collectAsStateWithLifecycle()

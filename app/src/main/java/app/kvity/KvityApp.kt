@@ -9,6 +9,8 @@ import app.kvity.data.SettingsStore
 import app.kvity.data.SubscriptionRepository
 import app.kvity.security.LockManager
 import app.kvity.security.PinStore
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class KvityApp : Application() {
@@ -39,6 +41,15 @@ class KvityApp : Application() {
         reference = ReferenceRepository(db)
         pin = PinStore(this)
         lock = LockManager(initiallyLocked = settings.current.pinEnabled && pin.isSet)
-        kotlinx.coroutines.MainScope().launch { reference.seedDefaults() }
+        val scope = kotlinx.coroutines.MainScope()
+        scope.launch { reference.seedDefaults() }
+        app.kvity.notify.Notifier.createChannel(this)
+        scope.launch {
+            // Расписание уведомлений следует за настройками (включение и время)
+            settings.settings
+                .map { it.notificationsEnabled to (it.notifyHour * 60 + it.notifyMinute) }
+                .distinctUntilChanged()
+                .collect { app.kvity.notify.ReminderWorker.schedule(this@KvityApp, settings.current) }
+        }
     }
 }
