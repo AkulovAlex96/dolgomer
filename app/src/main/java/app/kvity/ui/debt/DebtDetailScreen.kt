@@ -58,9 +58,11 @@ fun DebtDetailScreen(
     onEdit: () -> Unit = {},
     onRemind: () -> Unit = {},
     extra: @Composable () -> Unit = {},
+    paymentAttachments: @Composable (paymentId: String) -> Unit = {},
 ) {
     var paymentDialog by remember { mutableStateOf(false) }
     var deleteDialog by remember { mutableStateOf(false) }
+    var openedPayment by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -92,7 +94,7 @@ fun DebtDetailScreen(
         ) {
             Hero(view, onAddPayment = { paymentDialog = true }, onRemind = onRemind)
             ScheduleCard(view)
-            PaymentsCard(view, onDeletePayment)
+            PaymentsCard(view, onDeletePayment, onOpen = { openedPayment = it })
             extra()
         }
 
@@ -104,6 +106,15 @@ fun DebtDetailScreen(
                     onAddPayment(date, minor)
                     paymentDialog = false
                 },
+            )
+        }
+        openedPayment?.let { pid ->
+            val p = view.payments.firstOrNull { it.id == pid }
+            if (p == null) openedPayment = null else AlertDialog(
+                onDismissRequest = { openedPayment = null },
+                title = { Text("${formatDate(p.date)}: ${formatMoney(p.amountMinor, view.debt.currency)}") },
+                text = { paymentAttachments(pid) },
+                confirmButton = { TextButton(onClick = { openedPayment = null }) { Text("Закрыть") } },
             )
         }
         if (deleteDialog) {
@@ -235,7 +246,7 @@ private fun ScheduleCard(view: DebtView) {
 }
 
 @Composable
-private fun PaymentsCard(view: DebtView, onDelete: (String) -> Unit) {
+private fun PaymentsCard(view: DebtView, onDelete: (String) -> Unit, onOpen: (String) -> Unit) {
     SectionCard {
         Text("Платежи", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (view.payments.isEmpty()) {
@@ -243,7 +254,9 @@ private fun PaymentsCard(view: DebtView, onDelete: (String) -> Unit) {
         }
         view.payments.forEach { p ->
             LabelRow(
+                onClick = { onOpen(p.id) },
                 label = formatDate(p.date),
+                subtitle = "нажмите, чтобы приложить чек",
                 trailing = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(formatMoney(p.amountMinor, view.debt.currency), fontWeight = FontWeight.Bold)

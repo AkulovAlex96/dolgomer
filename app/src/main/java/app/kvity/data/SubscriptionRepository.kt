@@ -38,7 +38,7 @@ class SubscriptionInput(
     val note: String? = null,
 )
 
-class SubscriptionRepository(private val db: KvityDatabase) {
+class SubscriptionRepository(private val db: KvityDatabase, private val attachments: AttachmentRepository? = null) {
 
     companion object {
         /** На сколько вперёд строятся списания и доли. */
@@ -110,7 +110,10 @@ class SubscriptionRepository(private val db: KvityDatabase) {
         db.subscriptions().update(old.copy(state = state))
     }
 
-    suspend fun delete(id: String) = db.subscriptions().delete(id)
+    suspend fun delete(id: String) {
+        attachments?.deleteOwnedBy(listOf(id))
+        db.subscriptions().delete(id)
+    }
 
     suspend fun addShare(subscriptionId: String, input: NewShare): String {
         val p = person(input.counterpartyName)

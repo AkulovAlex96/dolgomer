@@ -1,6 +1,7 @@
 package app.kvity
 
 import android.app.Application
+import app.kvity.data.AttachmentRepository
 import app.kvity.data.DebtRepository
 import app.kvity.data.KvityDatabase
 import app.kvity.data.PeopleRepository
@@ -15,6 +16,8 @@ import kotlinx.coroutines.launch
 
 class KvityApp : Application() {
     lateinit var db: KvityDatabase
+        private set
+    lateinit var attachments: AttachmentRepository
         private set
     lateinit var debts: DebtRepository
         private set
@@ -34,8 +37,9 @@ class KvityApp : Application() {
     override fun onCreate() {
         super.onCreate()
         db = KvityDatabase.create(this)
-        debts = DebtRepository(db)
-        subscriptions = SubscriptionRepository(db)
+        attachments = AttachmentRepository(this, db)
+        debts = DebtRepository(db, attachments)
+        subscriptions = SubscriptionRepository(db, attachments)
         people = PeopleRepository(db)
         settings = SettingsStore(this)
         reference = ReferenceRepository(db)

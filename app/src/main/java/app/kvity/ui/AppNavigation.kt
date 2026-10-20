@@ -26,7 +26,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import app.kvity.KvityApp
+import app.kvity.data.AttachmentOwner
 import app.kvity.data.DebtView
+import app.kvity.ui.components.AttachmentsCard
 import app.kvity.data.EventKind
 import app.kvity.domain.InstallmentState
 import app.kvity.ui.calendar.CalendarScreen
@@ -209,6 +211,8 @@ fun AppNavigation() {
                     onDeleteDebt = { vm.deleteDebt(); nav.popBackStack() },
                     onEdit = { nav.navigate(Routes.editDebt(id)) },
                     onRemind = { view?.let { reminder = debtReminder(it) } },
+                    extra = { AttachmentsCard(app.attachments, AttachmentOwner.DEBT, id, title = "Вложения (расписка, документы)") },
+                    paymentAttachments = { pid -> AttachmentsCard(app.attachments, AttachmentOwner.PAYMENT, pid, title = "Чеки", framed = false) },
                 )
             }
 
@@ -270,6 +274,7 @@ fun AppNavigation() {
                         )
                     },
                     knownNames = knownNames,
+                    attachments = { sid -> AttachmentsCard(app.attachments, AttachmentOwner.SUBSCRIPTION, sid) },
                 )
             }
 

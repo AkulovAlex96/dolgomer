@@ -34,7 +34,7 @@ class NewDebt(
     val note: String? = null,
 )
 
-class DebtRepository(private val db: KvityDatabase) {
+class DebtRepository(private val db: KvityDatabase, private val attachments: AttachmentRepository? = null) {
 
     fun observeDebts(today: () -> LocalDate = LocalDate::now): Flow<List<DebtView>> =
         combine(
@@ -111,9 +111,16 @@ class DebtRepository(private val db: KvityDatabase) {
         )
     }
 
-    suspend fun deletePayment(id: String) = db.payments().delete(id)
+    suspend fun deletePayment(id: String) {
+        attachments?.deleteOwnedBy(listOf(id))
+        db.payments().delete(id)
+    }
 
-    suspend fun deleteDebt(id: String) = db.debts().delete(id)
+    suspend fun deleteDebt(id: String) {
+        val paymentIds = db.payments().all().filter { it.debtId == id }.map { it.id }
+        attachments?.deleteOwnedBy(listOf(id) + paymentIds)
+        db.debts().delete(id)
+    }
 
     private fun toView(debt: DebtEntity, person: CounterpartyEntity?, payments: List<PaymentEntity>, today: LocalDate) =
         DebtView(
