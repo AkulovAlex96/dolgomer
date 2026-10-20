@@ -1,6 +1,10 @@
+@file:UseSerializers(LocalDateAsStringSerializer::class)
+
 package app.kvity.data
 
 import androidx.room.Entity
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -15,6 +19,7 @@ import java.time.LocalDate
 
 // Идентификаторы строковые (UUID), чтобы позже можно было добавить синхронизацию без смены схемы.
 
+@Serializable
 @Entity(tableName = "counterparties")
 data class CounterpartyEntity(
     @PrimaryKey val id: String,
@@ -24,6 +29,7 @@ data class CounterpartyEntity(
     val createdAt: Long,
 )
 
+@Serializable
 @Entity(
     tableName = "debts",
     foreignKeys = [
@@ -71,6 +77,7 @@ data class DebtEntity(
     }
 }
 
+@Serializable
 @Entity(
     tableName = "payments",
     foreignKeys = [
@@ -103,6 +110,7 @@ enum class AttachmentOwner { DEBT, PAYMENT, SUBSCRIPTION }
  * [anchorDate] это известная дата списания, от неё считаются все следующие.
  * Если платит другой ([payer] = OTHER), [amountMinor] это моя доля, которую я возвращаю плательщику.
  */
+@Serializable
 @Entity(tableName = "subscriptions")
 data class SubscriptionEntity(
     @PrimaryKey val id: String,
@@ -123,6 +131,7 @@ data class SubscriptionEntity(
 )
 
 /** Доля участника общей подписки: сколько он возвращает мне за каждый период. */
+@Serializable
 @Entity(
     tableName = "subscription_shares",
     foreignKeys = [
@@ -143,6 +152,7 @@ data class SubscriptionShareEntity(
 )
 
 /** Отметка «участник оплатил свою долю за период, который начался в [periodDate]». */
+@Serializable
 @Entity(
     tableName = "share_payments",
     foreignKeys = [ForeignKey(SubscriptionShareEntity::class, ["id"], ["shareId"], onDelete = ForeignKey.CASCADE)],
@@ -158,6 +168,7 @@ data class SharePaymentEntity(
 
 // ---- Вложения, шаблоны, журнал напоминаний, курсы ----
 
+@Serializable
 @Entity(tableName = "attachments", indices = [Index("ownerId")])
 data class AttachmentEntity(
     @PrimaryKey val id: String,
@@ -171,6 +182,7 @@ data class AttachmentEntity(
     val createdAt: Long,
 )
 
+@Serializable
 @Entity(tableName = "reminder_templates")
 data class ReminderTemplateEntity(
     @PrimaryKey val id: String,
@@ -178,6 +190,7 @@ data class ReminderTemplateEntity(
     val text: String,
 )
 
+@Serializable
 @Entity(tableName = "reminder_log")
 data class ReminderLogEntity(
     @PrimaryKey val id: String,
@@ -189,6 +202,7 @@ data class ReminderLogEntity(
     val sentAt: Long,
 )
 
+@Serializable
 @Entity(tableName = "exchange_rates")
 data class ExchangeRateEntity(
     @PrimaryKey val id: String,

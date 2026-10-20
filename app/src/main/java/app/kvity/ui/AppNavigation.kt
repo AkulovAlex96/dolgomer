@@ -31,6 +31,7 @@ import app.kvity.data.DebtView
 import app.kvity.ui.components.AttachmentsCard
 import app.kvity.data.EventKind
 import app.kvity.domain.InstallmentState
+import app.kvity.ui.backup.BackupScreen
 import app.kvity.ui.calendar.CalendarScreen
 import app.kvity.ui.calendar.CalendarViewModel
 import app.kvity.ui.dashboard.DashboardScreen
@@ -65,6 +66,7 @@ object Routes {
     const val SETTINGS = "settings"
     const val RATES = "settings/rates"
     const val TEMPLATES = "settings/templates"
+    const val BACKUP = "backup"
     const val NEW_DEBT = "debt/new"
     const val DEBT = "debt/{id}"
     const val EDIT_DEBT = "debt/{id}/edit"
@@ -141,6 +143,9 @@ fun AppNavigation() {
                     onAddSubscription = { nav.navigate(Routes.NEW_SUB) },
                     onOpenSubscription = { nav.navigate(Routes.sub(it)) },
                     onOpenSettings = { nav.navigate(Routes.SETTINGS) },
+                    backupHint = (state.debts.isNotEmpty() || state.subs.isNotEmpty()) &&
+                        System.currentTimeMillis() - maxOf(settings.lastBackupMillis, settings.installedAtMillis) > 30L * 24 * 3600 * 1000,
+                    onOpenBackup = { nav.navigate(Routes.BACKUP) },
                 )
             }
 
@@ -322,6 +327,10 @@ fun AppNavigation() {
                 )
             }
 
+            composable(Routes.BACKUP) {
+                BackupScreen(manager = app.backup, lastBackupMillis = settings.lastBackupMillis, onBack = { nav.popBackStack() })
+            }
+
             composable(Routes.TEMPLATES) {
                 TemplatesScreen(
                     templates = templates,
@@ -351,6 +360,7 @@ private fun tabIcon(route: String) = when (route) {
 
 private fun moreItems(nav: NavHostController) = listOf(
     MoreItem("Настройки", "Тема, валюты, уведомления, безопасность") { nav.navigate(Routes.SETTINGS) },
+    MoreItem("Резервная копия", "Сохранить данные в файл или Google Drive, восстановить") { nav.navigate(Routes.BACKUP) },
     MoreItem("Курсы валют", "Для необязательного пересчёта итогов") { nav.navigate(Routes.RATES) },
     MoreItem("Шаблоны сообщений", "Напоминания должникам") { nav.navigate(Routes.TEMPLATES) },
 )

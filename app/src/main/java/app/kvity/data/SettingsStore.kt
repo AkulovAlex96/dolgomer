@@ -29,6 +29,7 @@ data class Settings(
     val secureScreen: Boolean = true,
     // данные
     val lastBackupMillis: Long = 0,
+    val installedAtMillis: Long = 0,
     val dueSoonDays: Int = 3,
 )
 
@@ -66,6 +67,7 @@ class SettingsStore(context: Context) {
             lockTimeoutSeconds = prefs.getInt("lockTimeout", d.lockTimeoutSeconds),
             secureScreen = prefs.getBoolean("secure", d.secureScreen),
             lastBackupMillis = prefs.getLong("lastBackup", d.lastBackupMillis),
+            installedAtMillis = prefs.getLong("installedAt", d.installedAtMillis),
             dueSoonDays = prefs.getInt("dueSoon", d.dueSoonDays),
         )
     }
@@ -89,6 +91,7 @@ class SettingsStore(context: Context) {
             .putInt("lockTimeout", s.lockTimeoutSeconds)
             .putBoolean("secure", s.secureScreen)
             .putLong("lastBackup", s.lastBackupMillis)
+            .putLong("installedAt", s.installedAtMillis)
             .putInt("dueSoon", s.dueSoonDays)
             .apply()
     }

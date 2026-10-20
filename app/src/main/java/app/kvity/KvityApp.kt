@@ -2,6 +2,7 @@ package app.kvity
 
 import android.app.Application
 import app.kvity.data.AttachmentRepository
+import app.kvity.data.BackupManager
 import app.kvity.data.DebtRepository
 import app.kvity.data.KvityDatabase
 import app.kvity.data.PeopleRepository
@@ -18,6 +19,8 @@ class KvityApp : Application() {
     lateinit var db: KvityDatabase
         private set
     lateinit var attachments: AttachmentRepository
+        private set
+    lateinit var backup: BackupManager
         private set
     lateinit var debts: DebtRepository
         private set
@@ -43,6 +46,8 @@ class KvityApp : Application() {
         people = PeopleRepository(db)
         settings = SettingsStore(this)
         reference = ReferenceRepository(db)
+        backup = BackupManager(this, db, settings)
+        if (settings.current.installedAtMillis == 0L) settings.update { it.copy(installedAtMillis = System.currentTimeMillis()) }
         pin = PinStore(this)
         lock = LockManager(initiallyLocked = settings.current.pinEnabled && pin.isSet)
         val scope = kotlinx.coroutines.MainScope()

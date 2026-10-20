@@ -51,6 +51,8 @@ fun DashboardScreen(
     onAddSubscription: () -> Unit,
     onOpenSubscription: (String) -> Unit,
     onOpenSettings: () -> Unit,
+    backupHint: Boolean = false,
+    onOpenBackup: () -> Unit = {},
 ) {
     var tab by remember { mutableIntStateOf(0) }
 
@@ -79,6 +81,14 @@ fun DashboardScreen(
                 ) {
                     Text("Квиты", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
                     androidx.compose.material3.TextButton(onClick = onOpenSettings) { Text("Настройки") }
+                }
+            }
+            if (backupHint) {
+                item {
+                    SectionCard(modifier = Modifier.clickable(onClick = onOpenBackup)) {
+                        Text("Резервная копия не создавалась больше 30 дней", fontWeight = FontWeight.SemiBold)
+                        Text("Нажмите, чтобы сохранить данные", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
             item { Tabs(selected = tab, onSelect = { tab = it }) }
