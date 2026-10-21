@@ -369,7 +369,7 @@ private fun moreItems(nav: NavHostController) = listOf(
     MoreItem("Настройки", "Тема, валюты, уведомления, безопасность") { nav.navigate(Routes.SETTINGS) },
     MoreItem("Резервная копия", "Сохранить данные в файл или Google Drive, восстановить") { nav.navigate(Routes.BACKUP) },
     MoreItem("Экспорт", "Долги, платежи и подписки в Excel или CSV") { nav.navigate(Routes.EXPORT) },
-    MoreItem("Импорт", "Загрузить долги из CSV-файла") { nav.navigate(Routes.IMPORT) },
+    MoreItem("Импорт", "Загрузить данные из Excel, CSV или zip") { nav.navigate(Routes.IMPORT) },
     MoreItem("Курсы валют", "Для необязательного пересчёта итогов") { nav.navigate(Routes.RATES) },
     MoreItem("Шаблоны сообщений", "Напоминания должникам") { nav.navigate(Routes.TEMPLATES) },
 )

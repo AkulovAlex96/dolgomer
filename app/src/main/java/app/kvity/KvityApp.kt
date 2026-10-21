@@ -4,6 +4,7 @@ import android.app.Application
 import app.kvity.data.AttachmentRepository
 import app.kvity.data.BackupManager
 import app.kvity.data.DebtRepository
+import app.kvity.data.ImportApplier
 import app.kvity.data.KvityDatabase
 import app.kvity.data.PeopleRepository
 import app.kvity.data.ReferenceRepository
@@ -21,6 +22,8 @@ class KvityApp : Application() {
     lateinit var attachments: AttachmentRepository
         private set
     lateinit var backup: BackupManager
+        private set
+    lateinit var importer: ImportApplier
         private set
     lateinit var debts: DebtRepository
         private set
@@ -44,6 +47,7 @@ class KvityApp : Application() {
         debts = DebtRepository(db, attachments)
         subscriptions = SubscriptionRepository(db, attachments)
         people = PeopleRepository(db)
+        importer = ImportApplier(db, debts, subscriptions)
         settings = SettingsStore(this)
         reference = ReferenceRepository(db)
         backup = BackupManager(this, db, settings)

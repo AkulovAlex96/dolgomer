@@ -19,28 +19,31 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import app.kvity.KvityApp
+import app.kvity.data.ImportReport
+import app.kvity.domain.Direction
 import app.kvity.exchange.Csv
 import app.kvity.exchange.DebtImport
-import app.kvity.exchange.ImportParseResult
+import app.kvity.exchange.ImportBatch
+import app.kvity.exchange.Importer
 import app.kvity.ui.components.FormScreen
 import app.kvity.ui.components.LabelRow
 import app.kvity.ui.components.SectionCard
 import app.kvity.ui.formatDate
 import app.kvity.ui.formatMoney
-import app.kvity.domain.Direction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private const val MAX_BYTES = 5 * 1024 * 1024
+private const val MAX_BYTES = 10 * 1024 * 1024
 
 @Composable
 fun ImportScreen(app: KvityApp, onBack: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var result by remember { mutableStateOf<ImportParseResult?>(null) }
+    var batch by remember { mutableStateOf<ImportBatch?>(null) }
     var fileName by remember { mutableStateOf<String?>(null) }
-    var message by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var report by remember { mutableStateOf<ImportReport?>(null) }
     var busy by remember { mutableStateOf(false) }
 
     val saveTemplate = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
@@ -57,56 +60,78 @@ fun ImportScreen(app: KvityApp, onBack: () -> Unit) {
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
-            message = null
-            val text = withContext(Dispatchers.IO) {
+            error = null
+            report = null
+            val bytes = withContext(Dispatchers.IO) {
                 runCatching {
-                    context.contentResolver.openInputStream(uri)!!.use { input ->
-                        val bytes = input.readNBytes(MAX_BYTES + 1)
-                        if (bytes.size > MAX_BYTES) null else String(bytes, Charsets.UTF_8)
-                    }
+                    context.contentResolver.openInputStream(uri)!!.use { it.readNBytes(MAX_BYTES + 1) }.takeIf { it.size <= MAX_BYTES }
                 }.getOrNull()
             }
-            if (text == null) {
-                message = "Не удалось прочитать файл или он больше 5 МБ"
-                result = null
+            if (bytes == null) {
+                error = "Не удалось прочитать файл или он больше 10 МБ"
+                batch = null
             } else {
                 fileName = uri.lastPathSegment?.substringAfterLast('/')
-                result = DebtImport.parse(text)
+                batch = withContext(Dispatchers.Default) { Importer.parse(bytes) }
             }
         }
     }
 
-    FormScreen(title = "Импорт долгов", onBack = onBack) {
+    FormScreen(title = "Импорт", onBack = onBack) {
         SectionCard {
             Text(
-                "Загрузите CSV-файл с долгами. Обязательные колонки: Контрагент, Направление («мне должны» или «я должен»), Валюта (RUB, KZT, USD…), Сумма (можно «50к»). " +
-                    "Необязательные: Выплачено, Дата выдачи, Срок, Комментарий. Файл, выгруженный из этого приложения, тоже подходит.",
+                "Загрузите файл Excel (.xlsx), CSV или архив .zip с CSV. Подойдёт и файл, выгруженный из этого приложения: " +
+                    "импортируются долги, платежи, подписки, участники подписок и контрагенты. Таблицы определяются по заголовкам колонок.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Text(
+                "Для долгов обязательны колонки Контрагент, Направление («мне должны» или «я должен»), Валюта (RUB, KZT, USD…), Сумма (можно «50к»). " +
+                    "Дубликаты пропускаются.",
+                fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
-        OutlinedButton(onClick = { saveTemplate.launch("kvity-import-template.csv") }, modifier = Modifier.fillMaxWidth()) { Text("Скачать шаблон") }
-        Button(enabled = !busy, onClick = { pick.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth()) { Text("Выбрать файл CSV") }
-        message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        OutlinedButton(onClick = { saveTemplate.launch("kvity-import-template.csv") }, modifier = Modifier.fillMaxWidth()) { Text("Скачать шаблон долгов") }
+        Button(enabled = !busy, onClick = { pick.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth()) { Text("Выбрать файл") }
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
-        result?.let { r ->
+        report?.let { r ->
+            SectionCard {
+                Text("Готово: добавлено ${r.added}", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    listOf("долгов" to r.debts, "платежей" to r.payments, "подписок" to r.subscriptions, "участников подписок" to r.shares, "контрагентов" to r.people)
+                        .filter { it.second > 0 }.joinToString(", ") { "${it.first}: ${it.second}" }.ifEmpty { "ничего нового" },
+                )
+                if (r.skippedDuplicates > 0) Text("Пропущено дубликатов: ${r.skippedDuplicates}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                r.problems.forEach { Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.error) }
+            }
+        }
+
+        batch?.let { b ->
             SectionCard {
                 Text(fileName ?: "Файл", fontWeight = FontWeight.SemiBold)
-                Text("Готово к добавлению: ${r.rows.size}", color = MaterialTheme.colorScheme.primary)
-                if (r.errors.isNotEmpty()) Text("Строк с ошибками: ${r.errors.size}", color = MaterialTheme.colorScheme.error)
+                Text(
+                    listOf("долгов" to b.debts.size, "платежей" to b.payments.size, "подписок" to b.subscriptions.size,
+                        "участников подписок" to b.shares.size, "контрагентов" to b.people.size)
+                        .filter { it.second > 0 }.joinToString(", ") { "${it.first}: ${it.second}" }.ifEmpty { "ничего не найдено" },
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                if (b.errors.isNotEmpty()) Text("Строк с ошибками: ${b.errors.size}", color = MaterialTheme.colorScheme.error)
+                if (b.ignoredSheets.isNotEmpty()) Text("Пропущены листы без известных заголовков: ${b.ignoredSheets.joinToString()}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (r.errors.isNotEmpty()) {
+            if (b.errors.isNotEmpty()) {
                 SectionCard {
                     Text("Ошибки (эти строки не будут добавлены)", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    r.errors.take(20).forEach { e ->
-                        Text(if (e.line > 0) "Строка ${e.line}: ${e.message}" else e.message, fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                    b.errors.take(20).forEach { e ->
+                        val where = listOfNotNull(e.sheet, if (e.line > 0) "строка ${e.line}" else null).joinToString(", ")
+                        Text((if (where.isNotEmpty()) "$where: " else "") + e.message, fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
                     }
-                    if (r.errors.size > 20) Text("…и ещё ${r.errors.size - 20}", fontSize = 12.sp)
+                    if (b.errors.size > 20) Text("…и ещё ${b.errors.size - 20}", fontSize = 12.sp)
                 }
             }
-            if (r.rows.isNotEmpty()) {
+            if (b.debts.isNotEmpty()) {
                 SectionCard {
-                    Text("Предпросмотр", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    r.rows.take(8).forEach { row ->
+                    Text("Долги (предпросмотр)", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    b.debts.take(6).forEach { row ->
                         LabelRow(
                             label = row.counterparty,
                             subtitle = (if (row.direction == Direction.OWED_TO_ME) "мне должны" else "я должен") +
@@ -114,23 +139,25 @@ fun ImportScreen(app: KvityApp, onBack: () -> Unit) {
                             trailing = { Text(formatMoney(row.principalMinor, row.currency), fontWeight = FontWeight.Bold) },
                         )
                     }
-                    if (r.rows.size > 8) Text("…и ещё ${r.rows.size - 8}", fontSize = 12.sp)
+                    if (b.debts.size > 6) Text("…и ещё ${b.debts.size - 6}", fontSize = 12.sp)
                 }
+            }
+            if (b.total > 0) {
                 Button(
                     enabled = !busy, modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         scope.launch {
                             busy = true
-                            val summary = app.debts.importDebts(r.rows)
-                            message = "Добавлено: ${summary.added}" +
-                                if (summary.skippedDuplicates > 0) ", пропущено дубликатов: ${summary.skippedDuplicates}" else ""
-                            result = null
+                            report = runCatching { app.importer.apply(b) }.getOrElse {
+                                error = "Не удалось импортировать: ${it.message}"
+                                null
+                            }
+                            if (report != null) batch = null
                             busy = false
                         }
                     },
-                ) { Text("Добавить ${r.rows.size}") }
+                ) { Text("Импортировать ${b.total}") }
             }
         }
-        if (result == null) message?.takeIf { it.startsWith("Добавлено") }?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
     }
 }

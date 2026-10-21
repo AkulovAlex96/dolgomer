@@ -19,7 +19,7 @@ data class ImportRow(
     val note: String?,
 )
 
-data class ImportError(val line: Int, val message: String)
+data class ImportError(val line: Int, val message: String, val sheet: String? = null)
 
 data class ImportParseResult(val rows: List<ImportRow>, val errors: List<ImportError>)
 
@@ -39,12 +39,16 @@ object DebtImport {
         ),
     )
 
-    fun parse(text: String, today: LocalDate = LocalDate.now()): ImportParseResult {
-        val table = Csv.parse(text)
-        if (table.isEmpty()) return ImportParseResult(emptyList(), listOf(ImportError(0, "Файл пуст")))
+    fun parse(text: String, today: LocalDate = LocalDate.now()): ImportParseResult =
+        parseRows(Csv.parse(text), today, sheet = null, requireHeader = false)
+
+    /** Разбор таблицы долгов. Без заголовка колонки берутся по порядку шаблона (только если [requireHeader] = false). */
+    fun parseRows(table: List<List<String>>, today: LocalDate, sheet: String?, requireHeader: Boolean): ImportParseResult {
+        if (table.isEmpty()) return ImportParseResult(emptyList(), listOf(ImportError(0, "Файл пуст", sheet)))
 
         val firstNormalized = table[0].map { it.trim().lowercase() }
         val hasHeader = DebtColumns.COUNTERPARTY.lowercase() in firstNormalized
+        if (!hasHeader && requireHeader) return ImportParseResult(emptyList(), listOf(ImportError(1, "Нет строки заголовков", sheet)))
         val columns: Map<String, Int> = if (hasHeader) {
             DebtColumns.IMPORTABLE.mapNotNull { name ->
                 firstNormalized.indexOf(name.lowercase()).takeIf { it >= 0 }?.let { name to it }
@@ -55,7 +59,7 @@ object DebtImport {
         val missing = listOf(DebtColumns.COUNTERPARTY, DebtColumns.DIRECTION, DebtColumns.CURRENCY, DebtColumns.AMOUNT)
             .filter { it !in columns }
         if (missing.isNotEmpty()) {
-            return ImportParseResult(emptyList(), listOf(ImportError(1, "Нет обязательных колонок: ${missing.joinToString(", ")}")))
+            return ImportParseResult(emptyList(), listOf(ImportError(1, "Нет обязательных колонок: ${missing.joinToString(", ")}", sheet)))
         }
 
         val rows = mutableListOf<ImportRow>()
@@ -93,7 +97,7 @@ object DebtImport {
             if (dueText.isNotEmpty() && dueDate == null) problems += "некорректный срок «$dueText»"
 
             if (problems.isNotEmpty()) {
-                errors += ImportError(line, problems.joinToString("; "))
+                errors += ImportError(line, problems.joinToString("; "), sheet)
             } else {
                 rows += ImportRow(line, name, direction!!, currency!!, principal!!, paid!!, startDate!!, dueDate, get(DebtColumns.NOTE).ifEmpty { null })
             }
@@ -130,6 +134,10 @@ object DebtImport {
 
     fun parseDate(text: String): LocalDate? {
         val t = text.trim()
+        // Excel хранит даты числом дней от 30.12.1899
+        t.replace(',', '.').toDoubleOrNull()?.takeIf { it in 20_000.0..80_000.0 }?.let {
+            return LocalDate.of(1899, 12, 30).plusDays(it.toLong())
+        }
         for (f in dateFormats) {
             try { return LocalDate.parse(t, f) } catch (_: DateTimeParseException) { }
         }
