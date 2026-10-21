@@ -23,8 +23,10 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         if (android.os.Build.VERSION.SDK_INT >= 33 && !Notifier.canPost(this)) {
-            registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
-                .launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            // Классический запрос: через ActivityResult он падает в FragmentActivity (код запроса шире 16 бит)
+            androidx.core.app.ActivityCompat.requestPermissions(
+                this, arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1001,
+            )
         }
         setContent {
             val settings by app.settings.settings.collectAsStateWithLifecycle()

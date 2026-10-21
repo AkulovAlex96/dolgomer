@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Монета с галочкой: «мы квиты». Основное содержимое помещается в безопасную зону 66x66 по центру. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- мягкая тень под монетой -->
+    <path
+        android:fillColor="#33101B63"
+        android:pathData="M54,60m-27,0a27,27 0,1 1,54 0a27,27 0,1 1,-54 0" />
+
+    <!-- монета -->
+    <path android:pathData="M54,54m-27,0a27,27 0,1 1,54 0a27,27 0,1 1,-54 0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="34"
+                android:startY="30"
+                android:endX="74"
+                android:endY="80"
+                android:type="linear">
+                <item android:color="#FFFFFFFF" android:offset="0.0" />
+                <item android:color="#FFE3E9FF" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- внутренний ободок монеты -->
+    <path
+        android:pathData="M54,54m-21,0a21,21 0,1 1,42 0a21,21 0,1 1,-42 0"
+        android:strokeWidth="1.6"
+        android:strokeColor="#334A67E8"
+        android:fillColor="#00000000" />
+
+    <!-- галочка -->
+    <path
+        android:pathData="M42.5,54.5 L51.5,63.5 L67,44.5"
+        android:strokeWidth="7.5"
+        android:strokeColor="#FF3F58D6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+
+    <!-- зелёный акцент: «деньги вернулись» -->
+    <path
+        android:fillColor="#FF4CC790"
+        android:pathData="M74,34m-6.5,0a6.5,6.5 0,1 1,13 0a6.5,6.5 0,1 1,-13 0" />
+    <path
+        android:pathData="M71,34 L73.3,36.3 L77.2,31.7"
+        android:strokeWidth="1.9"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+</vector>
