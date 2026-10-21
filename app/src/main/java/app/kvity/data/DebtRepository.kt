@@ -34,6 +34,8 @@ class NewDebt(
     val note: String? = null,
 )
 
+data class ImportSummary(val added: Int, val skippedDuplicates: Int)
+
 class DebtRepository(private val db: KvityDatabase, private val attachments: AttachmentRepository? = null) {
 
     fun observeDebts(today: () -> LocalDate = LocalDate::now): Flow<List<DebtView>> =
@@ -101,6 +103,31 @@ class DebtRepository(private val db: KvityDatabase, private val attachments: Att
                 firstDate = input.firstDate, note = input.note,
             ),
         )
+    }
+
+    /** Добавляет долги из импорта. Полные дубликаты (тот же человек, направление, валюта, сумма и дата выдачи) пропускаются. */
+    suspend fun importDebts(rows: List<app.kvity.exchange.ImportRow>): ImportSummary {
+        val people = db.counterparties().all().associateBy { it.id }
+        val existing = db.debts().all().map {
+            listOf(people[it.counterpartyId]?.name?.lowercase().orEmpty(), it.direction, it.currency, it.principalMinor, it.startDate)
+        }.toMutableSet()
+        var added = 0
+        var skipped = 0
+        for (r in rows) {
+            val key = listOf(r.counterparty.trim().lowercase(), r.direction, r.currency, r.principalMinor, r.startDate)
+            if (!existing.add(key)) { skipped++; continue }
+            val id = addDebt(
+                NewDebt(
+                    counterpartyName = r.counterparty, direction = r.direction, principalMinor = r.principalMinor,
+                    currency = r.currency, startDate = r.startDate,
+                    termType = if (r.dueDate != null) TermType.ONE_TIME else TermType.NONE,
+                    dueDate = r.dueDate, note = r.note,
+                ),
+            )
+            if (r.paidMinor > 0) addPayment(id, LocalDate.now(), r.paidMinor, "Импорт")
+            added++
+        }
+        return ImportSummary(added, skipped)
     }
 
     suspend fun setArchived(id: String, archived: Boolean) = db.debts().setArchived(id, archived)

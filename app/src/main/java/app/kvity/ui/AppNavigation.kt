@@ -33,6 +33,8 @@ import app.kvity.data.EventKind
 import app.kvity.domain.InstallmentState
 import app.kvity.ui.backup.BackupScreen
 import app.kvity.ui.calendar.CalendarScreen
+import app.kvity.ui.exchange.ExportScreen
+import app.kvity.ui.exchange.ImportScreen
 import app.kvity.ui.calendar.CalendarViewModel
 import app.kvity.ui.dashboard.DashboardScreen
 import app.kvity.ui.dashboard.DashboardViewModel
@@ -67,6 +69,8 @@ object Routes {
     const val RATES = "settings/rates"
     const val TEMPLATES = "settings/templates"
     const val BACKUP = "backup"
+    const val EXPORT = "export"
+    const val IMPORT = "import"
     const val NEW_DEBT = "debt/new"
     const val DEBT = "debt/{id}"
     const val EDIT_DEBT = "debt/{id}/edit"
@@ -327,6 +331,9 @@ fun AppNavigation() {
                 )
             }
 
+            composable(Routes.EXPORT) { ExportScreen(app, onBack = { nav.popBackStack() }) }
+            composable(Routes.IMPORT) { ImportScreen(app, onBack = { nav.popBackStack() }) }
+
             composable(Routes.BACKUP) {
                 BackupScreen(manager = app.backup, lastBackupMillis = settings.lastBackupMillis, onBack = { nav.popBackStack() })
             }
@@ -361,6 +368,8 @@ private fun tabIcon(route: String) = when (route) {
 private fun moreItems(nav: NavHostController) = listOf(
     MoreItem("Настройки", "Тема, валюты, уведомления, безопасность") { nav.navigate(Routes.SETTINGS) },
     MoreItem("Резервная копия", "Сохранить данные в файл или Google Drive, восстановить") { nav.navigate(Routes.BACKUP) },
+    MoreItem("Экспорт", "Долги, платежи и подписки в Excel или CSV") { nav.navigate(Routes.EXPORT) },
+    MoreItem("Импорт", "Загрузить долги из CSV-файла") { nav.navigate(Routes.IMPORT) },
     MoreItem("Курсы валют", "Для необязательного пересчёта итогов") { nav.navigate(Routes.RATES) },
     MoreItem("Шаблоны сообщений", "Напоминания должникам") { nav.navigate(Routes.TEMPLATES) },
 )
