@@ -41,7 +41,7 @@ fun PinPad(
     var pin by remember(resetKey) { mutableStateOf("") }
 
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         Text(
             message ?: " ", color = if (message != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 6.dp),
@@ -50,7 +50,7 @@ fun PinPad(
             repeat(length) { i ->
                 Box(
                     Modifier.size(14.dp).background(
-                        if (i < pin.length) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        if (i < pin.length) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
                         CircleShape,
                     ),
                 )
@@ -63,7 +63,7 @@ fun PinPad(
                     row.forEach { k ->
                         Box(
                             Modifier.size(68.dp)
-                                .background(if (k.isEmpty()) Color0 else MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                                .background(if (k.isEmpty()) Color0 else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f), CircleShape)
                                 .clickable(enabled = k.isNotEmpty()) {
                                     if (k == "⌫") pin = pin.dropLast(1)
                                     else if (pin.length < length) {
@@ -72,7 +72,12 @@ fun PinPad(
                                     }
                                 },
                             contentAlignment = Alignment.Center,
-                        ) { Text(k, fontSize = 24.sp, fontWeight = FontWeight.SemiBold) }
+                        ) {
+                            Text(
+                                k, fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
                     }
                 }
             }
