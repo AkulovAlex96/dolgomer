@@ -70,7 +70,8 @@ fun DashboardScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(14.dp),
+            // запас снизу, чтобы кнопка «+» не закрывала последние строки
+            contentPadding = PaddingValues(start = 14.dp, top = 14.dp, end = 14.dp, bottom = 92.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             item {
