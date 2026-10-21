@@ -19,9 +19,10 @@ class PeopleRepository(private val db: KvityDatabase) {
         db.counterparties().observeAll(),
         db.debts().observeAll(),
         db.payments().observeAll(),
-        db.shares().observeAll(),
+        combine(db.shares().observeAll(), db.subscriptions().observeAll()) { sh, sb -> sh to sb },
         db.sharePayments().observeAll(),
-    ) { people, debts, payments, shares, sharePayments ->
+    ) { people, debts, payments, sharesAndSubs, _ ->
+        val (shares, subscriptions) = sharesAndSubs
         val now = today()
         val paidByDebt = payments.groupBy { it.debtId }.mapValues { (_, v) -> v.sumOf { it.amountMinor } }
         people.map { p ->
@@ -32,8 +33,10 @@ class PeopleRepository(private val db: KvityDatabase) {
                 val signed = if (d.direction == Direction.OWED_TO_ME) rest else -rest
                 if (rest > 0) balance.merge(d.currency, signed, Long::plus)
             }
-            val myShares = shares.filter { it.counterpartyId == p.id && it.active }
-            PersonView(p, balance.filterValues { it != 0L }, myDebts.size, myShares.size)
+            // подписки человека: он участник (возвращает долю) или он плательщик
+            val subIds = shares.filter { it.counterpartyId == p.id && it.active }.map { it.subscriptionId }.toSet() +
+                subscriptions.filter { it.payerCounterpartyId == p.id }.map { it.id }
+            PersonView(p, balance.filterValues { it != 0L }, myDebts.size, subIds.size)
         }
     }
 
