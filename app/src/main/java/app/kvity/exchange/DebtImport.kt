@@ -84,7 +84,7 @@ object DebtImport {
             if (principal == null) problems += "некорректная сумма «${get(DebtColumns.AMOUNT)}»"
 
             val paidText = get(DebtColumns.PAID)
-            val paid = if (paidText.isEmpty()) 0L else parseAmount(paidText, digits)
+            val paid = if (paidText.isEmpty() || isZero(paidText)) 0L else parseAmount(paidText, digits)
             if (paid == null) problems += "некорректная сумма выплат «$paidText»"
             else if (principal != null && paid > principal) problems += "выплачено больше суммы долга"
 
@@ -126,6 +126,11 @@ object DebtImport {
             else -> t.uppercase().takeIf { it.length == 3 && it.all { c -> c in 'A'..'Z' } }
         }
     }
+
+    /** «0», «0,00», «0 ₽»: выгрузка записывает отсутствие выплат нулём. */
+    private fun isZero(text: String): Boolean =
+        text.trim().trimEnd('₽', '₸', '$', '€').replace(" ", "").replace(" ", "").replace(',', '.')
+            .toBigDecimalOrNull()?.signum() == 0
 
     private fun parseAmount(text: String, digits: Int): Long? {
         val cleaned = text.trim().trimEnd('₽', '₸', '$', '€').trim()

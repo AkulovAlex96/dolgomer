@@ -102,6 +102,13 @@ class DebtImportTest {
         assertEquals("заём", r.note)
     }
 
+    @Test fun `zero paid amount from export is accepted`() {
+        val csv = "Контрагент;Направление;Валюта;Сумма;Выплачено\nИван;мне должны;RUB;100;0\nМария;я должен;RUB;100;0,00\nПётр;я должен;RUB;100;0 ₽"
+        val r = DebtImport.parse(csv, today)
+        assertTrue(r.errors.isEmpty())
+        assertEquals(listOf(0L, 0L, 0L), r.rows.map { it.paidMinor })
+    }
+
     @Test fun `positional columns without header`() {
         val r = DebtImport.parse("Иван;я должен;KZT;5000", today)
         assertEquals(1, r.rows.size)
