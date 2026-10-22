@@ -45,6 +45,19 @@ class ReferenceRepository(private val db: KvityDatabase) {
 
 /** Подстановка переменных шаблона. */
 object TemplateText {
+    private val overdueSentence = Regex("""\s*[^.!?]*\{дней_просрочки\}[^.!?]*[.!?]?""")
+    private val otherPlaceholder = Regex("""\{(?!дней_просрочки\})""")
+
+    /**
+     * Если долг не просрочен, предложение вида «Просрочка {дней_просрочки} дн.» убирается целиком (иначе выйдет «Просрочка 0 дн.»).
+     * Предложения, где есть и другие переменные, и шаблон, который после этого опустел бы, остаются как есть.
+     */
+    internal fun withoutOverdueSentence(template: String, overdueDays: Long): String {
+        if (overdueDays > 0) return template
+        val cut = template.replace(overdueSentence) { if (otherPlaceholder.containsMatchIn(it.value)) it.value else "" }.trim()
+        return cut.ifBlank { template }
+    }
+
     fun render(
         template: String,
         name: String,
@@ -52,7 +65,7 @@ object TemplateText {
         remaining: String,
         due: String,
         overdueDays: Long,
-    ): String = template
+    ): String = withoutOverdueSentence(template, overdueDays)
         .replace("{имя}", name)
         .replace("{сумма}", amount)
         .replace("{остаток}", remaining)

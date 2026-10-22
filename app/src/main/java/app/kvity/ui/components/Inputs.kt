@@ -50,8 +50,9 @@ fun <T> ChipRow(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Un
             FilterChip(
                 selected = selected == value,
                 onClick = { onSelect(value) },
-                label = { Text(title) },
-                modifier = Modifier.weight(1f),
+                label = { Text(title, maxLines = 1) },
+                // ширина пропорциональна подписи: «Мне должны» в узкой трети строки переносилась на вторую строку
+                modifier = Modifier.weight(title.length.coerceAtLeast(6).toFloat()),
             )
         }
     }

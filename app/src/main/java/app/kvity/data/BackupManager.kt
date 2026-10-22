@@ -8,6 +8,9 @@ import java.io.OutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/** Что лежит в копии: показывается перед заменой данных. */
+data class BackupSummary(val createdAt: Long, val debts: Int, val payments: Int, val subscriptions: Int, val counterparties: Int)
+
 class BackupManager(
     private val context: Context,
     private val db: KvityDatabase,
@@ -35,6 +38,17 @@ class BackupManager(
         val files = data.attachments.map { it.path to File(attachmentsDir, it.path) }
         BackupCodec.write(out, data, files, password)
         settings.update { it.copy(lastBackupMillis = System.currentTimeMillis()) }
+    }
+
+    /** Проверяет файл и пароль, ничего не меняя. Бросает [BackupFormatException] или [WrongPasswordException]. */
+    suspend fun inspect(input: InputStream, password: String?): BackupSummary = withContext(Dispatchers.IO) {
+        val temp = File(context.cacheDir, "inspect")
+        try {
+            val d = BackupCodec.read(input, password, temp).data
+            BackupSummary(d.createdAt, d.debts.size, d.payments.size, d.subscriptions.size, d.counterparties.size)
+        } finally {
+            temp.deleteRecursively()
+        }
     }
 
     /** Заменяет все данные содержимым копии. Перед заменой сохраняет текущее состояние в каталог приложения. */

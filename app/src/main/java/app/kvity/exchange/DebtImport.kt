@@ -3,6 +3,7 @@ package app.kvity.exchange
 import app.kvity.domain.AmountParser
 import app.kvity.domain.Currencies
 import app.kvity.domain.Direction
+import app.kvity.domain.Limits
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
@@ -76,6 +77,7 @@ object DebtImport {
             val currency = parseCurrency(get(DebtColumns.CURRENCY))
             val problems = mutableListOf<String>()
             if (name.isEmpty()) problems += "не указан контрагент"
+            else if (name.length > Limits.NAME) problems += "слишком длинное имя (максимум ${Limits.NAME} символов)"
             if (direction == null) problems += "направление должно быть «мне должны» или «я должен»"
             if (currency == null) problems += "неизвестная валюта «${get(DebtColumns.CURRENCY)}»"
 
@@ -115,6 +117,10 @@ object DebtImport {
         }
     }
 
+    /** Настоящая валюта ISO 4217: «XXX» (нет валюты), «XTS» (тест) и выдуманные коды не проходят. */
+    private fun isRealCurrency(code: String): Boolean =
+        runCatching { java.util.Currency.getInstance(code).defaultFractionDigits >= 0 }.getOrDefault(false)
+
     fun parseCurrency(text: String): String? {
         val t = text.trim()
         if (t.isEmpty()) return null
@@ -123,7 +129,7 @@ object DebtImport {
             "₸", "тг", "тенге" -> "KZT"
             "$" -> "USD"
             "€" -> "EUR"
-            else -> t.uppercase().takeIf { it.length == 3 && it.all { c -> c in 'A'..'Z' } }
+            else -> t.uppercase().takeIf { it.length == 3 && it.all { c -> c in 'A'..'Z' } && isRealCurrency(it) }
         }
     }
 

@@ -31,6 +31,8 @@ import app.kvity.data.PersonView
 import app.kvity.data.SubscriptionView
 import app.kvity.domain.DebtStatus
 import app.kvity.domain.Direction
+import app.kvity.domain.Limits
+import app.kvity.ui.components.ConfirmDialog
 import app.kvity.ui.components.FormScreen
 import app.kvity.ui.components.LabelRow
 import app.kvity.ui.components.SectionCard
@@ -50,7 +52,7 @@ fun PeopleScreen(people: List<PersonView>, onOpen: (String) -> Unit) {
             item { Text("Люди", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp)) }
             if (people.isEmpty()) {
                 item {
-                    SectionCard { Text("Здесь появятся люди, с которыми есть долги или общие подписки.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    SectionCard { Text("Здесь появятся люди, с которыми есть долги или общие регулярные платежи.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
             }
             items(people, key = { it.person.id }) { p ->
@@ -86,6 +88,8 @@ fun PersonDetailScreen(
     onDelete: () -> Unit,
     onOpenDebt: (String) -> Unit,
     onOpenSubscription: (String) -> Unit,
+    /** Имена остальных контрагентов в нижнем регистре: два контрагента с одним именем запутали бы импорт, где люди ищутся по имени. */
+    otherNames: Set<String> = emptySet(),
 ) {
     val c = MaterialTheme.kvity
     FormScreen(title = person?.person?.name ?: "Контрагент", onBack = onBack) {
@@ -94,13 +98,26 @@ fun PersonDetailScreen(
         var phone by rememberSaveable(person.person.id) { mutableStateOf(person.person.phone ?: "") }
         var note by rememberSaveable(person.person.id) { mutableStateOf(person.person.note ?: "") }
         var error by rememberSaveable { mutableStateOf(false) }
+        var confirmDelete by rememberSaveable { mutableStateOf(false) }
+        if (confirmDelete) {
+            ConfirmDialog(
+                title = "Удалить контрагента?",
+                text = "«${person.person.name}» будет удалён.",
+                onConfirm = { confirmDelete = false; onDelete() },
+                onDismiss = { confirmDelete = false },
+            )
+        }
 
         SectionCard {
-            OutlinedTextField(name, { name = it }, label = { Text("Имя") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(phone, { phone = it }, label = { Text("Телефон") }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
-            OutlinedTextField(note, { note = it }, label = { Text("Заметка") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+            val duplicate = name.trim().lowercase() in otherNames
+            OutlinedTextField(
+                name, { name = it.take(Limits.NAME) }, label = { Text("Имя") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                isError = duplicate, supportingText = if (duplicate) ({ Text("Контрагент с таким именем уже есть") }) else null,
+            )
+            OutlinedTextField(phone, { phone = it.take(Limits.PHONE) }, label = { Text("Телефон") }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+            OutlinedTextField(note, { note = it.take(Limits.NOTE) }, label = { Text("Заметка") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
             Button(
-                enabled = name.isNotBlank(), modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                enabled = name.isNotBlank() && name.trim().lowercase() !in otherNames, modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 onClick = { onSave(name, phone.ifBlank { null }, note.ifBlank { null }) },
             ) { Text("Сохранить") }
         }
@@ -138,7 +155,7 @@ fun PersonDetailScreen(
 
         if (subs.isNotEmpty()) {
             SectionCard {
-                Text("Подписки", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Регулярные платежи", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 subs.forEach { v ->
                     val unpaid = v.shares.filter { it.share.counterpartyId == person.person.id }
                         .sumOf { sh -> sh.dues.count { !it.paid && it.periodDate.isBefore(java.time.LocalDate.now().plusDays(1)) } }
@@ -152,8 +169,8 @@ fun PersonDetailScreen(
         }
 
         TextButton(onClick = {
-            if (person.debtCount == 0 && person.shareCount == 0) onDelete() else error = true
+            if (person.debtCount == 0 && person.shareCount == 0) confirmDelete = true else error = true
         }) { Text("Удалить контрагента") }
-        if (error) Text("Нельзя удалить: есть долги или подписки.", color = c.expense)
+        if (error) Text("Нельзя удалить: есть долги или регулярные платежи.", color = c.expense)
     }
 }

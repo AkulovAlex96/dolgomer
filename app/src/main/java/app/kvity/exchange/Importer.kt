@@ -3,8 +3,13 @@ package app.kvity.exchange
 import app.kvity.domain.AmountParser
 import app.kvity.domain.Currencies
 import app.kvity.domain.Direction
+import app.kvity.domain.Limits
 import app.kvity.domain.Periodicity
 import java.io.ByteArrayInputStream
+import java.nio.ByteBuffer
+import java.nio.charset.CharacterCodingException
+import java.nio.charset.Charset
+import java.nio.charset.CodingErrorAction
 import java.time.LocalDate
 import java.util.zip.ZipInputStream
 
@@ -69,7 +74,7 @@ object Importer {
             }
         }
         if (batch.total == 0 && batch.errors.isEmpty()) {
-            return batch.copy(errors = listOf(ImportError(0, "В файле не найдено таблиц с известными заголовками (Долги, Платежи, Подписки, Доли в подписках, Контрагенты)")), ignoredSheets = ignored)
+            return batch.copy(errors = listOf(ImportError(0, "В файле не найдено таблиц с известными заголовками (Долги, Платежи, Регулярные платежи, Доли в регулярных платежах, Контрагенты)")), ignoredSheets = ignored)
         }
         return batch.copy(ignoredSheets = ignored)
     }
@@ -98,15 +103,31 @@ object Importer {
                     while (true) {
                         val e = z.nextEntry ?: break
                         if (e.isDirectory || !e.name.lowercase().endsWith(".csv")) continue
-                        sheets += SheetData(e.name.substringAfterLast('/').removeSuffix(".csv"), Csv.parse(String(z.readBytes(), Charsets.UTF_8)))
+                        val text = decodeText(z.readBytes()) ?: continue
+                        sheets += SheetData(e.name.substringAfterLast('/').removeSuffix(".csv"), Csv.parse(text))
                     }
                 }
             }
             return sheets.ifEmpty { null }
         }
-        val text = String(bytes, Charsets.UTF_8)
-        if (text.isBlank()) return null
+        val text = decodeText(bytes)
+        if (text.isNullOrBlank()) return null
         return listOf(SheetData(CSV_SHEET, Csv.parse(text)))
+    }
+
+    /**
+     * Текст файла: UTF-8, а если байты не образуют корректный UTF-8, то windows-1251 (так Excel сохраняет «CSV» по-русски).
+     * Бинарный файл (с нулевыми байтами) текстом не считается: null.
+     */
+    internal fun decodeText(bytes: ByteArray): String? {
+        if (bytes.take(8192).any { it == 0.toByte() }) return null
+        return try {
+            Charsets.UTF_8.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT)
+                .decode(ByteBuffer.wrap(bytes)).toString()
+        } catch (e: CharacterCodingException) {
+            String(bytes, Charset.forName("windows-1251"))
+        }
     }
 
     private class Cols(header: List<String>, private val row: List<String>) {
@@ -144,6 +165,7 @@ object Importer {
         parseTable(sheet, header, listOf("Контрагент", "Дата", "Сумма")) { line, c, problems ->
             val name = c["Контрагент"]
             if (name.isEmpty()) problems += "не указан контрагент"
+            else if (name.length > Limits.NAME) problems += "слишком длинное имя (максимум ${Limits.NAME} символов)"
             val currencyText = c["Валюта"]
             val currency = if (currencyText.isEmpty()) null else DebtImport.parseCurrency(currencyText)
             if (currencyText.isNotEmpty() && currency == null) problems += "неизвестная валюта «$currencyText»"
@@ -171,13 +193,17 @@ object Importer {
         parseTable(sheet, header, listOf("Название", "Сумма", "Валюта", "Дата списания")) { line, c, problems ->
             val name = c["Название"]
             if (name.isEmpty()) problems += "не указано название"
+            else if (name.length > Limits.NAME) problems += "слишком длинное имя (максимум ${Limits.NAME} символов)"
+            if (c["Кто платит"].length > Limits.NAME) problems += "слишком длинное имя (максимум ${Limits.NAME} символов)"
             val currency = DebtImport.parseCurrency(c["Валюта"])
             if (currency == null) problems += "неизвестная валюта «${c["Валюта"]}»"
             val sum = amount(c["Сумма"], currency, problems, "Сумма")
             val period = parsePeriod(c["Период"])
             if (period == null) problems += "непонятный период «${c["Период"]}»"
-            val anchor = DebtImport.parseDate(c["Дата списания"])
-            if (anchor == null) problems += "некорректная дата списания «${c["Дата списания"]}»"
+            // «Дата начала» хранит исходную дату расписания; «Дата списания» в выгрузке — ближайшее списание
+            val anchorText = c["Дата начала"].ifEmpty { c["Дата списания"] }
+            val anchor = DebtImport.parseDate(anchorText)
+            if (anchor == null) problems += "некорректная дата списания «$anchorText»"
             val payerText = c["Кто платит"]
             val payer = when (payerText.lowercase()) { "", "я", "me", "мной", "сам" -> null; else -> payerText }
             val state = when (c["Статус"].lowercase()) {
@@ -192,6 +218,7 @@ object Importer {
         parseTable(sheet, header, listOf("Подписка", "Участник", "Период", "Доля", "Валюта")) { line, c, problems ->
             if (c["Подписка"].isEmpty()) problems += "не указана подписка"
             if (c["Участник"].isEmpty()) problems += "не указан участник"
+            else if (c["Участник"].length > Limits.NAME) problems += "слишком длинное имя (максимум ${Limits.NAME} символов)"
             val currency = DebtImport.parseCurrency(c["Валюта"])
             if (currency == null) problems += "неизвестная валюта «${c["Валюта"]}»"
             val period = DebtImport.parseDate(c["Период"])
@@ -204,6 +231,7 @@ object Importer {
     private fun parsePeople(sheet: SheetData, header: List<String>) =
         parseTable(sheet, header, listOf("Имя")) { line, c, problems ->
             if (c["Имя"].isEmpty()) problems += "не указано имя"
-            if (problems.isEmpty()) ImportPerson(line, c["Имя"], c["Телефон"].ifEmpty { null }, c["Заметка"].ifEmpty { null }) else null
+            else if (c["Имя"].length > Limits.NAME) problems += "слишком длинное имя (максимум ${Limits.NAME} символов)"
+            if (problems.isEmpty()) ImportPerson(line, c["Имя"], c["Телефон"].take(Limits.PHONE).ifEmpty { null }, c["Заметка"].take(Limits.NOTE).ifEmpty { null }) else null
         }
 }

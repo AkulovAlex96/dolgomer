@@ -27,7 +27,9 @@ import app.kvity.data.SubscriptionPayer
 import app.kvity.data.SubscriptionState
 import app.kvity.data.SubscriptionView
 import app.kvity.domain.AmountParser
+import app.kvity.domain.Limits
 import app.kvity.domain.SubscriptionCalc
+import app.kvity.ui.components.ConfirmDialog
 import app.kvity.ui.components.DatePickerField
 import app.kvity.ui.components.FormScreen
 import app.kvity.ui.components.LabelRow
@@ -58,7 +60,7 @@ fun SubscriptionDetailScreen(
     var deleteDialog by remember { mutableStateOf(false) }
 
     FormScreen(
-        title = view?.subscription?.name ?: "Подписка",
+        title = view?.subscription?.name ?: "Регулярный платёж",
         onBack = onBack,
         actions = { TextButton(onClick = onEdit) { Text("Изменить") } },
     ) {
@@ -138,8 +140,8 @@ fun SubscriptionDetailScreen(
     if (deleteDialog) {
         AlertDialog(
             onDismissRequest = { deleteDialog = false },
-            title = { Text("Удалить подписку?") },
-            text = { Text("Подписка, участники и отметки об оплате будут удалены.") },
+            title = { Text("Удалить регулярный платёж?") },
+            text = { Text("Регулярный платёж, участники и отметки об оплате будут удалены.") },
             confirmButton = { TextButton(onClick = { deleteDialog = false; onDelete() }) { Text("Удалить") } },
             dismissButton = { TextButton(onClick = { deleteDialog = false }) { Text("Отмена") } },
         )
@@ -170,6 +172,16 @@ private fun ShareCard(
     val upcoming = sh.dues.firstOrNull { !it.paid && !it.periodDate.isBefore(today) }
     val lastPaid = sh.dues.filter { it.paid }.takeLast(2)
     var expanded by remember { mutableStateOf(false) }
+    var confirmRemove by remember { mutableStateOf(false) }
+    if (confirmRemove) {
+        ConfirmDialog(
+            title = "Убрать участника?",
+            text = "${sh.counterpartyName} и его отметки об оплате будут удалены из этого регулярного платежа.",
+            confirmLabel = "Убрать",
+            onConfirm = { confirmRemove = false; onDelete() },
+            onDismiss = { confirmRemove = false },
+        )
+    }
 
     SectionCard {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -192,7 +204,7 @@ private fun ShareCard(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             if (lastPaid.isNotEmpty()) TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "Скрыть оплаченные" else "Показать оплаченные") }
             else Text("")
-            TextButton(onClick = onDelete) { Text("Убрать") }
+            TextButton(onClick = { confirmRemove = true }) { Text("Убрать") }
         }
     }
 }
@@ -245,7 +257,7 @@ private fun ShareDialog(
         title = { Text("Новый участник") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(name, { name = it }, label = { Text("Имя") }, singleLine = true)
+                OutlinedTextField(name, { name = it.take(Limits.NAME) }, label = { Text("Имя") }, singleLine = true)
                 val hints = knownNames.filter { it.contains(name.trim(), true) && !it.equals(name.trim(), true) }.take(3)
                 if (name.isNotBlank() && hints.isNotEmpty()) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

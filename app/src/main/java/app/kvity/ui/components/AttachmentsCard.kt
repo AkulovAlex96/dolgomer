@@ -28,6 +28,7 @@ import app.kvity.data.AttachmentEntity
 import app.kvity.data.AttachmentOwner
 import app.kvity.data.AttachmentRepository
 import app.kvity.data.AttachmentTooLargeException
+import app.kvity.ui.formatFileSize
 import kotlinx.coroutines.launch
 
 /** Список вложений владельца с добавлением фото и файлов. */
@@ -80,7 +81,7 @@ fun AttachmentsCard(
                     Toast.makeText(context, "Нет приложения для открытия файла", Toast.LENGTH_SHORT).show()
                 } },
                 label = att.fileName,
-                subtitle = "%.1f КБ".format(att.sizeBytes / 1024.0).replace('.', ','),
+                subtitle = formatFileSize(att.sizeBytes),
                 trailing = { TextButton(onClick = { confirmDelete = att }) { Text("✕") } },
             )
         }

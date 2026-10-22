@@ -18,6 +18,7 @@ import app.kvity.data.SubscriptionInput
 import app.kvity.data.SubscriptionPayer
 import app.kvity.data.SubscriptionView
 import app.kvity.domain.AmountParser
+import app.kvity.domain.Limits
 import app.kvity.domain.Periodicity
 import app.kvity.ui.components.ChipRow
 import app.kvity.ui.components.DatePickerField
@@ -59,8 +60,8 @@ fun SubscriptionFormScreen(
     val valid = name.isNotBlank() && amount != null && anchor != null &&
         (payer == SubscriptionPayer.ME || payerName.isNotBlank())
 
-    FormScreen(title = if (initial == null) "Новая подписка" else "Изменить подписку", onBack = onBack, backLabel = "Отмена") {
-        OutlinedTextField(name, { name = it }, label = { Text("Название (ChatGPT, GitHub…)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+    FormScreen(title = if (initial == null) "Новый регулярный платёж" else "Изменить регулярный платёж", onBack = onBack, backLabel = "Отмена") {
+        OutlinedTextField(name, { name = it.take(Limits.NAME) }, label = { Text("Название (ChatGPT, GitHub…)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
@@ -77,7 +78,7 @@ fun SubscriptionFormScreen(
 
         ChipRow(listOf(SubscriptionPayer.ME to "Плачу я", SubscriptionPayer.OTHER to "Платит другой"), payer, { payer = it })
         if (payer == SubscriptionPayer.OTHER) {
-            OutlinedTextField(payerName, { payerName = it }, label = { Text("Кто платит") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(payerName, { payerName = it.take(Limits.NAME) }, label = { Text("Кто платит") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             val hints = knownNames.filter { it.contains(payerName.trim(), true) && !it.equals(payerName.trim(), true) }.take(4)
             if (payerName.isNotBlank() && hints.isNotEmpty()) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -85,12 +86,12 @@ fun SubscriptionFormScreen(
                 }
             }
         } else {
-            Text("Участников, которые возвращают долю, можно добавить на экране подписки.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Участников, которые возвращают долю, можно добавить на экране регулярного платежа.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
-        OutlinedTextField(method, { method = it }, label = { Text("Способ оплаты (необязательно)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(method, { method = it.take(Limits.NAME) }, label = { Text("Способ оплаты (необязательно)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         DatePickerField("Конец пробного периода (необязательно)", trialEpoch?.let(LocalDate::ofEpochDay), { trialEpoch = it.toEpochDay() })
-        OutlinedTextField(note, { note = it }, label = { Text("Комментарий") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(note, { note = it.take(Limits.NOTE) }, label = { Text("Комментарий") }, modifier = Modifier.fillMaxWidth())
 
         Button(
             enabled = valid, modifier = Modifier.fillMaxWidth(),

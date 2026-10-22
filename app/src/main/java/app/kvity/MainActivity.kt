@@ -1,10 +1,13 @@
 package app.kvity
 
+import android.graphics.Color
 import android.os.Bundle
 import android.view.WindowManager
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.fragment.app.FragmentActivity
@@ -37,6 +40,15 @@ class MainActivity : FragmentActivity() {
                 ThemeMode.DARK -> true
             }
 
+            // Иконки статус-бара и навигации следуют теме приложения, а не системной: иначе в светлой теме на тёмной системе они белые на белом
+            DisposableEffect(dark) {
+                enableEdgeToEdge(
+                    statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { dark },
+                    navigationBarStyle = SystemBarStyle.auto(LIGHT_NAV_SCRIM, DARK_NAV_SCRIM) { dark },
+                )
+                onDispose {}
+            }
+
             // Запрет скриншотов и скрытие содержимого в списке недавних приложений
             LaunchedEffect(settings.secureScreen) {
                 if (settings.secureScreen) window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
@@ -56,6 +68,12 @@ class MainActivity : FragmentActivity() {
                 }
             }
         }
+    }
+
+    private companion object {
+        // стандартные подложки трёхкнопочной навигации из enableEdgeToEdge
+        val LIGHT_NAV_SCRIM = Color.argb(0xe6, 0xFF, 0xFF, 0xFF)
+        val DARK_NAV_SCRIM = Color.argb(0x80, 0x1b, 0x1b, 0x1b)
     }
 
     override fun onStop() {

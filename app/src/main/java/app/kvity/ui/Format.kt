@@ -9,6 +9,13 @@ import java.time.format.DateTimeFormatter
 
 private val dateFormat = DateTimeFormatter.ofPattern("dd.MM.yyyy")
 
+/** Размер файла для списка вложений: «22 Б», «1,5 КБ», «5,0 МБ». */
+fun formatFileSize(bytes: Long): String = when {
+    bytes < 1024 -> "$bytes Б"
+    bytes < 1024 * 1024 -> "%.1f КБ".format(java.util.Locale.ROOT, bytes / 1024.0).replace('.', ',')
+    else -> "%.1f МБ".format(java.util.Locale.ROOT, bytes / (1024.0 * 1024.0)).replace('.', ',')
+}
+
 fun currencyOf(code: String): Currency = Currencies.byCode(code) ?: Currency(code, code)
 
 fun formatMoney(minor: Long, currencyCode: String): String =

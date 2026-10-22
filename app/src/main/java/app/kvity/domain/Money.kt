@@ -20,6 +20,8 @@ object Currencies {
 data class Money(val minor: Long, val currencyCode: String)
 
 object AmountParser {
+    private const val MAX_INTEGER_DIGITS = 15
+
     /**
      * Разбирает ввод пользователя: «50000», «50 000», «1,5к», «10к», «2м».
      * Возвращает сумму в минимальных единицах или null, если ввод некорректен.
@@ -38,10 +40,16 @@ object AmountParser {
         val value = text.toBigDecimalOrNull()?.multiply(multiplier) ?: return null
         if (value.signum() <= 0) return null
         if (value.stripTrailingZeros().scale() > fractionDigits) return null
+        // целая часть должна помещаться в Long (с запасом на копейки): иначе «1e999999999» вешает setScale, а длинные числа бросают Overflow
+        if (value.precision() - value.scale() > MAX_INTEGER_DIGITS) return null
 
-        return value.setScale(fractionDigits, RoundingMode.UNNECESSARY)
-            .movePointRight(fractionDigits)
-            .longValueExact()
+        return try {
+            value.setScale(fractionDigits, RoundingMode.UNNECESSARY)
+                .movePointRight(fractionDigits)
+                .longValueExact()
+        } catch (e: ArithmeticException) {
+            null
+        }
     }
 }
 

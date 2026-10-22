@@ -33,6 +33,22 @@ class MoneyTest {
         assertNull(AmountParser.parseMinor("к"))
     }
 
+    @Test fun `rejects amounts that do not fit into a long instead of throwing`() {
+        assertNull(AmountParser.parseMinor("99999999999999999999"))
+        assertNull(AmountParser.parseMinor("92233720368547758"))
+        assertNull(AmountParser.parseMinor("9999999999999м"))
+        assertNull(AmountParser.parseMinor("1e30"))
+    }
+
+    @Test(timeout = 3000) fun `huge exponent does not hang`() {
+        assertNull(AmountParser.parseMinor("1e999999999"))
+        assertNull(AmountParser.parseMinor("1e-999999999"))
+    }
+
+    @Test fun `accepts the largest sensible amounts`() {
+        assertEquals(100_000_000_000_00L, AmountParser.parseMinor("100000000000"))
+    }
+
     @Test fun `respects currency fraction digits`() {
         assertEquals(10_000L, AmountParser.parseMinor("10000", fractionDigits = 0))
         assertNull(AmountParser.parseMinor("10,5", fractionDigits = 0))

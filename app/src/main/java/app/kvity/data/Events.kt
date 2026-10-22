@@ -5,6 +5,7 @@ import app.kvity.domain.Direction
 import app.kvity.domain.InstallmentState
 import app.kvity.domain.SubscriptionCalc
 import java.time.LocalDate
+import java.time.YearMonth
 
 enum class EventKind { DEBT, SUBSCRIPTION }
 enum class MoneyFlow { IN, OUT }
@@ -24,7 +25,23 @@ data class CalendarEvent(
     val periodDate: LocalDate? = null,
 )
 
+/** Итог календарного месяца в одной валюте: сколько вернут мне и сколько верну я. */
+data class MonthTotal(val currency: String, val incomingMinor: Long, val outgoingMinor: Long)
+
 object Events {
+
+    /** Суммы событий за месяц по валютам: основная валюта первой, остальные по алфавиту. */
+    fun monthTotals(events: List<CalendarEvent>, month: YearMonth, mainCurrency: String): List<MonthTotal> =
+        events.filter { YearMonth.from(it.date) == month }
+            .groupBy { it.currency }
+            .map { (code, list) ->
+                MonthTotal(
+                    code,
+                    incomingMinor = list.filter { it.flow == MoneyFlow.IN }.sumOf { it.amountMinor },
+                    outgoingMinor = list.filter { it.flow == MoneyFlow.OUT }.sumOf { it.amountMinor },
+                )
+            }
+            .sortedWith(compareBy<MonthTotal> { it.currency != mainCurrency }.thenBy { it.currency })
 
     fun build(debts: List<DebtView>, subs: List<SubscriptionView>, today: LocalDate): List<CalendarEvent> =
         debtEvents(debts, today) + subscriptionEvents(subs, today)

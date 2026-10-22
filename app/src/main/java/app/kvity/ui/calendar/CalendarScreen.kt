@@ -29,12 +29,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.kvity.data.CalendarEvent
 import app.kvity.data.EventKind
+import app.kvity.data.Events
+import app.kvity.data.MonthTotal
 import app.kvity.data.MoneyFlow
 import app.kvity.domain.AmountFormatter
 import app.kvity.ui.components.LabelRow
@@ -95,12 +99,12 @@ fun CalendarScreen(
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf(CalendarFilter.ALL to "Всё", CalendarFilter.DEBTS to "Долги", CalendarFilter.SUBSCRIPTIONS to "Подписки").forEach { (f, t) ->
+                listOf(CalendarFilter.ALL to "Всё", CalendarFilter.DEBTS to "Долги", CalendarFilter.SUBSCRIPTIONS to "Регулярные платежи").forEach { (f, t) ->
                     FilterChip(selected = filter == f, onClick = { filter = f }, label = { Text(t) })
                 }
             }
 
-            Legend()
+            MonthSummary(Events.monthTotals(filtered, month, mainCurrency))
             MonthGrid(month, firstDayOfWeek, today, selected, byDate, mainCurrency) { selected = it }
 
             selected?.let { day -> DayDetails(day, byDate[day].orEmpty(), onOpenEvent, onMarkSharePaid) }
@@ -108,16 +112,35 @@ fun CalendarScreen(
     }
 }
 
+/** Итог показанного месяца: три рамки, в каждой суммы по валютам столбиком (как на главной); ниже пояснение к красной точке. */
 @Composable
-private fun Legend() {
+private fun MonthSummary(totals: List<MonthTotal>) {
     val c = MaterialTheme.kvity
-    Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text("+8к", color = c.income, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-        Text("мне вернут", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("−2к", color = c.expense, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-        Text("я верну", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Box(Modifier.size(7.dp).background(c.expense, CircleShape))
-        Text("просрочка", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    // строка на каждую валюту в каждой рамке, «—» там, где суммы нет: так строки трёх рамок выровнены
+    fun lines(sign: (Long) -> String, value: (MonthTotal) -> Long) =
+        totals.map { if (value(it) == 0L) "—" else sign(value(it)) + formatMoney(kotlin.math.abs(value(it)), it.currency) }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SummaryBox("Мне вернут", lines({ "+" }) { it.incomingMinor }, c.incomeBg, c.income, Modifier.weight(1f))
+            SummaryBox("Я верну", lines({ "−" }) { it.outgoingMinor }, c.expenseBg, c.expense, Modifier.weight(1f))
+            SummaryBox(
+                "Итог", lines({ if (it > 0) "+" else "−" }) { it.incomingMinor - it.outgoingMinor },
+                MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurface, Modifier.weight(1f),
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(7.dp).background(c.expense, CircleShape))
+            Text("просрочка", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun SummaryBox(title: String, lines: List<String>, bg: androidx.compose.ui.graphics.Color, fg: androidx.compose.ui.graphics.Color, modifier: Modifier) {
+    Column(modifier.background(bg, RoundedCornerShape(10.dp)).padding(horizontal = 8.dp, vertical = 6.dp)) {
+        Text(title, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (lines.isEmpty()) Text("—", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = fg)
+        lines.forEach { Text(it, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = fg) }
     }
 }
 
@@ -151,7 +174,7 @@ private fun MonthGrid(
                 for (col in 0 until 7) {
                     val dayNum = r * 7 + col - offset + 1
                     if (dayNum < 1 || dayNum > days) {
-                        Box(Modifier.weight(1f).height(70.dp))
+                        Box(Modifier.weight(1f).height(with(LocalDensity.current) { 72.sp.toDp() }))
                     } else {
                         val date = month.atDay(dayNum)
                         DayCell(date, today, date == selected, byDate[date].orEmpty(), mainCurrency, Modifier.weight(1f)) { onSelect(date) }
@@ -183,38 +206,52 @@ private fun DayCell(
     val overdue = events.any { it.overdue }
     val digits = currencyOf(mainCurrency).fractionDigits
 
+    // высоты в sp: при крупном шрифте системы ячейка растёт вместе с текстом, а сумма внизу не обрезается
+    val density = LocalDensity.current
+    val cellHeight = with(density) { 72.sp.toDp() }
+    val amountHeight = with(density) { 15.sp.toDp() }
+
     Column(
         modifier = modifier
-            .height(70.dp)
+            .height(cellHeight)
             .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(9.dp))
             .border(
                 if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 RoundedCornerShape(9.dp),
             )
+            .clip(RoundedCornerShape(9.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 3.dp, vertical = 2.dp),
+            .padding(4.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            if (date == today) {
-                Box(Modifier.size(18.dp).background(MaterialTheme.colorScheme.primary, CircleShape), contentAlignment = Alignment.Center) {
-                    Text(date.dayOfMonth.toString(), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
-                }
-            } else {
-                Text(date.dayOfMonth.toString(), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        val numberSize = with(density) { 20.sp.toDp() }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(numberSize)) {
+            // один и тот же квадрат под число у всех дней: кружок «сегодня» не смещает цифры и симметричен рамке
+            val isToday = date == today
+            Box(
+                Modifier.size(numberSize).then(if (isToday) Modifier.background(MaterialTheme.colorScheme.primary, CircleShape) else Modifier),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    date.dayOfMonth.toString(), fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                    color = if (isToday) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             if (overdue) {
                 Box(Modifier.padding(start = 3.dp).size(6.dp).background(c.expense, CircleShape))
             }
-            if (hasOther) Text("•", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 2.dp))
+            // суммы в других валютах показаны только в деталях дня; точка не меняет высоту строки с числом
+            if (hasOther) Box(Modifier.padding(start = 4.dp).size(4.dp).background(MaterialTheme.colorScheme.onSurfaceVariant, CircleShape))
         }
         Box(Modifier.weight(1f))
         Text(
             if (incoming > 0) "+" + AmountFormatter.compact(incoming, digits) else "",
-            color = c.income, fontWeight = FontWeight.Bold, fontSize = 10.sp, maxLines = 1, modifier = Modifier.height(15.dp),
+            color = c.income, fontWeight = FontWeight.Bold, fontSize = 10.sp, lineHeight = 13.sp, maxLines = 1, softWrap = false,
+            modifier = Modifier.height(amountHeight).padding(start = 2.dp),
         )
         Text(
             if (outgoing > 0) "−" + AmountFormatter.compact(outgoing, digits) else "",
-            color = c.expense, fontWeight = FontWeight.Bold, fontSize = 10.sp, maxLines = 1, modifier = Modifier.height(15.dp),
+            color = c.expense, fontWeight = FontWeight.Bold, fontSize = 10.sp, lineHeight = 13.sp, maxLines = 1, softWrap = false,
+            modifier = Modifier.height(amountHeight).padding(start = 2.dp),
         )
     }
 }

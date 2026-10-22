@@ -21,6 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.kvity.data.ExchangeRateEntity
 import app.kvity.data.ReminderTemplateEntity
+import app.kvity.domain.Limits
+import app.kvity.ui.components.ConfirmDialog
 import app.kvity.ui.components.DropdownField
 import app.kvity.ui.components.FormScreen
 import app.kvity.ui.components.LabelRow
@@ -39,6 +41,15 @@ fun RatesScreen(
 ) {
     var editing by remember { mutableStateOf<ExchangeRateEntity?>(null) }
     var adding by remember { mutableStateOf(false) }
+    var pendingDelete by remember { mutableStateOf<ExchangeRateEntity?>(null) }
+    pendingDelete?.let { r ->
+        ConfirmDialog(
+            title = "Удалить курс?",
+            text = "1 ${r.fromCode} = ${r.rate.toString().removeSuffix(".0").replace('.', ',')} ${r.toCode}",
+            onConfirm = { pendingDelete = null; onDelete(r.id) },
+            onDismiss = { pendingDelete = null },
+        )
+    }
 
     FormScreen(title = "Курсы валют", onBack = onBack, actions = { TextButton(onClick = { adding = true }) { Text("+ Курс") } }) {
         Text(
@@ -52,7 +63,7 @@ fun RatesScreen(
                     onClick = { editing = r },
                     label = "1 ${r.fromCode} = ${r.rate.toString().removeSuffix(".0").replace('.', ',')} ${r.toCode}",
                     subtitle = "на ${formatDate(r.date)}",
-                    trailing = { TextButton(onClick = { onDelete(r.id) }) { Text("✕") } },
+                    trailing = { TextButton(onClick = { pendingDelete = r }) { Text("✕") } },
                 )
             }
         }
@@ -63,7 +74,7 @@ fun RatesScreen(
         var from by remember { mutableStateOf(e?.fromCode ?: currencies.first()) }
         var to by remember { mutableStateOf(e?.toCode ?: currencies.getOrElse(1) { currencies.first() }) }
         var text by remember { mutableStateOf(e?.rate?.toString()?.removeSuffix(".0")?.replace('.', ',') ?: "") }
-        val rate = text.trim().replace(',', '.').toDoubleOrNull()
+        val rate = parseRate(text)
         val opts = currencies.map { it to "${currencyOf(it).symbol} $it" }
         AlertDialog(
             onDismissRequest = { adding = false; editing = null },
@@ -72,11 +83,11 @@ fun RatesScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     DropdownField("1 единица", opts, from, { from = it })
                     DropdownField("равна", opts, to, { to = it })
-                    OutlinedTextField(text, { text = it }, label = { Text("Курс") }, singleLine = true, isError = text.isNotBlank() && (rate == null || rate <= 0))
+                    OutlinedTextField(text, { text = it }, label = { Text("Курс") }, singleLine = true, isError = text.isNotBlank() && rate == null)
                 }
             },
             confirmButton = {
-                TextButton(enabled = rate != null && rate > 0 && from != to, onClick = {
+                TextButton(enabled = rate != null && from != to, onClick = {
                     onSave(from, to, rate!!, e?.id); adding = false; editing = null
                 }) { Text("Сохранить") }
             },
@@ -94,6 +105,15 @@ fun TemplatesScreen(
 ) {
     var editing by remember { mutableStateOf<ReminderTemplateEntity?>(null) }
     var adding by remember { mutableStateOf(false) }
+    var pendingDelete by remember { mutableStateOf<ReminderTemplateEntity?>(null) }
+    pendingDelete?.let { t ->
+        ConfirmDialog(
+            title = "Удалить шаблон?",
+            text = "Шаблон «${t.name}» будет удалён.",
+            onConfirm = { pendingDelete = null; onDelete(t.id) },
+            onDismiss = { pendingDelete = null },
+        )
+    }
 
     FormScreen(title = "Шаблоны сообщений", onBack = onBack, actions = { TextButton(onClick = { adding = true }) { Text("+ Шаблон") } }) {
         Text(
@@ -106,7 +126,7 @@ fun TemplatesScreen(
                     Text(t.name, fontWeight = FontWeight.Bold)
                     Row {
                         TextButton(onClick = { editing = t }) { Text("Изменить") }
-                        TextButton(onClick = { onDelete(t.id) }) { Text("Удалить") }
+                        TextButton(onClick = { pendingDelete = t }) { Text("Удалить") }
                     }
                 }
                 Text(t.text, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -123,8 +143,8 @@ fun TemplatesScreen(
             title = { Text(if (e == null) "Новый шаблон" else "Изменить шаблон") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(name, { name = it }, label = { Text("Название") }, singleLine = true)
-                    OutlinedTextField(text, { text = it }, label = { Text("Текст") })
+                    OutlinedTextField(name, { name = it.take(Limits.NAME) }, label = { Text("Название") }, singleLine = true)
+                    OutlinedTextField(text, { text = it.take(Limits.TEMPLATE) }, label = { Text("Текст") })
                 }
             },
             confirmButton = {
@@ -136,3 +156,10 @@ fun TemplatesScreen(
         )
     }
 }
+
+/** Курс из текстового поля: конечное число в разумных пределах, иначе null («1e999999999» и «Infinity» не проходят). */
+internal fun parseRate(text: String): Double? =
+    text.trim().replace(',', '.').toDoubleOrNull()?.takeIf { it.isFinite() && it in MIN_RATE..MAX_RATE }
+
+private const val MIN_RATE = 1e-6
+private const val MAX_RATE = 1e9

@@ -35,6 +35,7 @@ import app.kvity.domain.AmountFormatter
 import app.kvity.domain.AmountParser
 import app.kvity.domain.Currencies
 import app.kvity.domain.Direction
+import app.kvity.domain.Limits
 import app.kvity.domain.Periodicity
 import app.kvity.domain.ScheduleGenerator
 import app.kvity.domain.ScheduleRule
@@ -82,7 +83,10 @@ fun NewDebtScreen(
     val dueDate = dueEpoch?.let(LocalDate::ofEpochDay)
     val firstDate = firstEpoch?.let(LocalDate::ofEpochDay)
 
-    val valid = name.isNotBlank() && principal != null && when (termType) {
+    // слишком мелкий платёж: график обрывается на ScheduleGenerator.MAX_ITEMS и весь долг не покрывает
+    val scheduleTooLong = termType == TermType.SCHEDULE && principal != null && installment != null && firstDate != null &&
+        !ScheduleGenerator.covers(ScheduleRule(periodicity, installment, firstDate), principal)
+    val valid = name.isNotBlank() && principal != null && !scheduleTooLong && when (termType) {
         TermType.ONE_TIME -> dueDate != null
         TermType.SCHEDULE -> installment != null && firstDate != null
         TermType.NONE -> true
@@ -122,8 +126,8 @@ fun NewDebtScreen(
 
             OutlinedTextField(
                 value = name,
-                onValueChange = { name = it },
-                label = { Text("Кто") },
+                onValueChange = { name = it.take(Limits.NAME) },
+                label = { Text(if (direction == Direction.I_OWE) "Кому" else "Кто") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -175,7 +179,12 @@ fun NewDebtScreen(
                     PeriodicityMenu(periodicity, onSelect = { periodicity = it })
                     DatePickerField("Первый платёж", firstDate, { firstEpoch = it.toEpochDay() })
 
-                    if (principal != null && installment != null && firstDate != null) {
+                    if (scheduleTooLong) {
+                        Text(
+                            "Слишком много платежей: в графике не больше ${ScheduleGenerator.MAX_ITEMS}. Увеличьте сумму платежа или выберите более редкий период.",
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    } else if (principal != null && installment != null && firstDate != null) {
                         SchedulePreview(principal, installment, periodicity, firstDate, currencyCode)
                     }
                 }
@@ -187,7 +196,7 @@ fun NewDebtScreen(
 
             OutlinedTextField(
                 value = note,
-                onValueChange = { note = it },
+                onValueChange = { note = it.take(Limits.NOTE) },
                 label = { Text("Комментарий") },
                 modifier = Modifier.fillMaxWidth(),
             )

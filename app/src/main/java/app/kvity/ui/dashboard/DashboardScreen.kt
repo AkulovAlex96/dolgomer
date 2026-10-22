@@ -26,6 +26,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -107,7 +108,7 @@ fun DashboardScreen(
                     }
                 } else if (state.subs.isNotEmpty()) {
                     item {
-                        Text("Все подписки", fontWeight = FontWeight.SemiBold,
+                        Text("Все регулярные платежи", fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
                     }
                     items(state.subs, key = { it.subscription.id }) { SubRow(it, onClick = { onOpenSubscription(it.subscription.id) }) }
@@ -147,11 +148,12 @@ private fun Tabs(selected: Int, onSelect: (Int) -> Unit) {
             .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(999.dp))
             .padding(3.dp),
     ) {
-        listOf("Долги", "Подписки").forEachIndexed { i, title ->
+        listOf("Долги", "Регулярные платежи").forEachIndexed { i, title ->
             val on = i == selected
             Box(
                 modifier = Modifier
                     .weight(1f)
+                    .clip(RoundedCornerShape(999.dp))
                     .background(if (on) MaterialTheme.colorScheme.surface else Color.Transparent, RoundedCornerShape(999.dp))
                     .clickable { onSelect(i) }
                     .padding(vertical = 8.dp),

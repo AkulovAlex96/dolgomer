@@ -168,7 +168,7 @@ fun NotificationsSection(settings: Settings, onChange: ((Settings) -> Settings) 
                 settings.overdueRepeatDays, { d -> onChange { it.copy(overdueRepeatDays = d) } },
             )
             DropdownField(
-                "О списании подписки",
+                "О списании регулярного платежа",
                 listOf(0 to "в день списания", 1 to "за 1 день", 2 to "за 2 дня", 3 to "за 3 дня"),
                 settings.subscriptionNotifyDays, { d -> onChange { it.copy(subscriptionNotifyDays = d) } },
             )

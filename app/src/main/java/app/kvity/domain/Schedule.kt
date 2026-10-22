@@ -21,7 +21,8 @@ data class ScheduleRule(
 data class PlannedPayment(val dueDate: LocalDate, val amountMinor: Long)
 
 object ScheduleGenerator {
-    private const val MAX_ITEMS = 1200
+    /** Больше платежей в графике не строится. */
+    const val MAX_ITEMS = 1200
 
     fun generate(rule: ScheduleRule, principalMinor: Long): List<PlannedPayment> {
         require(rule.interval >= 1) { "interval must be >= 1" }
@@ -39,6 +40,10 @@ object ScheduleGenerator {
         }
         return result
     }
+
+    /** Помещается ли весь долг в график: при слишком мелком платеже график обрывается на [MAX_ITEMS] и сумму не покрывает. */
+    fun covers(rule: ScheduleRule, principalMinor: Long): Boolean =
+        generate(rule, principalMinor).sumOf { it.amountMinor } >= principalMinor
 
     /** Дата платежа с номером [index] (с нуля). Для повторяющихся событий, например подписок. */
     fun dateAt(rule: ScheduleRule, index: Int): LocalDate {

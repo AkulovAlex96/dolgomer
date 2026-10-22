@@ -2,13 +2,16 @@ package app.kvity.exchange
 
 import app.kvity.data.DebtView
 import app.kvity.data.PersonView
+import app.kvity.data.SubscriptionEntity
 import app.kvity.data.SubscriptionPayer
+import app.kvity.data.SubscriptionRepository
 import app.kvity.data.SubscriptionState
 import app.kvity.data.SubscriptionView
 import app.kvity.domain.Currencies
 import app.kvity.domain.DebtStatus
 import app.kvity.domain.Direction
 import app.kvity.domain.Periodicity
+import app.kvity.domain.SubscriptionCalc
 import app.kvity.domain.TermType
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -17,8 +20,8 @@ import java.time.format.DateTimeFormatter
 enum class ExportTable(val title: String) {
     DEBTS("Долги"),
     PAYMENTS("Платежи"),
-    SUBSCRIPTIONS("Подписки"),
-    SHARES("Доли в подписках"),
+    SUBSCRIPTIONS("Регулярные платежи"),
+    SHARES("Доли в регулярных платежах"),
     PEOPLE("Контрагенты"),
 }
 
@@ -64,7 +67,7 @@ object ExportBuilder {
             when (t) {
                 ExportTable.DEBTS -> debtsTable(filteredDebts)
                 ExportTable.PAYMENTS -> paymentsTable(filteredDebts)
-                ExportTable.SUBSCRIPTIONS -> subscriptionsTable(subs)
+                ExportTable.SUBSCRIPTIONS -> subscriptionsTable(subs, today)
                 ExportTable.SHARES -> sharesTable(subs, today)
                 ExportTable.PEOPLE -> peopleTable(people)
             }
@@ -117,21 +120,28 @@ object ExportBuilder {
         Periodicity.DAYS -> "каждые $interval дн."
     }
 
-    private fun subscriptionsTable(subs: List<SubscriptionView>) = Table(
+    private fun subscriptionsTable(subs: List<SubscriptionView>, today: LocalDate) = Table(
         ExportTable.SUBSCRIPTIONS.title,
-        listOf("Название", "Кто платит", "Сумма", "Валюта", "Период", "Дата списания", "Статус", "Способ оплаты", "Комментарий"),
+        listOf("Название", "Кто платит", "Сумма", "Валюта", "Период", "Дата списания", "Статус", "Способ оплаты", "Комментарий", "Дата начала"),
         subs.map { v ->
             val s = v.subscription
             listOf(
                 cell(s.name),
                 cell(if (s.payer == SubscriptionPayer.ME) "я" else v.payerName ?: "другой"),
                 money(s.amountMinor, s.currency), cell(s.currency), cell(periodLabel(s.periodicity, s.interval)),
-                cell(date(s.anchorDate)),
+                nextChargeCell(s, today),
                 cell(when (s.state) { SubscriptionState.ACTIVE -> "активна"; SubscriptionState.PAUSED -> "на паузе"; SubscriptionState.CANCELLED -> "отменена" }),
-                cell(s.paymentMethodNote), cell(s.note),
+                cell(s.paymentMethodNote), cell(s.note), cell(date(s.anchorDate)),
             )
         },
     )
+
+    /** Ближайшее списание (сегодня или позже); у приостановленных и отменённых подписок пусто. */
+    private fun nextChargeCell(s: SubscriptionEntity, today: LocalDate): Cell {
+        if (s.state != SubscriptionState.ACTIVE) return Cell.Empty
+        val next = SubscriptionCalc.occurrences(s.anchorDate, s.periodicity, s.interval, today, today.plusDays(SubscriptionRepository.HORIZON_DAYS)).firstOrNull()
+        return if (next == null) Cell.Empty else cell(date(next))
+    }
 
     private fun sharesTable(subs: List<SubscriptionView>, today: LocalDate) = Table(
         ExportTable.SHARES.title,

@@ -37,6 +37,7 @@ import app.kvity.domain.AmountParser
 import app.kvity.domain.DebtStatus
 import app.kvity.domain.Direction
 import app.kvity.domain.InstallmentState
+import app.kvity.ui.components.ConfirmDialog
 import app.kvity.ui.components.DatePickerField
 import app.kvity.ui.components.LabelRow
 import app.kvity.ui.components.SectionCard
@@ -101,6 +102,7 @@ fun DebtDetailScreen(
         if (paymentDialog) {
             PaymentDialog(
                 currencyCode = view.debt.currency,
+                remainingMinor = view.summary.remainingMinor,
                 onDismiss = { paymentDialog = false },
                 onConfirm = { date, minor ->
                     onAddPayment(date, minor)
@@ -247,6 +249,16 @@ private fun ScheduleCard(view: DebtView) {
 
 @Composable
 private fun PaymentsCard(view: DebtView, onDelete: (String) -> Unit, onOpen: (String) -> Unit) {
+    var pendingDelete by remember { mutableStateOf<String?>(null) }
+    pendingDelete?.let { id ->
+        val p = view.payments.firstOrNull { it.id == id }
+        ConfirmDialog(
+            title = "Удалить платёж?",
+            text = if (p == null) "Платёж будет удалён." else "Платёж ${formatMoney(p.amountMinor, view.debt.currency)} от ${formatDate(p.date)} будет удалён, остаток долга пересчитается.",
+            onConfirm = { pendingDelete = null; onDelete(id) },
+            onDismiss = { pendingDelete = null },
+        )
+    }
     SectionCard {
         Text("Платежи", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (view.payments.isEmpty()) {
@@ -260,7 +272,7 @@ private fun PaymentsCard(view: DebtView, onDelete: (String) -> Unit, onOpen: (St
                 trailing = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(formatMoney(p.amountMinor, view.debt.currency), fontWeight = FontWeight.Bold)
-                        TextButton(onClick = { onDelete(p.id) }) { Text("✕") }
+                        TextButton(onClick = { pendingDelete = p.id }) { Text("✕") }
                     }
                 },
             )
@@ -271,6 +283,7 @@ private fun PaymentsCard(view: DebtView, onDelete: (String) -> Unit, onOpen: (St
 @Composable
 private fun PaymentDialog(
     currencyCode: String,
+    remainingMinor: Long,
     onDismiss: () -> Unit,
     onConfirm: (LocalDate, Long) -> Unit,
 ) {
@@ -289,6 +302,13 @@ private fun PaymentDialog(
                     label = { Text("Сумма, ${currencyOf(currencyCode).symbol}") },
                     singleLine = true,
                     isError = amountText.isNotBlank() && amount == null,
+                    // переплата возможна (проценты, округление): предупреждаем, но не запрещаем
+                    supportingText = if (amount != null && amount > remainingMinor) ({
+                        Text(
+                            "Больше остатка долга (${formatMoney(remainingMinor, currencyCode)}). Платёж всё равно можно добавить.",
+                            color = MaterialTheme.kvity.warn,
+                        )
+                    }) else null,
                 )
                 DatePickerField("Дата", date, { date = it })
             }

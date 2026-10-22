@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -63,6 +64,7 @@ fun PinPad(
                     row.forEach { k ->
                         Box(
                             Modifier.size(68.dp)
+                                .clip(CircleShape)
                                 .background(if (k.isEmpty()) Color0 else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f), CircleShape)
                                 .clickable(enabled = k.isNotEmpty()) {
                                     if (k == "⌫") pin = pin.dropLast(1)

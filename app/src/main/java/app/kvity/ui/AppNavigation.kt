@@ -188,6 +188,7 @@ fun AppNavigation() {
                     onDelete = { peopleVm.delete(id); nav.popBackStack() },
                     onOpenDebt = { nav.navigate(Routes.debt(it)) },
                     onOpenSubscription = { nav.navigate(Routes.sub(it)) },
+                    otherNames = persons.filter { it.person.id != id }.map { it.person.name.trim().lowercase() }.toSet(),
                 )
             }
 
@@ -368,7 +369,7 @@ private fun tabIcon(route: String) = when (route) {
 private fun moreItems(nav: NavHostController) = listOf(
     MoreItem("Настройки", "Тема, валюты, уведомления, безопасность") { nav.navigate(Routes.SETTINGS) },
     MoreItem("Резервная копия", "Сохранить данные в файл или Google Drive, восстановить") { nav.navigate(Routes.BACKUP) },
-    MoreItem("Экспорт", "Долги, платежи и подписки в Excel или CSV") { nav.navigate(Routes.EXPORT) },
+    MoreItem("Экспорт", "Долги, платежи и регулярные платежи в Excel или CSV") { nav.navigate(Routes.EXPORT) },
     MoreItem("Импорт", "Загрузить данные из Excel, CSV или zip") { nav.navigate(Routes.IMPORT) },
     MoreItem("Курсы валют", "Для необязательного пересчёта итогов") { nav.navigate(Routes.RATES) },
     MoreItem("Шаблоны сообщений", "Напоминания должникам") { nav.navigate(Routes.TEMPLATES) },

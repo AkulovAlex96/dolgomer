@@ -93,7 +93,7 @@ class ImportApplier(
         val groups = batch.shares.groupBy { it.subscription.trim().lowercase() to it.participant.trim().lowercase() }
         for ((key, rows) in groups) {
             val sub = allSubs.firstOrNull { it.name.trim().lowercase() == key.first }
-            if (sub == null) { problems += "Доля, строка ${rows.first().line}: нет подписки «${rows.first().subscription}»"; continue }
+            if (sub == null) { problems += "Доля, строка ${rows.first().line}: нет регулярного платежа «${rows.first().subscription}»"; continue }
             val person = allPeople.firstOrNull { it.name.trim().lowercase() == key.second }
             val existing = person?.let { p -> allShares.firstOrNull { it.subscriptionId == sub.id && it.counterpartyId == p.id } }
             val shareId = existing?.id ?: run {
@@ -108,6 +108,56 @@ class ImportApplier(
         }
 
         return ImportReport(debtSummary.added, payments, subs, shares, people, skipped, problems)
+    }
+
+    /**
+     * Сколько записей файла уже есть в приложении и при импорте будут пропущены. Правила те же, что в [apply], но ничего не пишется:
+     * так предпросмотр честно показывает, сколько будет добавлено на самом деле.
+     */
+    suspend fun countDuplicates(batch: ImportBatch): Int {
+        var dup = 0
+        for (p in batch.people) {
+            val existing = db.counterparties().findByName(p.name.trim()) ?: continue
+            val adds = (existing.phone == null && p.phone != null) || (existing.note == null && p.note != null)
+            if (!adds) dup++
+        }
+
+        val people = db.counterparties().all().associateBy { it.id }
+        val debtKeys = db.debts().all()
+            .map { listOf(people[it.counterpartyId]?.name?.lowercase().orEmpty(), it.direction, it.currency, it.principalMinor, it.startDate) }
+            .toMutableSet()
+        for (r in batch.debts) {
+            if (!debtKeys.add(listOf(r.counterparty.trim().lowercase(), r.direction, r.currency, r.principalMinor, r.startDate))) dup++
+        }
+
+        val names = people.values.associate { it.id to it.name.lowercase() }
+        val allDebts = db.debts().all().filter { !it.archived }
+        val seen = db.payments().all().map { Triple(it.debtId, it.date, it.amountMinor) }.toMutableSet()
+        for (p in batch.payments) {
+            val target = allDebts.filter {
+                names[it.counterpartyId] == p.counterparty.trim().lowercase() &&
+                    (p.direction == null || it.direction == p.direction) && (p.currency == null || it.currency == p.currency)
+            }.maxByOrNull { it.startDate } ?: continue
+            if (!seen.add(Triple(target.id, p.date, p.amountMinor))) dup++
+        }
+
+        val subKeys = db.subscriptions().all()
+            .map { subKey(it.name, it.currency, it.amountMinor, it.anchorDate, it.payerCounterpartyId?.let(names::get)) }
+            .toMutableSet()
+        for (s in batch.subscriptions) {
+            if (!subKeys.add(subKey(s.name, s.currency, s.amountMinor, s.anchor, s.payerName?.lowercase()))) dup++
+        }
+
+        val allSubs = db.subscriptions().all().sortedBy { it.createdAt }
+        val allShares = db.shares().all()
+        val allPeople = db.counterparties().all()
+        val groups = batch.shares.groupBy { it.subscription.trim().lowercase() to it.participant.trim().lowercase() }
+        for ((key, _) in groups) {
+            val sub = allSubs.firstOrNull { it.name.trim().lowercase() == key.first } ?: continue
+            val person = allPeople.firstOrNull { it.name.trim().lowercase() == key.second } ?: continue
+            if (allShares.any { it.subscriptionId == sub.id && it.counterpartyId == person.id }) dup++
+        }
+        return dup
     }
 
     private fun subKey(name: String, currency: String, amount: Long, anchor: LocalDate, payer: String?) =

@@ -14,7 +14,7 @@ fun cell(value: String?): Cell = if (value.isNullOrEmpty()) Cell.Empty else Cell
 class Table(val name: String, val header: List<String>, val rows: List<List<Cell>>)
 
 object Csv {
-    const val BOM = "﻿"
+    const val BOM = "\uFEFF"
 
     /** CSV для Excel: UTF-8 с BOM, разделитель «;», десятичная запятая. */
     fun write(table: Table, delimiter: Char = ';'): String {
