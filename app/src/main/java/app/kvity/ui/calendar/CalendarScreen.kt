@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -44,6 +45,7 @@ import app.kvity.domain.AmountFormatter
 import app.kvity.ui.components.LabelRow
 import app.kvity.ui.components.Pill
 import app.kvity.ui.components.SectionCard
+import app.kvity.ui.components.swipeHorizontally
 import app.kvity.ui.currencyOf
 import app.kvity.ui.formatDate
 import app.kvity.ui.formatMoney
@@ -88,6 +90,7 @@ fun CalendarScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .swipeHorizontally(onLeft = { month = month.plusMonths(1) }, onRight = { month = month.minusMonths(1) })
                 .verticalScroll(rememberScrollState())
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -104,8 +107,13 @@ fun CalendarScreen(
                 }
             }
 
-            MonthSummary(Events.monthTotals(filtered, month, mainCurrency))
-            MonthGrid(month, firstDayOfWeek, today, selected, byDate, mainCurrency) { selected = it }
+            if (filter != CalendarFilter.SUBSCRIPTIONS) {
+                MonthSummary("Долги", Events.monthTotals(filtered.filter { it.kind == EventKind.DEBT }, month, mainCurrency), legend = true)
+            }
+            if (filter != CalendarFilter.DEBTS) {
+                MonthSummary("Регулярные платежи", Events.monthTotals(filtered.filter { it.kind == EventKind.SUBSCRIPTION }, month, mainCurrency), legend = filter == CalendarFilter.SUBSCRIPTIONS)
+            }
+            MonthGrid(month, firstDayOfWeek, today, selected, byDate, mainCurrency) { selected = it; month = YearMonth.from(it) }
 
             selected?.let { day -> DayDetails(day, byDate[day].orEmpty(), onOpenEvent, onMarkSharePaid) }
         }
@@ -114,12 +122,13 @@ fun CalendarScreen(
 
 /** Итог показанного месяца: три рамки, в каждой суммы по валютам столбиком (как на главной); ниже пояснение к красной точке. */
 @Composable
-private fun MonthSummary(totals: List<MonthTotal>) {
+private fun MonthSummary(title: String, totals: List<MonthTotal>, legend: Boolean) {
     val c = MaterialTheme.kvity
     // строка на каждую валюту в каждой рамке, «—» там, где суммы нет: так строки трёх рамок выровнены
     fun lines(sign: (Long) -> String, value: (MonthTotal) -> Long) =
         totals.map { if (value(it) == 0L) "—" else sign(value(it)) + formatMoney(kotlin.math.abs(value(it)), it.currency) }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(title, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SummaryBox("Мне вернут", lines({ "+" }) { it.incomingMinor }, c.incomeBg, c.income, Modifier.weight(1f))
             SummaryBox("Я верну", lines({ "−" }) { it.outgoingMinor }, c.expenseBg, c.expense, Modifier.weight(1f))
@@ -128,7 +137,7 @@ private fun MonthSummary(totals: List<MonthTotal>) {
                 MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurface, Modifier.weight(1f),
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (legend) Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(7.dp).background(c.expense, CircleShape))
             Text("просрочка", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -173,12 +182,12 @@ private fun MonthGrid(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 for (col in 0 until 7) {
                     val dayNum = r * 7 + col - offset + 1
-                    if (dayNum < 1 || dayNum > days) {
-                        Box(Modifier.weight(1f).height(with(LocalDensity.current) { 72.sp.toDp() }))
-                    } else {
-                        val date = month.atDay(dayNum)
-                        DayCell(date, today, date == selected, byDate[date].orEmpty(), mainCurrency, Modifier.weight(1f)) { onSelect(date) }
-                    }
+                    val date = month.atDay(1).plusDays((dayNum - 1).toLong())
+                    val inMonth = dayNum in 1..days
+                    DayCell(
+                        date, today, date == selected, byDate[date].orEmpty(), mainCurrency,
+                        Modifier.weight(1f).then(if (inMonth) Modifier else Modifier.alpha(0.45f)),
+                    ) { onSelect(date) }
                 }
             }
         }
@@ -200,15 +209,32 @@ private fun DayCell(
     onClick: () -> Unit,
 ) {
     val c = MaterialTheme.kvity
-    val incoming = events.filter { it.flow == MoneyFlow.IN && it.currency == mainCurrency }.sumOf { it.amountMinor }
-    val outgoing = events.filter { it.flow == MoneyFlow.OUT && it.currency == mainCurrency }.sumOf { it.amountMinor }
-    val hasOther = events.any { it.currency != mainCurrency }
+    val debts = events.filter { it.kind == EventKind.DEBT }
+    val regular = events.filter { it.kind == EventKind.SUBSCRIPTION }
+    // долги по каждой валюте и направлению: основная валюта первой, входящие раньше исходящих
+    val debtLines = debts.groupBy { it.currency to it.flow }
+        .toSortedMap(compareBy<Pair<String, MoneyFlow>> { it.first != mainCurrency }.thenBy { it.first }.thenBy { it.second })
+        .map { (key, list) ->
+            val cur = currencyOf(key.first)
+            val text = (if (key.second == MoneyFlow.IN) "+" else "−") + AmountFormatter.compact(list.sumOf { it.amountMinor }, cur.fractionDigits) + cur.symbol
+            text to key.second
+        }
+    val debtShown = if (debtLines.size > 2) listOf(debtLines[0], "ещё ${debtLines.size - 1}" to null) else debtLines
+    // регулярные платежи считаются отдельно от долгов и по каждой валюте (основная первой): итог со знаком
+    val regularLines = regular.groupBy { it.currency }
+        .toSortedMap(compareBy<String> { it != mainCurrency }.thenBy { it })
+        .map { (code, list) -> code to list.sumOf { if (it.flow == MoneyFlow.IN) it.amountMinor else -it.amountMinor } }
+        .map { (code, net) ->
+            val cur = currencyOf(code)
+            (if (net < 0) "−" else "+") + AmountFormatter.compact(kotlin.math.abs(net), cur.fractionDigits) + cur.symbol
+        }
+    // две строки под регулярные; если валют больше, вторая строка сворачивается в «ещё N»
+    val regularShown = if (regularLines.size > 2) listOf(regularLines[0], "ещё ${regularLines.size - 1}") else regularLines
     val overdue = events.any { it.overdue }
-    val digits = currencyOf(mainCurrency).fractionDigits
 
     // высоты в sp: при крупном шрифте системы ячейка растёт вместе с текстом, а сумма внизу не обрезается
     val density = LocalDensity.current
-    val cellHeight = with(density) { 72.sp.toDp() }
+    val cellHeight = with(density) { 104.sp.toDp() }
     val amountHeight = with(density) { 15.sp.toDp() }
 
     Column(
@@ -239,20 +265,24 @@ private fun DayCell(
             if (overdue) {
                 Box(Modifier.padding(start = 3.dp).size(6.dp).background(c.expense, CircleShape))
             }
-            // суммы в других валютах показаны только в деталях дня; точка не меняет высоту строки с числом
-            if (hasOther) Box(Modifier.padding(start = 4.dp).size(4.dp).background(MaterialTheme.colorScheme.onSurfaceVariant, CircleShape))
         }
         Box(Modifier.weight(1f))
-        Text(
-            if (incoming > 0) "+" + AmountFormatter.compact(incoming, digits) else "",
-            color = c.income, fontWeight = FontWeight.Bold, fontSize = 10.sp, lineHeight = 13.sp, maxLines = 1, softWrap = false,
-            modifier = Modifier.height(amountHeight).padding(start = 2.dp),
-        )
-        Text(
-            if (outgoing > 0) "−" + AmountFormatter.compact(outgoing, digits) else "",
-            color = c.expense, fontWeight = FontWeight.Bold, fontSize = 10.sp, lineHeight = 13.sp, maxLines = 1, softWrap = false,
-            modifier = Modifier.height(amountHeight).padding(start = 2.dp),
-        )
+        for (i in 0 until 2) {
+            val (text, flow) = debtShown.getOrElse(i) { "" to null }
+            Text(
+                text,
+                color = when (flow) { MoneyFlow.IN -> c.income; MoneyFlow.OUT -> c.expense; null -> MaterialTheme.colorScheme.onSurfaceVariant },
+                fontWeight = FontWeight.Bold, fontSize = 10.sp, lineHeight = 13.sp, maxLines = 1, softWrap = false,
+                modifier = Modifier.height(amountHeight).padding(start = 2.dp),
+            )
+        }
+        for (i in 0 until 2) {
+            Text(
+                regularShown.getOrElse(i) { "" },
+                color = MaterialTheme.colorScheme.tertiary, fontWeight = FontWeight.Bold, fontSize = 10.sp, lineHeight = 13.sp, maxLines = 1, softWrap = false,
+                modifier = Modifier.height(amountHeight).padding(start = 2.dp),
+            )
+        }
     }
 }
 
@@ -270,32 +300,36 @@ private fun DayDetails(
             Text("В этот день ничего нет", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
             return@SectionCard
         }
-        val currencies = events.map { it.currency }.distinct()
-        currencies.forEach { code ->
-            val inn = events.filter { it.currency == code && it.flow == MoneyFlow.IN }.sumOf { it.amountMinor }
-            val out = events.filter { it.currency == code && it.flow == MoneyFlow.OUT }.sumOf { it.amountMinor }
-            Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TotalBox("Входящие", if (inn > 0) "+" + formatMoney(inn, code) else "—", c.incomeBg, c.income, Modifier.weight(1f))
-                TotalBox("Исходящие", if (out > 0) "−" + formatMoney(out, code) else "—", c.expenseBg, c.expense, Modifier.weight(1f))
-                val net = inn - out
-                TotalBox("Итог", (if (net > 0) "+" else if (net < 0) "−" else "") + formatMoney(kotlin.math.abs(net), code),
-                    MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+        listOf(EventKind.DEBT to "Долги", EventKind.SUBSCRIPTION to "Регулярные платежи").forEach { (kind, heading) ->
+            val part = events.filter { it.kind == kind }
+            if (part.isEmpty()) return@forEach
+            Text(heading, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 10.dp))
+            part.map { it.currency }.distinct().forEach { code ->
+                val inn = part.filter { it.currency == code && it.flow == MoneyFlow.IN }.sumOf { it.amountMinor }
+                val out = part.filter { it.currency == code && it.flow == MoneyFlow.OUT }.sumOf { it.amountMinor }
+                Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TotalBox("Входящие", if (inn > 0) "+" + formatMoney(inn, code) else "—", c.incomeBg, c.income, Modifier.weight(1f))
+                    TotalBox("Исходящие", if (out > 0) "−" + formatMoney(out, code) else "—", c.expenseBg, c.expense, Modifier.weight(1f))
+                    val net = inn - out
+                    TotalBox("Итог", (if (net > 0) "+" else if (net < 0) "−" else "") + formatMoney(kotlin.math.abs(net), code),
+                        MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+                }
             }
-        }
-        events.sortedBy { it.flow }.forEach { e ->
-            LabelRow(
-                onClick = { onOpen(e) },
-                label = e.title, subtitle = listOfNotNull(e.subtitle, if (e.overdue) "просрочено" else null).joinToString(" · ").ifEmpty { null },
-                trailing = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            (if (e.flow == MoneyFlow.IN) "+" else "−") + formatMoney(e.amountMinor, e.currency),
-                            color = if (e.flow == MoneyFlow.IN) c.income else c.expense, fontWeight = FontWeight.Bold,
-                        )
-                        if (e.shareId != null) TextButton(onClick = { onMarkSharePaid(e) }) { Text("Оплатил") }
-                    }
-                },
-            )
+            part.sortedBy { it.flow }.forEach { e ->
+                LabelRow(
+                    onClick = { onOpen(e) },
+                    label = e.title, subtitle = listOfNotNull(e.subtitle, if (e.overdue) "просрочено" else null).joinToString(" · ").ifEmpty { null },
+                    trailing = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                (if (e.flow == MoneyFlow.IN) "+" else "−") + formatMoney(e.amountMinor, e.currency),
+                                color = if (e.flow == MoneyFlow.IN) c.income else c.expense, fontWeight = FontWeight.Bold,
+                            )
+                            if (e.shareId != null) TextButton(onClick = { onMarkSharePaid(e) }) { Text("Оплатил") }
+                        }
+                    },
+                )
+            }
         }
     }
 }

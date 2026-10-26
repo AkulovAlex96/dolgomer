@@ -67,9 +67,9 @@ object Events {
         val out = mutableListOf<CalendarEvent>()
         for (v in subs) {
             val s = v.subscription
-            // Мои списания (только будущие и сегодняшние): что и когда спишется
+            // Мои списания: прошедшие (за последний год) и будущие, чтобы месяцы календаря не были пустыми
             if (s.state == SubscriptionState.ACTIVE) {
-                SubscriptionCalc.occurrences(s.anchorDate, s.periodicity, s.interval, today, horizon).forEach { d ->
+                SubscriptionCalc.occurrences(s.anchorDate, s.periodicity, s.interval, today.minusDays(365), horizon).forEach { d ->
                     out += CalendarEvent(
                         date = d, kind = EventKind.SUBSCRIPTION, flow = MoneyFlow.OUT, title = s.name,
                         subtitle = if (s.payer == SubscriptionPayer.ME) "списание" else "возвращаю ${v.payerName.orEmpty()}",

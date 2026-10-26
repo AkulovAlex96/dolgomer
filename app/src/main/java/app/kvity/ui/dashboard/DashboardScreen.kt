@@ -39,6 +39,7 @@ import app.kvity.ui.components.LabelRow
 import app.kvity.ui.components.MoneyLines
 import app.kvity.ui.components.SectionCard
 import app.kvity.ui.components.StatusPill
+import app.kvity.ui.components.swipeHorizontally
 import app.kvity.ui.formatDate
 import app.kvity.ui.formatMoney
 import app.kvity.ui.label
@@ -71,7 +72,8 @@ fun DashboardScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .padding(padding)
+                .swipeHorizontally(onLeft = { tab = 1 }, onRight = { tab = 0 }),
             // запас снизу, чтобы кнопка «+» не закрывала последние строки
             contentPadding = PaddingValues(start = 14.dp, top = 14.dp, end = 14.dp, bottom = 92.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
