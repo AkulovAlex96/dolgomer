@@ -146,6 +146,7 @@ fun AppNavigation() {
                     onOpenDebt = { nav.navigate(Routes.debt(it)) },
                     onAddSubscription = { nav.navigate(Routes.NEW_SUB) },
                     onOpenSubscription = { nav.navigate(Routes.sub(it)) },
+                    onMarkSharePaid = vm::markSharePaid,
                     onOpenSettings = { nav.navigate(Routes.SETTINGS) },
                     backupHint = (state.debts.isNotEmpty() || state.subs.isNotEmpty()) &&
                         System.currentTimeMillis() - maxOf(settings.lastBackupMillis, settings.installedAtMillis) > 30L * 24 * 3600 * 1000,

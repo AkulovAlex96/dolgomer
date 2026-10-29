@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.kvity.data.CalendarEvent
 import app.kvity.data.DebtView
 import app.kvity.domain.Bucket
 import app.kvity.domain.DebtStatus
@@ -53,6 +54,7 @@ fun DashboardScreen(
     onOpenDebt: (String) -> Unit,
     onAddSubscription: () -> Unit,
     onOpenSubscription: (String) -> Unit,
+    onMarkSharePaid: (CalendarEvent) -> Unit = {},
     onOpenSettings: () -> Unit,
     backupHint: Boolean = false,
     onOpenBackup: () -> Unit = {},
@@ -100,6 +102,9 @@ fun DashboardScreen(
 
             if (tab == 1) {
                 item { SubsBalanceCard(state) }
+                if (state.overdueShares.isNotEmpty()) {
+                    item { OverdueSharesCard(state.overdueShares, onOpenSubscription, onMarkSharePaid) }
+                }
                 item { BucketsCard("Мне платят", state.subsIncoming, MaterialTheme.kvity.income) }
                 item { BucketsCard("Я плачу", state.subsOutgoing, MaterialTheme.kvity.expense) }
                 if (state.loaded && state.subs.isEmpty()) {
@@ -286,6 +291,31 @@ private fun SubRow(view: app.kvity.data.SubscriptionView, onClick: () -> Unit) {
                 Text(formatMoney(s.amountMinor, s.currency), fontWeight = FontWeight.Bold)
                 if (unpaid > 0) app.kvity.ui.components.Pill("не оплатили: $unpaid", c.expenseBg, c.expense)
             }
+        }
+    }
+}
+
+@Composable
+private fun OverdueSharesCard(
+    shares: List<CalendarEvent>,
+    onOpen: (String) -> Unit,
+    onMarkPaid: (CalendarEvent) -> Unit,
+) {
+    val c = MaterialTheme.kvity
+    SectionCard {
+        Text("Просрочено — не оплатили", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = c.expense)
+        shares.forEach { e ->
+            LabelRow(
+                onClick = { e.refId.let(onOpen) },
+                label = e.title,
+                subtitle = listOfNotNull(e.subtitle, formatDate(e.date)).joinToString(" · "),
+                trailing = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("+" + formatMoney(e.amountMinor, e.currency), color = c.income, fontWeight = FontWeight.Bold)
+                        androidx.compose.material3.TextButton(onClick = { onMarkPaid(e) }) { Text("Оплатил") }
+                    }
+                },
+            )
         }
     }
 }

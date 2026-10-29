@@ -2,6 +2,7 @@ package app.kvity.ui.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.kvity.data.CalendarEvent
 import app.kvity.data.DebtRepository
 import app.kvity.data.DebtView
 import app.kvity.data.EventKind
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /** Суммы по периодам: период → (код валюты → сумма в минимальных единицах). */
 typealias BucketTotals = Map<Bucket, Map<String, Long>>
@@ -43,13 +45,21 @@ data class DashboardState(
     val subsIncomingMonthly: Map<String, Long> = emptyMap(),
     val subsOutgoingMonthly: Map<String, Long> = emptyMap(),
     val subs: List<SubscriptionView> = emptyList(),
+    /** Неоплаченные доли участников с прошедшим сроком. */
+    val overdueShares: List<CalendarEvent> = emptyList(),
 )
 
 class DashboardViewModel(
     debts: DebtRepository,
-    subscriptions: SubscriptionRepository,
+    private val subscriptions: SubscriptionRepository,
     settings: SettingsStore,
 ) : ViewModel() {
+
+    fun markSharePaid(e: CalendarEvent) {
+        val shareId = e.shareId ?: return
+        val period = e.periodDate ?: return
+        viewModelScope.launch { subscriptions.markPaid(shareId, period, e.amountMinor) }
+    }
 
     val state: StateFlow<DashboardState> = combine(
         debts.observeDebts(), subscriptions.observeAll(), settings.settings,
@@ -78,7 +88,10 @@ class DashboardViewModel(
                 .filterValues { it > 0 }
 
             val events = Events.subscriptionEvents(subs, today).filter { it.kind == EventKind.SUBSCRIPTION }
-            fun subDues(flow: MoneyFlow) = events.filter { it.flow == flow }.map { Due(it.date, it.amountMinor, it.currency) }
+            // Прошедшие собственные списания уже произошли: просрочкой они не являются, отметить их нельзя
+            fun subDues(flow: MoneyFlow) = events
+                .filter { it.flow == flow && (flow == MoneyFlow.IN || !it.date.isBefore(today)) }
+                .map { Due(it.date, it.amountMinor, it.currency) }
 
             val monthlyIn = mutableMapOf<String, Long>()
             val monthlyOut = mutableMapOf<String, Long>()
@@ -108,6 +121,7 @@ class DashboardViewModel(
                 subsIncomingMonthly = monthlyIn,
                 subsOutgoingMonthly = monthlyOut,
                 subs = subs,
+                overdueShares = events.filter { it.flow == MoneyFlow.IN && it.overdue }.sortedBy { it.date },
             )
         }
     }
