@@ -53,6 +53,8 @@ fun SubscriptionDetailScreen(
     onMarkPaid: (ShareView, LocalDate) -> Unit,
     onMarkUnpaid: (ShareView, LocalDate) -> Unit,
     onRemind: (ShareView, LocalDate) -> Unit,
+    onMarkChargePaid: (LocalDate) -> Unit,
+    onMarkChargeUnpaid: (LocalDate) -> Unit,
     knownNames: List<String>,
     attachments: @Composable (subscriptionId: String) -> Unit = {},
 ) {
@@ -97,6 +99,41 @@ fun SubscriptionDetailScreen(
             s.paymentMethodNote?.let { Text("Оплата: $it", color = MaterialTheme.colorScheme.onSurfaceVariant) }
             s.trialEndsOn?.let { Text("Пробный период до ${formatDate(it)}", color = c.warn) }
             s.note?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
+
+        if (s.state == SubscriptionState.ACTIVE) {
+            val charges = app.kvity.data.Events.subscriptionEvents(listOf(view), today).filter { it.flow == app.kvity.data.MoneyFlow.OUT }
+            val pending = charges.filter { it.markable && it.date <= today } + charges.filter { it.markable && it.date > today }.take(1)
+            val lastPaid = charges.filter { it.paid }.takeLast(2)
+            SectionCard {
+                Text("Мои списания", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (pending.isEmpty() && lastPaid.isEmpty()) {
+                    Text("Нет списаний", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                pending.forEach { e ->
+                    LabelRow(
+                        label = formatDate(e.date),
+                        subtitle = if (e.overdue) "просрочено" else if (e.date == today) "сегодня" else "ожидается",
+                        trailing = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(formatMoney(e.amountMinor, e.currency), color = if (e.overdue) c.expense else MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                                TextButton(onClick = { onMarkChargePaid(e.date) }) { Text("Оплатил") }
+                            }
+                        },
+                    )
+                }
+                lastPaid.forEach { e ->
+                    LabelRow(
+                        label = formatDate(e.date), subtitle = "оплачено",
+                        trailing = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(formatMoney(e.amountMinor, e.currency), color = c.income, fontWeight = FontWeight.Bold)
+                                TextButton(onClick = { onMarkChargeUnpaid(e.date) }) { Text("Отменить") }
+                            }
+                        },
+                    )
+                }
+            }
         }
 
         if (s.payer == SubscriptionPayer.ME) {

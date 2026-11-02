@@ -54,7 +54,7 @@ fun DashboardScreen(
     onOpenDebt: (String) -> Unit,
     onAddSubscription: () -> Unit,
     onOpenSubscription: (String) -> Unit,
-    onMarkSharePaid: (CalendarEvent) -> Unit = {},
+    onMarkPaid: (CalendarEvent) -> Unit = {},
     onOpenSettings: () -> Unit,
     backupHint: Boolean = false,
     onOpenBackup: () -> Unit = {},
@@ -103,7 +103,7 @@ fun DashboardScreen(
             if (tab == 1) {
                 item { SubsBalanceCard(state) }
                 if (state.overdueShares.isNotEmpty()) {
-                    item { OverdueSharesCard(state.overdueShares, onOpenSubscription, onMarkSharePaid) }
+                    item { OverdueSharesCard(state.overdueShares, onOpenSubscription, onMarkPaid) }
                 }
                 item { BucketsCard("Мне платят", state.subsIncoming, MaterialTheme.kvity.income) }
                 item { BucketsCard("Я плачу", state.subsOutgoing, MaterialTheme.kvity.expense) }
@@ -303,7 +303,7 @@ private fun OverdueSharesCard(
 ) {
     val c = MaterialTheme.kvity
     SectionCard {
-        Text("Просрочено — не оплатили", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = c.expense)
+        Text("Просрочено", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = c.expense)
         shares.forEach { e ->
             LabelRow(
                 onClick = { e.refId.let(onOpen) },
@@ -311,7 +311,8 @@ private fun OverdueSharesCard(
                 subtitle = listOfNotNull(e.subtitle, formatDate(e.date)).joinToString(" · "),
                 trailing = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("+" + formatMoney(e.amountMinor, e.currency), color = c.income, fontWeight = FontWeight.Bold)
+                        val incoming = e.flow == app.kvity.data.MoneyFlow.IN
+                        Text((if (incoming) "+" else "−") + formatMoney(e.amountMinor, e.currency), color = if (incoming) c.income else c.expense, fontWeight = FontWeight.Bold)
                         androidx.compose.material3.TextButton(onClick = { onMarkPaid(e) }) { Text("Оплатил") }
                     }
                 },

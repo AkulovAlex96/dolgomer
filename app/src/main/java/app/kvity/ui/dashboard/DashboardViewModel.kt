@@ -45,7 +45,7 @@ data class DashboardState(
     val subsIncomingMonthly: Map<String, Long> = emptyMap(),
     val subsOutgoingMonthly: Map<String, Long> = emptyMap(),
     val subs: List<SubscriptionView> = emptyList(),
-    /** Неоплаченные доли участников с прошедшим сроком. */
+    /** Неоплаченные платежи с прошедшим сроком: доли участников и мои списания. */
     val overdueShares: List<CalendarEvent> = emptyList(),
 )
 
@@ -55,10 +55,12 @@ class DashboardViewModel(
     settings: SettingsStore,
 ) : ViewModel() {
 
-    fun markSharePaid(e: CalendarEvent) {
-        val shareId = e.shareId ?: return
+    fun markPaid(e: CalendarEvent) {
         val period = e.periodDate ?: return
-        viewModelScope.launch { subscriptions.markPaid(shareId, period, e.amountMinor) }
+        viewModelScope.launch {
+            if (e.shareId != null) subscriptions.markPaid(e.shareId, period, e.amountMinor)
+            else subscriptions.markChargePaid(e.refId, period, e.amountMinor)
+        }
     }
 
     val state: StateFlow<DashboardState> = combine(
@@ -88,9 +90,9 @@ class DashboardViewModel(
                 .filterValues { it > 0 }
 
             val events = Events.subscriptionEvents(subs, today).filter { it.kind == EventKind.SUBSCRIPTION }
-            // Прошедшие собственные списания уже произошли: просрочкой они не являются, отметить их нельзя
+            // Оплаченные и давно прошедшие (до заведения в приложении) собственные списания в суммы не входят
             fun subDues(flow: MoneyFlow) = events
-                .filter { it.flow == flow && (flow == MoneyFlow.IN || !it.date.isBefore(today)) }
+                .filter { it.flow == flow && !it.paid && (it.overdue || !it.date.isBefore(today)) }
                 .map { Due(it.date, it.amountMinor, it.currency) }
 
             val monthlyIn = mutableMapOf<String, Long>()
@@ -121,7 +123,7 @@ class DashboardViewModel(
                 subsIncomingMonthly = monthlyIn,
                 subsOutgoingMonthly = monthlyOut,
                 subs = subs,
-                overdueShares = events.filter { it.flow == MoneyFlow.IN && it.overdue }.sortedBy { it.date },
+                overdueShares = events.filter { it.overdue }.sortedBy { it.date },
             )
         }
     }

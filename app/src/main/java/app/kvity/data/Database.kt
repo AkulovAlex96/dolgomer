@@ -114,6 +114,17 @@ interface SharePaymentDao {
 }
 
 @Dao
+interface ChargePaymentDao {
+    @Insert suspend fun insert(item: ChargePaymentEntity)
+    @Query("DELETE FROM subscription_payments WHERE subscriptionId = :subscriptionId AND periodDate = :periodDate")
+    suspend fun deleteFor(subscriptionId: String, periodDate: LocalDate)
+    @Query("SELECT * FROM subscription_payments") fun observeAll(): Flow<List<ChargePaymentEntity>>
+    @Query("SELECT * FROM subscription_payments") suspend fun all(): List<ChargePaymentEntity>
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insertAll(items: List<ChargePaymentEntity>)
+    @Query("DELETE FROM subscription_payments") suspend fun deleteAll()
+}
+
+@Dao
 interface AttachmentDao {
     @Insert suspend fun insert(item: AttachmentEntity)
     @Query("DELETE FROM attachments WHERE id = :id") suspend fun delete(id: String)
@@ -160,11 +171,11 @@ interface RateDao {
         CounterpartyEntity::class, DebtEntity::class, PaymentEntity::class,
         SubscriptionEntity::class, SubscriptionShareEntity::class, SharePaymentEntity::class,
         AttachmentEntity::class, ReminderTemplateEntity::class, ReminderLogEntity::class,
-        ExchangeRateEntity::class,
+        ExchangeRateEntity::class, ChargePaymentEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
 )
 @TypeConverters(Converters::class)
 abstract class KvityDatabase : RoomDatabase() {
@@ -174,6 +185,7 @@ abstract class KvityDatabase : RoomDatabase() {
     abstract fun subscriptions(): SubscriptionDao
     abstract fun shares(): ShareDao
     abstract fun sharePayments(): SharePaymentDao
+    abstract fun chargePayments(): ChargePaymentDao
     abstract fun attachments(): AttachmentDao
     abstract fun templates(): TemplateDao
     abstract fun reminderLog(): ReminderLogDao

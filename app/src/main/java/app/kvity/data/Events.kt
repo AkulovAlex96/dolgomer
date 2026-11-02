@@ -4,8 +4,10 @@ import app.kvity.domain.DebtStatus
 import app.kvity.domain.Direction
 import app.kvity.domain.InstallmentState
 import app.kvity.domain.SubscriptionCalc
+import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.ZoneId
 
 enum class EventKind { DEBT, SUBSCRIPTION }
 enum class MoneyFlow { IN, OUT }
@@ -23,6 +25,10 @@ data class CalendarEvent(
     val refId: String,
     val shareId: String? = null,
     val periodDate: LocalDate? = null,
+    /** Платёж уже отмечен оплаченным. */
+    val paid: Boolean = false,
+    /** Своё списание, которое можно отметить оплаченным. */
+    val markable: Boolean = false,
 )
 
 /** Итог календарного месяца в одной валюте: сколько вернут мне и сколько верну я. */
@@ -67,13 +73,18 @@ object Events {
         val out = mutableListOf<CalendarEvent>()
         for (v in subs) {
             val s = v.subscription
-            // Мои списания: прошедшие (за последний год) и будущие, чтобы месяцы календаря не были пустыми
+            // Мои списания: прошедшие (за последний год) и будущие, чтобы месяцы календаря не были пустыми.
+            // Просрочкой считаются только неотмеченные списания с момента, как подписка заведена в приложении
+            val trackedFrom = Instant.ofEpochMilli(s.createdAt).atZone(ZoneId.systemDefault()).toLocalDate()
             if (s.state == SubscriptionState.ACTIVE) {
                 SubscriptionCalc.occurrences(s.anchorDate, s.periodicity, s.interval, today.minusDays(365), horizon).forEach { d ->
                     out += CalendarEvent(
                         date = d, kind = EventKind.SUBSCRIPTION, flow = MoneyFlow.OUT, title = s.name,
                         subtitle = if (s.payer == SubscriptionPayer.ME) "списание" else "возвращаю ${v.payerName.orEmpty()}",
-                        amountMinor = s.amountMinor, currency = s.currency, overdue = false, refId = s.id,
+                        amountMinor = s.amountMinor, currency = s.currency, refId = s.id,
+                        overdue = d !in v.paidCharges && d.isBefore(today) && !d.isBefore(trackedFrom),
+                        periodDate = d, paid = d in v.paidCharges,
+                        markable = d !in v.paidCharges && !d.isBefore(trackedFrom),
                     )
                 }
             }

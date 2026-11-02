@@ -44,6 +44,11 @@ class ReminderPlannerTest {
         assertTrue(types(event(today.plusDays(3), EventKind.SUBSCRIPTION, MoneyFlow.OUT)).isEmpty())
     }
 
+    @Test fun `past own subscription charge is not overdue`() {
+        val past = CalendarEvent(today.minusDays(1), EventKind.SUBSCRIPTION, MoneyFlow.OUT, "X", null, 1000, "RUB", false, "id")
+        assertTrue(ReminderPlanner.plan(listOf(past), today, settings).isEmpty())
+    }
+
     @Test fun `nothing when notifications are disabled`() {
         val s = settings.copy(notificationsEnabled = false)
         assertTrue(ReminderPlanner.plan(listOf(event(today)), today, s).isEmpty())

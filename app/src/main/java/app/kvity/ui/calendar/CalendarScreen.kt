@@ -318,14 +318,14 @@ private fun DayDetails(
             part.sortedBy { it.flow }.forEach { e ->
                 LabelRow(
                     onClick = { onOpen(e) },
-                    label = e.title, subtitle = listOfNotNull(e.subtitle, if (e.overdue) "просрочено" else null).joinToString(" · ").ifEmpty { null },
+                    label = e.title, subtitle = listOfNotNull(e.subtitle, if (e.overdue) "просрочено" else if (e.paid) "оплачено" else null).joinToString(" · ").ifEmpty { null },
                     trailing = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 (if (e.flow == MoneyFlow.IN) "+" else "−") + formatMoney(e.amountMinor, e.currency),
                                 color = if (e.flow == MoneyFlow.IN) c.income else c.expense, fontWeight = FontWeight.Bold,
                             )
-                            if (e.shareId != null) TextButton(onClick = { onMarkSharePaid(e) }) { Text("Оплатил") }
+                            if (e.shareId != null || e.markable) TextButton(onClick = { onMarkSharePaid(e) }) { Text("Оплатил") }
                         }
                     },
                 )

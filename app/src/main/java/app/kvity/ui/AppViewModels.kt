@@ -57,6 +57,11 @@ class SubscriptionDetailViewModel(
     fun markPaid(sh: ShareView, period: LocalDate) {
         viewModelScope.launch { repo.markPaid(sh.share.id, period, sh.share.amountMinor) }
     }
+    fun markChargePaid(period: LocalDate) {
+        val s = view.value?.subscription ?: return
+        viewModelScope.launch { repo.markChargePaid(id, period, s.amountMinor) }
+    }
+    fun markChargeUnpaid(period: LocalDate) { viewModelScope.launch { repo.markChargeUnpaid(id, period) } }
     fun markUnpaid(sh: ShareView, period: LocalDate) { viewModelScope.launch { repo.markUnpaid(sh.share.id, period) } }
     fun update(input: SubscriptionInput) { viewModelScope.launch { repo.update(id, input) } }
 }

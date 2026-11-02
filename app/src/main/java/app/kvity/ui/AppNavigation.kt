@@ -146,7 +146,7 @@ fun AppNavigation() {
                     onOpenDebt = { nav.navigate(Routes.debt(it)) },
                     onAddSubscription = { nav.navigate(Routes.NEW_SUB) },
                     onOpenSubscription = { nav.navigate(Routes.sub(it)) },
-                    onMarkSharePaid = vm::markSharePaid,
+                    onMarkPaid = vm::markPaid,
                     onOpenSettings = { nav.navigate(Routes.SETTINGS) },
                     backupHint = (state.debts.isNotEmpty() || state.subs.isNotEmpty()) &&
                         System.currentTimeMillis() - maxOf(settings.lastBackupMillis, settings.installedAtMillis) > 30L * 24 * 3600 * 1000,
@@ -274,6 +274,8 @@ fun AppNavigation() {
                     onDeleteShare = vm::deleteShare,
                     onMarkPaid = vm::markPaid,
                     onMarkUnpaid = vm::markUnpaid,
+                    onMarkChargePaid = vm::markChargePaid,
+                    onMarkChargeUnpaid = vm::markChargeUnpaid,
                     onRemind = { sh, period ->
                         reminder = ReminderContext(
                             name = sh.counterpartyName, phone = sh.counterpartyPhone,

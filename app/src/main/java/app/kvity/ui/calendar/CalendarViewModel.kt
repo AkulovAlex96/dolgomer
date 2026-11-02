@@ -23,8 +23,10 @@ class CalendarViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun markSharePaid(e: CalendarEvent) {
-        val shareId = e.shareId ?: return
         val period = e.periodDate ?: return
-        viewModelScope.launch { subscriptions.markPaid(shareId, period, e.amountMinor) }
+        viewModelScope.launch {
+            if (e.shareId != null) subscriptions.markPaid(e.shareId, period, e.amountMinor)
+            else subscriptions.markChargePaid(e.refId, period, e.amountMinor)
+        }
     }
 }

@@ -166,6 +166,21 @@ data class SharePaymentEntity(
     val amountMinor: Long,
 )
 
+/** Отметка «моё списание по подписке за период, который начался в [periodDate], оплачено». */
+@Serializable
+@Entity(
+    tableName = "subscription_payments",
+    foreignKeys = [ForeignKey(SubscriptionEntity::class, ["id"], ["subscriptionId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("subscriptionId")],
+)
+data class ChargePaymentEntity(
+    @PrimaryKey val id: String,
+    val subscriptionId: String,
+    val periodDate: LocalDate,
+    val paidDate: LocalDate,
+    val amountMinor: Long,
+)
+
 // ---- Вложения, шаблоны, журнал напоминаний, курсы ----
 
 @Serializable

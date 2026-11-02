@@ -15,6 +15,7 @@ object ReminderPlanner {
         if (!settings.notificationsEnabled) return emptyList()
         val result = mutableListOf<ReminderItem>()
         for (e in events) {
+            if (e.paid) continue
             val days = ChronoUnit.DAYS.between(today, e.date)
             when {
                 days == 0L -> result += ReminderItem(e, ReminderType.TODAY, 0)
@@ -26,6 +27,8 @@ object ReminderPlanner {
                     }
                     if (days.toInt() in before) result += ReminderItem(e, ReminderType.UPCOMING, days)
                 }
+                // прошедшие собственные списания подписок просрочкой не являются
+                !e.overdue -> Unit
                 else -> {
                     val overdue = -days
                     val every = settings.overdueRepeatDays

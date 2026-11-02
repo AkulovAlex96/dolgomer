@@ -20,6 +20,8 @@ data class SubscriptionView(
     val subscription: SubscriptionEntity,
     val payerName: String?,
     val shares: List<ShareView>,
+    /** Периоды, за которые моё списание отмечено оплаченным. */
+    val paidCharges: Set<LocalDate> = emptySet(),
 )
 
 class NewShare(val counterpartyName: String, val amountMinor: Long, val currency: String, val activeFrom: LocalDate)
@@ -51,11 +53,13 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
             db.shares().observeAll(),
             db.sharePayments().observeAll(),
             db.counterparties().observeAll(),
-        ) { subs, shares, payments, people ->
+            db.chargePayments().observeAll(),
+        ) { subs, shares, payments, people, charges ->
+            val paidCharges = charges.groupBy { it.subscriptionId }.mapValues { (_, v) -> v.map { it.periodDate }.toSet() }
             val names = people.associateBy { it.id }
             val paidByShare = payments.groupBy { it.shareId }.mapValues { (_, v) -> v.map { it.periodDate }.toSet() }
             val horizon = today().plusDays(HORIZON_DAYS)
-            subs.map { s -> buildView(s, shares.filter { it.subscriptionId == s.id }, paidByShare, names, horizon) }
+            subs.map { s -> buildView(s, shares.filter { it.subscriptionId == s.id }, paidByShare, names, horizon, paidCharges[s.id].orEmpty()) }
                 .sortedBy { it.subscription.name.lowercase() }
         }
 
@@ -68,6 +72,7 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
         paidByShare: Map<String, Set<LocalDate>>,
         names: Map<String, CounterpartyEntity>,
         horizon: LocalDate,
+        paidCharges: Set<LocalDate>,
     ): SubscriptionView {
         val end = if (s.state == SubscriptionState.ACTIVE) horizon else LocalDate.now()
         val views = shares.map { sh ->
@@ -77,7 +82,7 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
             )
             ShareView(sh, names[sh.counterpartyId]?.name.orEmpty(), names[sh.counterpartyId]?.phone, dues)
         }
-        return SubscriptionView(s, s.payerCounterpartyId?.let { names[it]?.name }, views)
+        return SubscriptionView(s, s.payerCounterpartyId?.let { names[it]?.name }, views, paidCharges)
     }
 
     private suspend fun person(name: String): CounterpartyEntity {
@@ -134,6 +139,13 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
         db.sharePayments().deleteFor(shareId, period)
         db.sharePayments().insert(SharePaymentEntity(UUID.randomUUID().toString(), shareId, period, paidDate, amountMinor))
     }
+
+    suspend fun markChargePaid(subscriptionId: String, period: LocalDate, amountMinor: Long, paidDate: LocalDate = LocalDate.now()) {
+        db.chargePayments().deleteFor(subscriptionId, period)
+        db.chargePayments().insert(ChargePaymentEntity(UUID.randomUUID().toString(), subscriptionId, period, paidDate, amountMinor))
+    }
+
+    suspend fun markChargeUnpaid(subscriptionId: String, period: LocalDate) = db.chargePayments().deleteFor(subscriptionId, period)
 
     suspend fun markUnpaid(shareId: String, period: LocalDate) = db.sharePayments().deleteFor(shareId, period)
 }

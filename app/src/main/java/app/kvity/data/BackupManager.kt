@@ -30,6 +30,7 @@ class BackupManager(
         templates = db.templates().all(),
         reminderLog = db.reminderLog().all(),
         rates = db.rates().all(),
+        chargePayments = db.chargePayments().all(),
     )
 
     /** Пишет копию в [out] (файл, выбранный пользователем) и запоминает дату. */
@@ -72,6 +73,7 @@ class BackupManager(
 
         val d = decoded.data
         db.withTransaction {
+            db.chargePayments().deleteAll()
             db.sharePayments().deleteAll()
             db.shares().deleteAll()
             db.subscriptions().deleteAll()
@@ -89,6 +91,7 @@ class BackupManager(
             db.subscriptions().insertAll(d.subscriptions)
             db.shares().insertAll(d.shares)
             db.sharePayments().insertAll(d.sharePayments)
+            db.chargePayments().insertAll(d.chargePayments)
             db.attachments().insertAll(d.attachments)
             db.templates().insertAll(d.templates)
             db.reminderLog().insertAll(d.reminderLog)
