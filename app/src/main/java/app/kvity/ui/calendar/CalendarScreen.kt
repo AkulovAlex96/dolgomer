@@ -325,7 +325,7 @@ private fun DayDetails(
                                 (if (e.flow == MoneyFlow.IN) "+" else "−") + formatMoney(e.amountMinor, e.currency),
                                 color = if (e.flow == MoneyFlow.IN) c.income else c.expense, fontWeight = FontWeight.Bold,
                             )
-                            if (e.shareId != null || e.markable) TextButton(onClick = { onMarkSharePaid(e) }) { Text("Оплатил") }
+                            if (e.shareId != null || e.markable || e.kind == EventKind.DEBT) TextButton(onClick = { onMarkSharePaid(e) }) { Text(if (e.kind == EventKind.DEBT && e.flow == MoneyFlow.IN) "Получил" else "Оплатил") }
                         }
                     },
                 )

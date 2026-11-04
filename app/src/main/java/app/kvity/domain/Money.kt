@@ -27,7 +27,10 @@ object AmountParser {
      * Возвращает сумму в минимальных единицах или null, если ввод некорректен.
      */
     fun parseMinor(input: String, fractionDigits: Int = 2): Long? {
-        var text = input.trim().lowercase().replace(" ", "").replace("\u00A0", "").replace(',', '.')
+        var text = input.trim().lowercase().replace(" ", "").replace("\u00A0", "")
+        // «1,000» неоднозначно (тысяча или 1,000): лучше отклонить, чем молча принять за 1
+        if (Regex("""\d+,\d{3}0*""").matches(text)) return null
+        text = text.replace(',', '.')
         if (text.isEmpty()) return null
 
         var multiplier = BigDecimal.ONE
@@ -74,7 +77,7 @@ object AmountFormatter {
     fun compact(minor: Long, fractionDigits: Int = 2): String {
         val whole = kotlin.math.abs(minor) / pow10(fractionDigits).toDouble()
         return when {
-            whole >= 1_000_000 -> trimmed(whole / 1_000_000) + "м"
+            whole >= 999_950 -> trimmed(whole / 1_000_000) + "м"
             whole >= 1_000 -> trimmed(whole / 1_000) + "к"
             else -> trimmed(whole)
         }

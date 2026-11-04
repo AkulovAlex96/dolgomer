@@ -64,12 +64,13 @@ class BackupManager(
 
         // страховка: текущие данные сохраняются, чтобы можно было откатиться вручную
         val safety = File(context.filesDir, "backups").apply { mkdirs() }
-        File(safety, "before-restore-${System.currentTimeMillis()}.kvbak").outputStream().use { out ->
+        // копия без пароля: старые не храним, а текущая удаляется после успешного восстановления
+        safety.listFiles()?.forEach { it.delete() }
+        val safetyFile = File(safety, "before-restore-${System.currentTimeMillis()}.kvbak")
+        safetyFile.outputStream().use { out ->
             val current = snapshot()
             BackupCodec.write(out, current, current.attachments.map { it.path to File(attachmentsDir, it.path) }, null)
         }
-        // храним только три последние страховочные копии
-        safety.listFiles()?.sortedByDescending { it.lastModified() }?.drop(3)?.forEach { it.delete() }
 
         val d = decoded.data
         db.withTransaction {
@@ -102,6 +103,7 @@ class BackupManager(
         attachmentsDir.mkdirs()
         decoded.attachmentsDir.listFiles()?.forEach { it.copyTo(File(attachmentsDir, it.name), overwrite = true) }
         temp.deleteRecursively()
+        safetyFile.delete()
         d
     }
 }

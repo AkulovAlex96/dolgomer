@@ -128,6 +128,8 @@ data class SubscriptionEntity(
     val trialEndsOn: LocalDate? = null,
     val note: String? = null,
     val createdAt: Long,
+    /** Когда подписку приостановили или отменили: после этой даты доли участников не начисляются. */
+    val stateChangedOn: LocalDate? = null,
 )
 
 /** Доля участника общей подписки: сколько он возвращает мне за каждый период. */

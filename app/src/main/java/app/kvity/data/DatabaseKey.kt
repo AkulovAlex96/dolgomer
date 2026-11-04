@@ -25,7 +25,8 @@ object DatabaseKey {
         prefs.getString(ENTRY, null)?.let { return decrypt(it) }
         val bytes = ByteArray(32).also { SecureRandom().nextBytes(it) }
         val pass = bytes.joinToString("") { "%02x".format(it) }
-        prefs.edit().putString(ENTRY, encrypt(pass)).apply()
+        // commit: ключ должен лечь на диск до открытия базы, иначе после сбоя сгенерируется другой и база не откроется
+        prefs.edit().putString(ENTRY, encrypt(pass)).commit()
         return pass
     }
 

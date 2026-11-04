@@ -18,6 +18,8 @@ data class ImportRow(
     val startDate: LocalDate,
     val dueDate: LocalDate?,
     val note: String?,
+    /** Дата выдачи указана в файле; иначе подставлена сегодняшняя и в сравнении дубликатов не участвует. */
+    val startGiven: Boolean = true,
 )
 
 data class ImportError(val line: Int, val message: String, val sheet: String? = null)
@@ -101,7 +103,7 @@ object DebtImport {
             if (problems.isNotEmpty()) {
                 errors += ImportError(line, problems.joinToString("; "), sheet)
             } else {
-                rows += ImportRow(line, name, direction!!, currency!!, principal!!, paid!!, startDate!!, dueDate, get(DebtColumns.NOTE).ifEmpty { null })
+                rows += ImportRow(line, name, direction!!, currency!!, principal!!, paid!!, startDate!!, dueDate, get(DebtColumns.NOTE).ifEmpty { null }, startText.isNotEmpty())
             }
         }
         return ImportParseResult(rows, errors)

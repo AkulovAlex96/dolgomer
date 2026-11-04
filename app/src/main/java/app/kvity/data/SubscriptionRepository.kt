@@ -7,6 +7,7 @@ import java.time.LocalDate
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 
 /** Доля участника с рассчитанными периодами. */
 data class ShareView(
@@ -47,7 +48,11 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
         const val HORIZON_DAYS = 400L
     }
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     fun observeAll(today: () -> LocalDate = LocalDate::now): Flow<List<SubscriptionView>> =
+        ticker(today).flatMapLatest { now -> build(now) }
+
+    private fun build(now: LocalDate): Flow<List<SubscriptionView>> =
         combine(
             db.subscriptions().observeAll(),
             db.shares().observeAll(),
@@ -57,9 +62,9 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
         ) { subs, shares, payments, people, charges ->
             val paidCharges = charges.groupBy { it.subscriptionId }.mapValues { (_, v) -> v.map { it.periodDate }.toSet() }
             val names = people.associateBy { it.id }
-            val paidByShare = payments.groupBy { it.shareId }.mapValues { (_, v) -> v.map { it.periodDate }.toSet() }
-            val horizon = today().plusDays(HORIZON_DAYS)
-            subs.map { s -> buildView(s, shares.filter { it.subscriptionId == s.id }, paidByShare, names, horizon, paidCharges[s.id].orEmpty()) }
+            val paidByShare = payments.groupBy { it.shareId }.mapValues { (_, v) -> v.associate { it.periodDate to it.amountMinor } }
+            val horizon = now.plusDays(HORIZON_DAYS)
+            subs.map { s -> buildView(s, shares.filter { it.subscriptionId == s.id }, paidByShare, names, horizon, now, paidCharges[s.id].orEmpty()) }
                 .sortedBy { it.subscription.name.lowercase() }
         }
 
@@ -69,16 +74,17 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
     private fun buildView(
         s: SubscriptionEntity,
         shares: List<SubscriptionShareEntity>,
-        paidByShare: Map<String, Set<LocalDate>>,
+        paidByShare: Map<String, Map<LocalDate, Long>>,
         names: Map<String, CounterpartyEntity>,
         horizon: LocalDate,
+        now: LocalDate,
         paidCharges: Set<LocalDate>,
     ): SubscriptionView {
-        val end = if (s.state == SubscriptionState.ACTIVE) horizon else LocalDate.now()
+        val end = if (s.state == SubscriptionState.ACTIVE) horizon else minOf(s.stateChangedOn ?: now, now)
         val views = shares.map { sh ->
             val dues = if (!sh.active) emptyList() else SubscriptionCalc.shareDues(
                 s.anchorDate, s.periodicity, s.interval, sh.activeFrom, sh.amountMinor, sh.currency,
-                paidByShare[sh.id].orEmpty(), end,
+                paidByShare[sh.id].orEmpty().keys, end, paidByShare[sh.id].orEmpty(),
             )
             ShareView(sh, names[sh.counterpartyId]?.name.orEmpty(), names[sh.counterpartyId]?.phone, dues)
         }
@@ -100,7 +106,38 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
 
     suspend fun update(id: String, input: SubscriptionInput) {
         val old = db.subscriptions().all().first { it.id == id }
-        db.subscriptions().update(toEntity(id, input, old.createdAt).copy(state = old.state))
+        val updated = toEntity(id, input, old.createdAt).copy(state = old.state, stateChangedOn = old.stateChangedOn)
+        db.subscriptions().update(updated)
+        if (old.anchorDate != updated.anchorDate || old.periodicity != updated.periodicity || old.interval != updated.interval) remapMarks(old, updated)
+    }
+
+    /** Отметки «оплачено» привязаны к датам периодов; при смене расписания переносим их на период с тем же номером. */
+    private suspend fun remapMarks(old: SubscriptionEntity, new: SubscriptionEntity) {
+        fun newDate(d: LocalDate, olds: List<LocalDate>): LocalDate? {
+            val idx = olds.indexOf(d).takeIf { it >= 0 } ?: return null
+            return SubscriptionCalc.occurrences(new.anchorDate, new.periodicity, new.interval, new.anchorDate, new.anchorDate.plusYears(100))
+                .getOrNull(idx)
+        }
+        val shareIds = db.shares().all().filter { it.subscriptionId == old.id }.map { it.id }.toSet()
+        val sharePays = db.sharePayments().all().filter { it.shareId in shareIds }
+        val chargePays = db.chargePayments().all().filter { it.subscriptionId == old.id }
+        val last = (sharePays.map { it.periodDate } + chargePays.map { it.periodDate }).maxOrNull() ?: return
+        val olds = SubscriptionCalc.occurrences(old.anchorDate, old.periodicity, old.interval, old.anchorDate, last)
+        for (p in sharePays) {
+            val nd = newDate(p.periodDate, olds) ?: continue
+            if (nd == p.periodDate) continue
+            db.sharePayments().delete(p.id)
+        }
+        for (p in chargePays) {
+            val nd = newDate(p.periodDate, olds) ?: continue
+            if (nd != p.periodDate) db.chargePayments().deleteFor(p.subscriptionId, p.periodDate)
+        }
+        db.sharePayments().insertAll(sharePays.mapNotNull { p ->
+            newDate(p.periodDate, olds)?.takeIf { it != p.periodDate }?.let { p.copy(periodDate = it) }
+        })
+        db.chargePayments().insertAll(chargePays.mapNotNull { p ->
+            newDate(p.periodDate, olds)?.takeIf { it != p.periodDate }?.let { p.copy(periodDate = it) }
+        })
     }
 
     private suspend fun toEntity(id: String, i: SubscriptionInput, createdAt: Long) = SubscriptionEntity(
@@ -112,7 +149,8 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
 
     suspend fun setState(id: String, state: SubscriptionState) {
         val old = db.subscriptions().all().first { it.id == id }
-        db.subscriptions().update(old.copy(state = state))
+        if (old.state == state) return
+        db.subscriptions().update(old.copy(state = state, stateChangedOn = if (state == SubscriptionState.ACTIVE) null else LocalDate.now()))
     }
 
     suspend fun delete(id: String) {

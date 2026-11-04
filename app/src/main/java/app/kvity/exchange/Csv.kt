@@ -25,7 +25,7 @@ object Csv {
     }
 
     private fun line(cells: List<Cell>, delimiter: Char): String =
-        cells.joinToString(delimiter.toString(), postfix = "\r\n") { escape(text(it), delimiter) }
+        cells.joinToString(delimiter.toString(), postfix = "\r\n") { escape(text(it), delimiter, it is Cell.Text) }
 
     private fun text(c: Cell): String = when (c) {
         is Cell.Text -> c.value
@@ -33,9 +33,10 @@ object Csv {
         Cell.Empty -> ""
     }
 
-    private fun escape(value: String, delimiter: Char): String {
+    private fun escape(value: String, delimiter: Char, isText: Boolean = true): String {
         // защита от «формул» при открытии в Excel
-        val safe = if (value.isNotEmpty() && value[0] in "=@" ) "'$value" else value
+        // числа (в том числе отрицательные) остаются числами, текст с «опасным» первым символом экранируется
+        val safe = if (isText && value.isNotEmpty() && value[0] in "=@+-\t\r") "'$value" else value
         val needsQuotes = safe.any { it == delimiter || it == '"' || it == '\n' || it == '\r' }
         return if (needsQuotes) "\"" + safe.replace("\"", "\"\"") + "\"" else safe
     }

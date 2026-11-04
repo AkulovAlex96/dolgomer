@@ -41,9 +41,11 @@ object SubscriptionCalc {
         currencyCode: String,
         paidPeriods: Set<LocalDate>,
         horizonEnd: LocalDate,
+        paidAmounts: Map<LocalDate, Long> = emptyMap(),
     ): List<ShareDue> =
         occurrences(anchor, periodicity, interval, maxOf(activeFrom, anchor), horizonEnd)
-            .map { ShareDue(it, amountMinor, currencyCode, it in paidPeriods) }
+            // оплаченный период хранит сумму, с которой был оплачен: последующая правка доли прошлое не меняет
+            .map { ShareDue(it, if (it in paidPeriods) paidAmounts[it] ?: amountMinor else amountMinor, currencyCode, it in paidPeriods) }
 
     /** Приблизительная стоимость в месяц (для итогов «в месяц / в год»). Для периодов дольше месяца делится. */
     fun monthlyMinor(amountMinor: Long, periodicity: Periodicity, interval: Int): Long {

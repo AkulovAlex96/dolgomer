@@ -1,5 +1,6 @@
 package app.kvity.data
 
+import app.kvity.domain.SubscriptionCalc
 import app.kvity.domain.Direction
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
@@ -21,7 +22,7 @@ class PeopleRepository(private val db: KvityDatabase) {
         db.payments().observeAll(),
         combine(db.shares().observeAll(), db.subscriptions().observeAll()) { sh, sb -> sh to sb },
         db.sharePayments().observeAll(),
-    ) { people, debts, payments, sharesAndSubs, _ ->
+    ) { people, debts, payments, sharesAndSubs, sharePayments ->
         val (shares, subscriptions) = sharesAndSubs
         val now = today()
         val paidByDebt = payments.groupBy { it.debtId }.mapValues { (_, v) -> v.sumOf { it.amountMinor } }
@@ -32,6 +33,15 @@ class PeopleRepository(private val db: KvityDatabase) {
                 val rest = (d.principalMinor - (paidByDebt[d.id] ?: 0)).coerceAtLeast(0)
                 val signed = if (d.direction == Direction.OWED_TO_ME) rest else -rest
                 if (rest > 0) balance.merge(d.currency, signed, Long::plus)
+            }
+            // неоплаченные доли в общих подписках — это тоже долг участника передо мной
+            for (sh in shares.filter { it.counterpartyId == p.id && it.active }) {
+                val sub = subscriptions.firstOrNull { it.id == sh.subscriptionId } ?: continue
+                val end = if (sub.state == SubscriptionState.ACTIVE) now else minOf(sub.stateChangedOn ?: now, now)
+                val paid = sharePayments.filter { it.shareId == sh.id }.map { it.periodDate }.toSet()
+                val unpaid = SubscriptionCalc.shareDues(sub.anchorDate, sub.periodicity, sub.interval, sh.activeFrom, sh.amountMinor, sh.currency, paid, end)
+                    .filter { !it.paid }
+                if (unpaid.isNotEmpty()) balance.merge(sh.currency, unpaid.sumOf { it.amountMinor }, Long::plus)
             }
             // подписки человека: он участник (возвращает долю) или он плательщик
             val subIds = shares.filter { it.counterpartyId == p.id && it.active }.map { it.subscriptionId }.toSet() +

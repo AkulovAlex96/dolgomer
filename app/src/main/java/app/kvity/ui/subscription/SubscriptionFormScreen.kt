@@ -54,10 +54,12 @@ fun SubscriptionFormScreen(
     var method by rememberSaveable { mutableStateOf(s?.paymentMethodNote ?: "") }
     var trialEpoch by rememberSaveable { mutableStateOf<Long?>(s?.trialEndsOn?.toEpochDay()) }
     var note by rememberSaveable { mutableStateOf(s?.note ?: "") }
+    var intervalText by rememberSaveable { mutableStateOf((s?.interval ?: 1).toString()) }
+    val interval = intervalText.toIntOrNull()?.takeIf { it in 1..99 }
 
     val amount = AmountParser.parseMinor(amountText, currencyOf(currency).fractionDigits)
     val anchor = anchorEpoch?.let(LocalDate::ofEpochDay)
-    val valid = name.isNotBlank() && amount != null && anchor != null &&
+    val valid = name.isNotBlank() && amount != null && anchor != null && interval != null &&
         (payer == SubscriptionPayer.ME || payerName.isNotBlank())
 
     FormScreen(title = if (initial == null) "Новый регулярный платёж" else "Изменить регулярный платёж", onBack = onBack, backLabel = "Отмена") {
@@ -74,6 +76,10 @@ fun SubscriptionFormScreen(
         }
 
         DropdownField("Период", periods, periodicity, { periodicity = it })
+        OutlinedTextField(
+            intervalText, { intervalText = it.filter(Char::isDigit).take(2) }, label = { Text("Повторять каждые N периодов") },
+            singleLine = true, isError = interval == null, modifier = Modifier.fillMaxWidth(),
+        )
         DatePickerField("Дата списания (любая известная)", anchor, { anchorEpoch = it.toEpochDay() })
 
         ChipRow(listOf(SubscriptionPayer.ME to "Плачу я", SubscriptionPayer.OTHER to "Платит другой"), payer, { payer = it })
@@ -98,7 +104,7 @@ fun SubscriptionFormScreen(
             onClick = {
                 onSave(
                     SubscriptionInput(
-                        name = name, amountMinor = amount!!, currency = currency, periodicity = periodicity,
+                        name = name, amountMinor = amount!!, currency = currency, periodicity = periodicity, interval = interval!!,
                         anchorDate = anchor!!, payer = payer, payerName = payerName.takeIf { payer == SubscriptionPayer.OTHER },
                         paymentMethodNote = method.ifBlank { null }, trialEndsOn = trialEpoch?.let(LocalDate::ofEpochDay),
                         note = note.ifBlank { null },

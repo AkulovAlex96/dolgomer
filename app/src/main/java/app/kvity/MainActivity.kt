@@ -7,9 +7,11 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kvity.data.ThemeMode
@@ -34,6 +36,7 @@ class MainActivity : FragmentActivity() {
         setContent {
             val settings by app.settings.settings.collectAsStateWithLifecycle()
             val locked by app.lock.locked.collectAsStateWithLifecycle()
+            var hasShownContent by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
             val dark = when (settings.theme) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 ThemeMode.LIGHT -> false
@@ -56,15 +59,21 @@ class MainActivity : FragmentActivity() {
             }
 
             KvityTheme(darkTheme = dark, colorBlind = settings.colorBlindPalette) {
-                if (locked && settings.pinEnabled && app.pin.isSet) {
-                    LockScreen(
-                        pinStore = app.pin,
-                        biometricEnabled = settings.biometricEnabled && Biometrics.isAvailable(this),
-                        onBiometric = { Biometrics.prompt(this) { app.lock.unlock() } },
-                        onUnlocked = { app.lock.unlock() },
-                    )
-                } else {
+                val showLock = locked && settings.pinEnabled && app.pin.isSet
+                // навигация остаётся в композиции под экраном блокировки: после ввода PIN открытая форма и экран не теряются
+                if (!showLock || hasShownContent) {
                     AppNavigation()
+                    hasShownContent = true
+                }
+                if (showLock) {
+                    androidx.compose.material3.Surface(onClick = {}, modifier = androidx.compose.ui.Modifier.fillMaxSize()) {
+                        LockScreen(
+                            pinStore = app.pin,
+                            biometricEnabled = settings.biometricEnabled && Biometrics.isAvailable(this),
+                            onBiometric = { Biometrics.prompt(this) { app.lock.unlock() } },
+                            onUnlocked = { app.lock.unlock() },
+                        )
+                    }
                 }
             }
         }

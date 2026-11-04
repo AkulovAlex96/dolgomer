@@ -35,19 +35,27 @@ data class ReminderContext(
 )
 
 object ReminderSender {
+    private fun safeStart(context: Context, intent: Intent) {
+        try {
+            context.startActivity(intent)
+        } catch (e: android.content.ActivityNotFoundException) {
+            android.widget.Toast.makeText(context, "Нет приложения для этого действия", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
     /** Открывает системный выбор приложения (WhatsApp, Telegram и т.д.) с готовым текстом. */
     fun share(context: Context, text: String) {
         val send = Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, text) }
-        context.startActivity(Intent.createChooser(send, "Отправить напоминание").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        safeStart(context, Intent.createChooser(send, "Отправить напоминание").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
     fun sms(context: Context, phone: String, text: String) {
         val i = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:$phone")).apply { putExtra("sms_body", text) }
-        context.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        safeStart(context, i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
     fun dial(context: Context, phone: String) {
-        context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        safeStart(context, Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }
 

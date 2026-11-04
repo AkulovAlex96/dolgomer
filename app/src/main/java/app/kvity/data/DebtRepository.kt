@@ -38,16 +38,20 @@ data class ImportSummary(val added: Int, val skippedDuplicates: Int)
 
 class DebtRepository(private val db: KvityDatabase, private val attachments: AttachmentRepository? = null) {
 
+    /** За сколько дней до срока долг получает статус «скоро срок» (настройка пользователя). */
+    var dueSoonDays: Flow<Int> = kotlinx.coroutines.flow.flowOf(3)
+
     fun observeDebts(today: () -> LocalDate = LocalDate::now): Flow<List<DebtView>> =
         combine(
             db.debts().observeActive(),
             db.counterparties().observeAll(),
             db.payments().observeAll(),
-        ) { debts, people, payments ->
+            dueSoonDays,
+            ticker(today),
+        ) { debts, people, payments, soon, now ->
             val byId = people.associateBy { it.id }
             val byDebt = payments.groupBy { it.debtId }
-            val now = today()
-            debts.map { toView(it, byId[it.counterpartyId], byDebt[it.id].orEmpty(), now) }
+            debts.map { toView(it, byId[it.counterpartyId], byDebt[it.id].orEmpty(), now, soon) }
         }
 
     fun observeDebt(id: String, today: () -> LocalDate = LocalDate::now): Flow<DebtView?> =
@@ -55,9 +59,11 @@ class DebtRepository(private val db: KvityDatabase, private val attachments: Att
             db.debts().observe(id),
             db.counterparties().observeAll(),
             db.payments().observeAll(),
-        ) { debt, people, payments ->
+            dueSoonDays,
+            ticker(today),
+        ) { debt, people, payments, soon, now ->
             debt?.let { d ->
-                toView(d, people.firstOrNull { it.id == d.counterpartyId }, payments.filter { it.debtId == d.id }, today())
+                toView(d, people.firstOrNull { it.id == d.counterpartyId }, payments.filter { it.debtId == d.id }, now, soon)
             }
         }
 
@@ -106,16 +112,19 @@ class DebtRepository(private val db: KvityDatabase, private val attachments: Att
     }
 
     /** Добавляет долги из импорта. Полные дубликаты (тот же человек, направление, валюта, сумма и дата выдачи) пропускаются. */
-    suspend fun importDebts(rows: List<app.kvity.exchange.ImportRow>): ImportSummary {
+    suspend fun importDebts(rows: List<app.kvity.exchange.ImportRow>, namesWithPayments: Set<String> = emptySet()): ImportSummary {
         val people = db.counterparties().all().associateBy { it.id }
         val existing = db.debts().all().map {
             listOf(people[it.counterpartyId]?.name?.lowercase().orEmpty(), it.direction, it.currency, it.principalMinor, it.startDate)
         }.toMutableSet()
+        val existingNoDate = existing.map { it.dropLast(1) }.toMutableSet()
         var added = 0
         var skipped = 0
         for (r in rows) {
             val key = listOf(r.counterparty.trim().lowercase(), r.direction, r.currency, r.principalMinor, r.startDate)
-            if (!existing.add(key)) { skipped++; continue }
+            val duplicate = if (r.startGiven) !existing.add(key) else !existingNoDate.add(key.dropLast(1)) || key in existing
+            if (r.startGiven) existingNoDate.add(key.dropLast(1)) else existing.add(key)
+            if (duplicate) { skipped++; continue }
             val id = addDebt(
                 NewDebt(
                     counterpartyName = r.counterparty, direction = r.direction, principalMinor = r.principalMinor,
@@ -124,7 +133,8 @@ class DebtRepository(private val db: KvityDatabase, private val attachments: Att
                     dueDate = r.dueDate, note = r.note,
                 ),
             )
-            if (r.paidMinor > 0) addPayment(id, LocalDate.now(), r.paidMinor, "Импорт")
+            // если в файле есть отдельные платежи этого человека, «Выплачено» — их сумма: не создаём платёж второй раз
+            if (r.paidMinor > 0 && r.counterparty.trim().lowercase() !in namesWithPayments) addPayment(id, LocalDate.now(), r.paidMinor, "Импорт")
             added++
         }
         return ImportSummary(added, skipped)
@@ -149,7 +159,7 @@ class DebtRepository(private val db: KvityDatabase, private val attachments: Att
         db.debts().delete(id)
     }
 
-    private fun toView(debt: DebtEntity, person: CounterpartyEntity?, payments: List<PaymentEntity>, today: LocalDate) =
+    private fun toView(debt: DebtEntity, person: CounterpartyEntity?, payments: List<PaymentEntity>, today: LocalDate, dueSoonDays: Int = 3) =
         DebtView(
             debt = debt,
             counterpartyName = person?.name.orEmpty(),
@@ -160,6 +170,7 @@ class DebtRepository(private val db: KvityDatabase, private val attachments: Att
                 planned = debt.plannedPayments(),
                 paymentsMinor = payments.map { it.amountMinor },
                 today = today,
+                dueSoonDays = dueSoonDays,
             ),
         )
 }

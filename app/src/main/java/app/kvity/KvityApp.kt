@@ -49,6 +49,7 @@ class KvityApp : Application() {
         people = PeopleRepository(db)
         importer = ImportApplier(db, debts, subscriptions)
         settings = SettingsStore(this)
+        debts.dueSoonDays = settings.settings.map { it.dueSoonDays }.distinctUntilChanged()
         reference = ReferenceRepository(db)
         backup = BackupManager(this, db, settings)
         if (settings.current.installedAtMillis == 0L) settings.update { it.copy(installedAtMillis = System.currentTimeMillis()) }
@@ -59,10 +60,15 @@ class KvityApp : Application() {
         app.kvity.notify.Notifier.createChannel(this)
         scope.launch {
             // Расписание уведомлений следует за настройками (включение и время)
+            var first = true
             settings.settings
                 .map { it.notificationsEnabled to (it.notifyHour * 60 + it.notifyMinute) }
                 .distinctUntilChanged()
-                .collect { app.kvity.notify.ReminderWorker.schedule(this@KvityApp, settings.current) }
+                .collect {
+                    // первая эмиссия — запуск процесса, существующее расписание сохраняем; дальше — пользователь изменил настройки
+                    app.kvity.notify.ReminderWorker.schedule(this@KvityApp, settings.current, replace = !first)
+                    first = false
+                }
         }
     }
 }

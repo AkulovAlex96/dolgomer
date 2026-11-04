@@ -42,14 +42,15 @@ class ImportApplier(
         }
 
         // Долги
-        val debtSummary = debts.importDebts(batch.debts)
+        val debtSummary = debts.importDebts(batch.debts, batch.payments.map { it.counterparty.trim().lowercase() }.toSet())
         skipped += debtSummary.skippedDuplicates
 
         // Платежи: привязываются к долгу того же человека (и направления/валюты, если они указаны в файле)
         var payments = 0
         val namesById = db.counterparties().all().associate { it.id to it.name.lowercase() }
         val allDebts = db.debts().all().filter { !it.archived }
-        val seen = db.payments().all().map { Triple(it.debtId, it.date, it.amountMinor) }.toMutableSet()
+        val stored = db.payments().all().groupingBy { Triple(it.debtId, it.date, it.amountMinor) }.eachCount()
+        val seen = mutableMapOf<Triple<String, LocalDate, Long>, Int>()
         for (p in batch.payments) {
             val candidates = allDebts.filter {
                 namesById[it.counterpartyId] == p.counterparty.trim().lowercase() &&
@@ -57,7 +58,10 @@ class ImportApplier(
             }
             val target = candidates.maxByOrNull { it.startDate }
             if (target == null) { problems += "Платёж, строка ${p.line}: нет долга для «${p.counterparty}»"; continue }
-            if (!seen.add(Triple(target.id, p.date, p.amountMinor))) { skipped++; continue }
+            val k = Triple(target.id, p.date, p.amountMinor)
+            val n = (seen[k] ?: 0) + 1
+            seen[k] = n
+            if (n <= (stored[k] ?: 0)) { skipped++; continue }
             debts.addPayment(target.id, p.date, p.amountMinor, p.note)
             payments++
         }
@@ -126,19 +130,27 @@ class ImportApplier(
         val debtKeys = db.debts().all()
             .map { listOf(people[it.counterpartyId]?.name?.lowercase().orEmpty(), it.direction, it.currency, it.principalMinor, it.startDate) }
             .toMutableSet()
+        val debtKeysNoDate = debtKeys.map { it.dropLast(1) }.toMutableSet()
         for (r in batch.debts) {
-            if (!debtKeys.add(listOf(r.counterparty.trim().lowercase(), r.direction, r.currency, r.principalMinor, r.startDate))) dup++
+            val key = listOf(r.counterparty.trim().lowercase(), r.direction, r.currency, r.principalMinor, r.startDate)
+            val duplicate = if (r.startGiven) !debtKeys.add(key) else !debtKeysNoDate.add(key.dropLast(1)) || key in debtKeys
+            if (r.startGiven) debtKeysNoDate.add(key.dropLast(1)) else debtKeys.add(key)
+            if (duplicate) dup++
         }
 
         val names = people.values.associate { it.id to it.name.lowercase() }
         val allDebts = db.debts().all().filter { !it.archived }
-        val seen = db.payments().all().map { Triple(it.debtId, it.date, it.amountMinor) }.toMutableSet()
+        val stored = db.payments().all().groupingBy { Triple(it.debtId, it.date, it.amountMinor) }.eachCount()
+        val seen = mutableMapOf<Triple<String, LocalDate, Long>, Int>()
         for (p in batch.payments) {
             val target = allDebts.filter {
                 names[it.counterpartyId] == p.counterparty.trim().lowercase() &&
                     (p.direction == null || it.direction == p.direction) && (p.currency == null || it.currency == p.currency)
             }.maxByOrNull { it.startDate } ?: continue
-            if (!seen.add(Triple(target.id, p.date, p.amountMinor))) dup++
+            val k = Triple(target.id, p.date, p.amountMinor)
+            val n = (seen[k] ?: 0) + 1
+            seen[k] = n
+            if (n <= (stored[k] ?: 0)) dup++
         }
 
         val subKeys = db.subscriptions().all()

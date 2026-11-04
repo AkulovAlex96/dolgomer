@@ -23,14 +23,14 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
         val app = applicationContext as KvityApp
         val settings = app.settings.current
         if (!settings.notificationsEnabled) return Result.success()
+        // следующий запуск ставится до работы: исключение ниже не должно обрывать цепочку напоминаний
+        schedule(applicationContext, settings)
 
         val today = LocalDate.now()
         val debts = app.debts.observeDebts().first()
         val subs = app.subscriptions.observeAll().first()
         val items = ReminderPlanner.plan(Events.build(debts, subs, today), today, settings)
         Notifier.post(applicationContext, items, settings.hideAmountsInNotifications)
-        // следующий запуск ставится заново на ближайшее заданное время: так расписание не «уплывает» от фактического времени этого запуска
-        schedule(applicationContext, settings)
         return Result.success()
     }
 
@@ -47,7 +47,7 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
          * PeriodicWorkRequest для этого не годится: он повторяется «примерно раз в сутки» от прошлого запуска
          * и со временем уходит от заданного часа (уведомления приходили в 5:04 при настройке 9:00).
          */
-        fun schedule(context: Context, settings: Settings) {
+        fun schedule(context: Context, settings: Settings, replace: Boolean = true) {
             val wm = WorkManager.getInstance(context)
             if (!settings.notificationsEnabled) {
                 wm.cancelUniqueWork(NAME)
@@ -57,7 +57,8 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
             val request = OneTimeWorkRequestBuilder<ReminderWorker>()
                 .setInitialDelay(delay.toMillis(), TimeUnit.MILLISECONDS)
                 .build()
-            wm.enqueueUniqueWork(NAME, ExistingWorkPolicy.REPLACE, request)
+            // при старте процесса (replace = false) уже ожидающий или выполняющийся запуск не трогаем: иначе холодный старт в момент срабатывания отменяет сегодняшнюю проверку
+            wm.enqueueUniqueWork(NAME, if (replace) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP, request)
         }
 
         /** Сколько ждать до ближайших [hour]:[minute]; если это время уже наступило (или осталась минута), берётся завтрашнее. */
