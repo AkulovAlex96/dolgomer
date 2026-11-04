@@ -54,6 +54,7 @@ fun SubscriptionFormScreen(
     var method by rememberSaveable { mutableStateOf(s?.paymentMethodNote ?: "") }
     var trialEpoch by rememberSaveable { mutableStateOf<Long?>(s?.trialEndsOn?.toEpochDay()) }
     var note by rememberSaveable { mutableStateOf(s?.note ?: "") }
+    var category by rememberSaveable { mutableStateOf(s?.category ?: "") }
     var intervalText by rememberSaveable { mutableStateOf((s?.interval ?: 1).toString()) }
     val interval = intervalText.toIntOrNull()?.takeIf { it in 1..99 }
 
@@ -97,6 +98,7 @@ fun SubscriptionFormScreen(
 
         OutlinedTextField(method, { method = it.take(Limits.NAME) }, label = { Text("Способ оплаты (необязательно)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         DatePickerField("Конец пробного периода (необязательно)", trialEpoch?.let(LocalDate::ofEpochDay), { trialEpoch = it.toEpochDay() })
+        OutlinedTextField(category, { category = it.take(Limits.NAME) }, label = { Text("Категория (необязательно)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(note, { note = it.take(Limits.NOTE) }, label = { Text("Комментарий") }, modifier = Modifier.fillMaxWidth())
 
         Button(
@@ -107,7 +109,7 @@ fun SubscriptionFormScreen(
                         name = name, amountMinor = amount!!, currency = currency, periodicity = periodicity, interval = interval!!,
                         anchorDate = anchor!!, payer = payer, payerName = payerName.takeIf { payer == SubscriptionPayer.OTHER },
                         paymentMethodNote = method.ifBlank { null }, trialEndsOn = trialEpoch?.let(LocalDate::ofEpochDay),
-                        note = note.ifBlank { null },
+                        note = note.ifBlank { null }, category = category.trim().ifBlank { null },
                     ),
                 )
             },

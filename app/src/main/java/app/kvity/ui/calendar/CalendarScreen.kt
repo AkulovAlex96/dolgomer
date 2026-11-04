@@ -226,7 +226,7 @@ private fun DayCell(
         .map { (code, list) -> code to list.sumOf { if (it.flow == MoneyFlow.IN) it.amountMinor else -it.amountMinor } }
         .map { (code, net) ->
             val cur = currencyOf(code)
-            (if (net < 0) "−" else "+") + AmountFormatter.compact(kotlin.math.abs(net), cur.fractionDigits) + cur.symbol
+            (if (net < 0) "−" else if (net > 0) "+" else "") + AmountFormatter.compact(kotlin.math.abs(net), cur.fractionDigits) + cur.symbol
         }
     // две строки под регулярные; если валют больше, вторая строка сворачивается в «ещё N»
     val regularShown = if (regularLines.size > 2) listOf(regularLines[0], "ещё ${regularLines.size - 1}") else regularLines

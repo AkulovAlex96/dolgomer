@@ -62,7 +62,7 @@ fun ExportScreen(app: KvityApp, onBack: () -> Unit) {
         val today = LocalDate.now()
         val built = ExportBuilder.build(
             ExportOptions(tables, direction),
-            app.debts.observeDebts().first(), app.subscriptions.observeAll().first(), app.people.observe().first(), today,
+            app.debts.observeDebts(includeArchived = true).first(), app.subscriptions.observeAll().first(), app.people.observe().first(), today,
         )
         val stamp = "%d-%02d-%02d".format(today.year, today.monthValue, today.dayOfMonth)
         val out = ByteArrayOutputStream()

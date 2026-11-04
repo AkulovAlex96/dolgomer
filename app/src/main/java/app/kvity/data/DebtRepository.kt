@@ -41,9 +41,9 @@ class DebtRepository(private val db: KvityDatabase, private val attachments: Att
     /** За сколько дней до срока долг получает статус «скоро срок» (настройка пользователя). */
     var dueSoonDays: Flow<Int> = kotlinx.coroutines.flow.flowOf(3)
 
-    fun observeDebts(today: () -> LocalDate = LocalDate::now): Flow<List<DebtView>> =
+    fun observeDebts(today: () -> LocalDate = LocalDate::now, includeArchived: Boolean = false): Flow<List<DebtView>> =
         combine(
-            db.debts().observeActive(),
+            if (includeArchived) db.debts().observeAll() else db.debts().observeActive(),
             db.counterparties().observeAll(),
             db.payments().observeAll(),
             dueSoonDays,
@@ -109,6 +109,12 @@ class DebtRepository(private val db: KvityDatabase, private val attachments: Att
                 firstDate = input.firstDate, note = input.note,
             ),
         )
+        if (old.counterpartyId != person.id) {
+            val used = db.debts().all().any { it.counterpartyId == old.counterpartyId } ||
+                db.shares().all().any { it.counterpartyId == old.counterpartyId } ||
+                db.subscriptions().all().any { it.payerCounterpartyId == old.counterpartyId }
+            if (!used) db.counterparties().delete(old.counterpartyId)
+        }
     }
 
     /** Добавляет долги из импорта. Полные дубликаты (тот же человек, направление, валюта, сумма и дата выдачи) пропускаются. */

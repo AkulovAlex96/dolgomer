@@ -1,5 +1,6 @@
 package app.kvity.data
 
+import androidx.room.withTransaction
 import app.kvity.domain.Periodicity
 import app.kvity.domain.ShareDue
 import app.kvity.domain.SubscriptionCalc
@@ -39,6 +40,7 @@ class SubscriptionInput(
     val paymentMethodNote: String? = null,
     val trialEndsOn: LocalDate? = null,
     val note: String? = null,
+    val category: String? = null,
 )
 
 class SubscriptionRepository(private val db: KvityDatabase, private val attachments: AttachmentRepository? = null) {
@@ -144,7 +146,7 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
         id = id, name = i.name.trim(), amountMinor = i.amountMinor, currency = i.currency,
         periodicity = i.periodicity, interval = i.interval, anchorDate = i.anchorDate, payer = i.payer,
         payerCounterpartyId = if (i.payer == SubscriptionPayer.OTHER && !i.payerName.isNullOrBlank()) person(i.payerName).id else null,
-        paymentMethodNote = i.paymentMethodNote, trialEndsOn = i.trialEndsOn, note = i.note, createdAt = createdAt,
+        paymentMethodNote = i.paymentMethodNote, trialEndsOn = i.trialEndsOn, note = i.note, category = i.category, createdAt = createdAt,
     )
 
     suspend fun setState(id: String, state: SubscriptionState) {
@@ -174,13 +176,17 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
     suspend fun deleteShare(id: String) = db.shares().delete(id)
 
     suspend fun markPaid(shareId: String, period: LocalDate, amountMinor: Long, paidDate: LocalDate = LocalDate.now()) {
-        db.sharePayments().deleteFor(shareId, period)
-        db.sharePayments().insert(SharePaymentEntity(UUID.randomUUID().toString(), shareId, period, paidDate, amountMinor))
+        db.withTransaction {
+            db.sharePayments().deleteFor(shareId, period)
+            db.sharePayments().insert(SharePaymentEntity(UUID.randomUUID().toString(), shareId, period, paidDate, amountMinor))
+        }
     }
 
     suspend fun markChargePaid(subscriptionId: String, period: LocalDate, amountMinor: Long, paidDate: LocalDate = LocalDate.now()) {
-        db.chargePayments().deleteFor(subscriptionId, period)
-        db.chargePayments().insert(ChargePaymentEntity(UUID.randomUUID().toString(), subscriptionId, period, paidDate, amountMinor))
+        db.withTransaction {
+            db.chargePayments().deleteFor(subscriptionId, period)
+            db.chargePayments().insert(ChargePaymentEntity(UUID.randomUUID().toString(), subscriptionId, period, paidDate, amountMinor))
+        }
     }
 
     suspend fun markChargeUnpaid(subscriptionId: String, period: LocalDate) = db.chargePayments().deleteFor(subscriptionId, period)

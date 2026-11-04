@@ -2,6 +2,7 @@ package app.kvity.data
 
 import app.kvity.exchange.ImportBatch
 import app.kvity.exchange.ImportSubState
+import androidx.room.withTransaction
 import java.time.LocalDate
 import java.util.UUID
 
@@ -24,7 +25,9 @@ class ImportApplier(
     private val subscriptions: SubscriptionRepository,
 ) {
 
-    suspend fun apply(batch: ImportBatch): ImportReport {
+    suspend fun apply(batch: ImportBatch): ImportReport = db.withTransaction { applyInTransaction(batch) }
+
+    private suspend fun applyInTransaction(batch: ImportBatch): ImportReport {
         var skipped = 0
         val problems = mutableListOf<String>()
 
