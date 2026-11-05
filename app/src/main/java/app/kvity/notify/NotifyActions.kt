@@ -35,6 +35,9 @@ object NotifyActions {
     /** «Напомнить» есть там, где деньги должны мне: долг «мне должны» и доли участников подписок. */
     fun canRemind(e: CalendarEvent): Boolean = e.flow == MoneyFlow.IN
 
+    /** Код PendingIntent вторых действий уведомления: отрицательный, не пересекается с id уведомлений. */
+    fun actionRequestCode(notificationId: Int): Int = notificationId.inv()
+
     /** Экран приложения, который открывает уведомление (маршруты как в [app.kvity.ui.Routes]). */
     fun route(e: CalendarEvent): String = if (e.kind == EventKind.DEBT) "debt/${e.refId}" else "sub/${e.refId}"
 
@@ -46,10 +49,63 @@ object NotifyActions {
     fun notificationId(key: String): Int = (key.hashCode() and 0x3fffffff) + 10
 }
 
-/** Экран, который нужно открыть после нажатия на уведомление; читается в AppNavigation. */
+/** Команда «открыть диалог напоминания» для долга или доли участника подписки. */
+sealed class RemindRequest {
+    data class Debt(val debtId: String) : RemindRequest()
+    data class Share(val subscriptionId: String, val shareId: String, val period: LocalDate) : RemindRequest()
+
+    /** Строка для extra интента: `debt:<id>` или `share:<подписка>:<доля>:<epochDay>`. */
+    fun encode(): String = when (this) {
+        is Debt -> "debt:$debtId"
+        is Share -> "share:$subscriptionId:$shareId:${period.toEpochDay()}"
+    }
+
+    companion object {
+        fun decode(s: String?): RemindRequest? {
+            val p = s?.split(':') ?: return null
+            return when {
+                p.size == 2 && p[0] == "debt" && p[1].isNotEmpty() -> Debt(p[1])
+                p.size == 4 && p[0] == "share" && p[1].isNotEmpty() && p[2].isNotEmpty() ->
+                    p[3].toLongOrNull()?.let { Share(p[1], p[2], LocalDate.ofEpochDay(it)) }
+                else -> null
+            }
+        }
+
+        fun of(e: CalendarEvent): RemindRequest? {
+            val shareId = e.shareId
+            val period = e.periodDate
+            return when {
+                e.flow != MoneyFlow.IN -> null
+                e.kind == EventKind.DEBT -> Debt(e.refId)
+                shareId != null && period != null -> Share(e.refId, shareId, period)
+                else -> null
+            }
+        }
+    }
+}
+
+/** Экран и диалог, которые нужно открыть после нажатия на уведомление; читаются в AppNavigation. */
 object NotificationNav {
     val pendingRoute = MutableStateFlow<String?>(null)
+    val pendingRemind = MutableStateFlow<RemindRequest?>(null)
     fun consume() { pendingRoute.value = null }
+    fun consumeRemind() { pendingRemind.value = null }
+}
+
+/** Мягкий запрос разрешения на точные будильники: только если разрешения нет и ещё не спрашивали. */
+object ExactAlarmPolicy {
+    fun shouldOffer(sdk: Int, canScheduleExact: Boolean, alreadyAsked: Boolean, notificationsEnabled: Boolean, canPost: Boolean): Boolean =
+        sdk >= 31 && !canScheduleExact && !alreadyAsked && notificationsEnabled && canPost
+}
+
+/** Какую сводку группы нужно снять вместе с отменой уведомления. */
+object NotifyGroups {
+    /** [active] — пары (id, группа) активных уведомлений ДО отмены. Сводки групп имеют id < 10. */
+    fun summaryToCancel(active: List<Pair<Int, String?>>, cancelledId: Int): Int? {
+        val group = active.firstOrNull { it.first == cancelledId }?.second ?: return null
+        val rest = active.filter { it.second == group && it.first != cancelledId }
+        return if (rest.size == 1 && rest[0].first < 10) rest[0].first else null
+    }
 }
 
 /** Когда в последний раз напоминали об окончании пробного периода подписки (чтобы не повторяться в один день). */

@@ -30,6 +30,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import app.kvity.KvityApp
 import app.kvity.notify.NotificationNav
+import app.kvity.notify.RemindRequest
+import app.kvity.data.ShareView
+import app.kvity.data.SubscriptionView
+import kotlinx.coroutines.flow.first
 import app.kvity.data.AttachmentOwner
 import app.kvity.data.DebtView
 import app.kvity.ui.components.AttachmentsCard
@@ -97,7 +101,7 @@ private val tabs = listOf(
 )
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(unlocked: Boolean = true) {
     val context = LocalContext.current
     val resources = androidx.compose.ui.platform.LocalResources.current
     val app = context.applicationContext as KvityApp
@@ -114,6 +118,29 @@ fun AppNavigation() {
             nav.navigate(it) { launchSingleTop = true }
             NotificationNav.consume()
         }
+    }
+
+    // «Напомнить» из уведомления: диалог выбора канала и шаблона поверх экрана долга/подписки;
+    // пока приложение заблокировано PIN, диалог не показываем (он рисуется поверх экрана блокировки)
+    val remindRequest by NotificationNav.pendingRemind.collectAsStateWithLifecycle()
+    LaunchedEffect(remindRequest, unlocked) {
+        val req = remindRequest ?: return@LaunchedEffect
+        if (!unlocked) return@LaunchedEffect
+        NotificationNav.consumeRemind()
+        reminder = when (req) {
+            is RemindRequest.Debt -> app.debts.observeDebt(req.debtId).first()
+                ?.let { debtReminder(it, resources.getString(R.string.nav_due_not_set)) }
+            is RemindRequest.Share -> app.subscriptions.observe(req.subscriptionId).first()?.let { v ->
+                v.shares.firstOrNull { it.share.id == req.shareId }?.let { shareReminder(v, it, req.period) }
+            }
+        }
+    }
+
+    // мягкий запрос точных будильников: один раз, на главном экране, после разрешения уведомлений
+    val offerExact = rememberShouldOfferExactAlarm(settings)
+    var showExact by remember { mutableStateOf(false) }
+    LaunchedEffect(offerExact, unlocked, route, settings.onboardingDone) {
+        if (offerExact && unlocked && settings.onboardingDone && route == Routes.DASHBOARD && reminder == null) showExact = true
     }
 
     val peopleVm: PeopleViewModel = viewModel(
@@ -310,16 +337,7 @@ fun AppNavigation() {
                     onMarkUnpaid = vm::markUnpaid,
                     onMarkChargePaid = vm::markChargePaid,
                     onMarkChargeUnpaid = vm::markChargeUnpaid,
-                    onRemind = { sh, period ->
-                        reminder = ReminderContext(
-                            name = sh.counterpartyName, phone = sh.counterpartyPhone,
-                            amount = formatMoney(sh.share.amountMinor, sh.share.currency),
-                            remaining = formatMoney(sh.share.amountMinor, sh.share.currency),
-                            due = "${view?.subscription?.name.orEmpty()}, ${formatDate(period)}",
-                            overdueDays = ChronoUnit.DAYS.between(period, LocalDate.now()).coerceAtLeast(0),
-                            shareId = sh.share.id, counterpartyId = sh.share.counterpartyId,
-                        )
-                    },
+                    onRemind = { sh, period -> view?.let { reminder = shareReminder(it, sh, period) } },
                     knownNames = knownNames,
                     attachments = { sid -> AttachmentsCard(app.attachments, AttachmentOwner.SUBSCRIPTION, sid) },
                 )
@@ -394,7 +412,17 @@ fun AppNavigation() {
             onDismiss = { reminder = null },
         )
     }
+    if (showExact) ExactAlarmDialog(onDismiss = { showExact = false })
 }
+
+private fun shareReminder(v: SubscriptionView, sh: ShareView, period: LocalDate) = ReminderContext(
+    name = sh.counterpartyName, phone = sh.counterpartyPhone,
+    amount = formatMoney(sh.share.amountMinor, sh.share.currency),
+    remaining = formatMoney(sh.share.amountMinor, sh.share.currency),
+    due = "${v.subscription.name}, ${formatDate(period)}",
+    overdueDays = ChronoUnit.DAYS.between(period, LocalDate.now()).coerceAtLeast(0),
+    shareId = sh.share.id, counterpartyId = sh.share.counterpartyId,
+)
 
 private fun tabIcon(route: String) = when (route) {
     Routes.DASHBOARD -> "▦"

@@ -17,6 +17,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kvity.data.ThemeMode
 import app.kvity.notify.NotificationNav
 import app.kvity.notify.Notifier
+import app.kvity.notify.RemindRequest
 import app.kvity.security.Biometrics
 import app.kvity.security.LockScreen
 import app.kvity.ui.AppNavigation
@@ -66,7 +67,7 @@ class MainActivity : FragmentActivity() {
                 val showLock = locked && settings.pinEnabled && app.pin.isSet
                 // навигация остаётся в композиции под экраном блокировки: после ввода PIN открытая форма и экран не теряются
                 if (!showLock || hasShownContent) {
-                    if (settings.onboardingDone) AppNavigation()
+                    if (settings.onboardingDone) AppNavigation(unlocked = !showLock)
                     else OnboardingScreen(onFinish = { app.settings.update { it.copy(onboardingDone = true) } })
                     hasShownContent = true
                 }
@@ -91,9 +92,13 @@ class MainActivity : FragmentActivity() {
 
     /** Нажатие на уведомление или его действие: запоминаем экран, который нужно открыть. */
     private fun handleIntent(intent: android.content.Intent?) {
-        val route = intent?.getStringExtra(Notifier.EXTRA_ROUTE) ?: return
-        intent.removeExtra(Notifier.EXTRA_ROUTE)
-        NotificationNav.pendingRoute.value = route
+        val remind = RemindRequest.decode(intent?.getStringExtra(Notifier.EXTRA_REMIND))
+        intent?.removeExtra(Notifier.EXTRA_REMIND)
+        val route = intent?.getStringExtra(Notifier.EXTRA_ROUTE)
+        intent?.removeExtra(Notifier.EXTRA_ROUTE)
+        if (route != null) NotificationNav.pendingRoute.value = route
+        // диалог откроется в AppNavigation, когда приложение разблокировано
+        if (remind != null) NotificationNav.pendingRemind.value = remind
     }
 
     private companion object {

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="exact_alarm_title">Exact reminders</string>
+    <string name="exact_alarm_text">To get notifications on time instead of delayed in battery saver mode, allow the app to use exact alarms. System settings will open.</string>
+    <string name="exact_alarm_allow">Allow exact reminders</string>
+    <string name="exact_alarm_later">Not now</string>
+</resources>

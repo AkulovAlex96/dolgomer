@@ -25,6 +25,7 @@ import app.kvity.ui.formatMoney
 object Notifier {
     const val CHANNEL = "payments"
     const val EXTRA_ROUTE = "route"
+    const val EXTRA_REMIND = "remind"
 
     fun createChannel(context: Context) {
         if (Build.VERSION.SDK_INT < 26) return
@@ -38,10 +39,11 @@ object Notifier {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
     /** Открывает [route] в приложении (пустой маршрут — просто приложение). */
-    private fun openIntent(context: Context, requestCode: Int, route: String?): PendingIntent {
+    private fun openIntent(context: Context, requestCode: Int, route: String?, remind: RemindRequest? = null): PendingIntent {
         val intent = Intent(context, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         if (route != null) intent.putExtra(EXTRA_ROUTE, route)
+        if (remind != null) intent.putExtra(EXTRA_REMIND, remind.encode())
         return PendingIntent.getActivity(context, requestCode, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     }
 
@@ -104,9 +106,13 @@ object Notifier {
             val paid = PendingIntent.getBroadcast(context, id, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             b.addAction(0, context.getString(R.string.notify_action_paid), paid)
         }
-        if (NotifyActions.canRemind(e)) {
-            // открывает экран долга/подписки, где есть кнопка «Напомнить» с выбором канала и шаблона
-            b.addAction(0, context.getString(R.string.notify_action_remind),openIntent(context, id + 1, NotifyActions.route(e)))
+        val remind = if (NotifyActions.canRemind(e)) RemindRequest.of(e) else null
+        if (remind != null) {
+            // открывает экран долга/подписки и сразу диалог выбора канала и шаблона
+            b.addAction(
+                0, context.getString(R.string.notify_action_remind),
+                openIntent(context, NotifyActions.actionRequestCode(id), NotifyActions.route(e), remind),
+            )
         }
         notify(context, id, b)
     }
@@ -123,7 +129,7 @@ object Notifier {
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(openIntent(context, id, route))
-            .addAction(0, context.getString(R.string.notify_action_open), openIntent(context, id + 1, route))
+            .addAction(0, context.getString(R.string.notify_action_open), openIntent(context, NotifyActions.actionRequestCode(id), route))
         notify(context, id, b)
         return true
     }
@@ -140,7 +146,7 @@ object Notifier {
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(openIntent(context, id, route))
-            .addAction(0, context.getString(R.string.notify_action_open), openIntent(context, id + 1, route))
+            .addAction(0, context.getString(R.string.notify_action_open), openIntent(context, NotifyActions.actionRequestCode(id), route))
         notify(context, id, b)
     }
 
