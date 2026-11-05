@@ -19,6 +19,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            // debug ставится рядом с основным приложением: другая подпись не мешает установке, данные раздельные
+            applicationIdSuffix = ".debug"
+        }
         release {
             isMinifyEnabled = false
         }

@@ -188,6 +188,18 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
         db.subscriptions().update(old.copy(state = state))
     }
 
+    /**
+     * Подписки, поставленные на паузу до появления истории пауз, не имеют записи интервала и продолжали бы начислять доли.
+     * Для них открывается пауза с сегодняшнего дня (точная дата остановки неизвестна). Вызывается при запуске приложения.
+     */
+    suspend fun repairLegacyPauses() = db.withTransaction {
+        val open = db.pauses().all().filter { it.toDate == null }.map { it.subscriptionId }.toSet()
+        val today = LocalDate.now()
+        db.subscriptions().all().filter { it.state != SubscriptionState.ACTIVE && it.id !in open }.forEach {
+            db.pauses().insert(SubscriptionPauseEntity(UUID.randomUUID().toString(), it.id, today, null))
+        }
+    }
+
     suspend fun delete(id: String) {
         attachments?.deleteOwnedBy(listOf(id))
         db.subscriptions().delete(id)

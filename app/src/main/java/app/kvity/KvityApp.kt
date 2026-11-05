@@ -56,6 +56,7 @@ class KvityApp : Application() {
         lock = LockManager(initiallyLocked = settings.current.pinEnabled && pin.isSet)
         val scope = kotlinx.coroutines.MainScope()
         scope.launch { reference.seedDefaults() }
+        scope.launch { subscriptions.repairLegacyPauses() }
         app.kvity.notify.Notifier.createChannel(this)
         scope.launch {
             // Расписание уведомлений следует за настройками (включение и время)
