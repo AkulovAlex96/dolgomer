@@ -23,15 +23,17 @@ fun FormScreen(
     title: String,
     onBack: () -> Unit,
     backLabel: String = "Назад",
+    hasChanges: Boolean = false,
     actions: @Composable () -> Unit = {},
     content: @Composable () -> Unit,
 ) {
+    val exit = rememberExitGuard(hasChanges, onBack)
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text(title) },
-                navigationIcon = { TextButton(onClick = onBack) { Text(backLabel) } },
+                navigationIcon = { TextButton(onClick = exit) { Text(backLabel) } },
                 actions = { actions() },
             )
         },

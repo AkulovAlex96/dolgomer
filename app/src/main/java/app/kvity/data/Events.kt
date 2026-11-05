@@ -34,7 +34,46 @@ data class CalendarEvent(
 /** Итог календарного месяца в одной валюте: сколько вернут мне и сколько верну я. */
 data class MonthTotal(val currency: String, val incomingMinor: Long, val outgoingMinor: Long)
 
+/** Платёж по долгу, у которого известен только месяц (ТЗ 3.15): в ячейки дней не ставится. */
+data class UndatedPayment(val month: YearMonth, val flow: MoneyFlow, val currency: String, val amountMinor: Long)
+
 object Events {
+
+    /** Платежи «только месяц» по всем долгам: входящие (мне вернули) и исходящие (я вернул). */
+    fun undatedPayments(debts: List<DebtView>): List<UndatedPayment> =
+        debts.flatMap { v ->
+            val flow = if (v.debt.direction == Direction.OWED_TO_ME) MoneyFlow.IN else MoneyFlow.OUT
+            v.payments.filter { it.monthOnly }.map { UndatedPayment(YearMonth.from(it.date), flow, v.debt.currency, it.amountMinor) }
+        }
+
+    private fun totalsOf(events: List<CalendarEvent>, mainCurrency: String): List<MonthTotal> =
+        events.groupBy { it.currency }
+            .map { (code, list) ->
+                MonthTotal(
+                    code,
+                    incomingMinor = list.filter { it.flow == MoneyFlow.IN }.sumOf { it.amountMinor },
+                    outgoingMinor = list.filter { it.flow == MoneyFlow.OUT }.sumOf { it.amountMinor },
+                )
+            }
+            .sortedWith(compareBy<MonthTotal> { it.currency != mainCurrency }.thenBy { it.currency })
+
+    /** Суммы платежей без точной даты за месяц по валютам (основная первой). */
+    fun undatedTotals(items: List<UndatedPayment>, month: YearMonth, mainCurrency: String): List<MonthTotal> =
+        totalsOf(
+            items.filter { it.month == month }.map {
+                CalendarEvent(
+                    it.month.atDay(1), EventKind.DEBT, it.flow, "", null, it.amountMinor, it.currency, overdue = false, refId = "",
+                )
+            },
+            mainCurrency,
+        )
+
+    /**
+     * Суммы одного дня по валютам: оплаченное и просроченное не входят (просрочка не смешивается с суммой дня,
+     * она видна в списке дня и красной точкой). Основная валюта первой, остальные по алфавиту.
+     */
+    fun dayTotals(events: List<CalendarEvent>, mainCurrency: String): List<MonthTotal> =
+        totalsOf(events.filter { !it.paid && !it.overdue }, mainCurrency)
 
     /**
      * Суммы событий за месяц по валютам: основная валюта первой, остальные по алфавиту.

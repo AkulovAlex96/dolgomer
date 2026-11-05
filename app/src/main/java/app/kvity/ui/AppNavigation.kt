@@ -170,8 +170,10 @@ fun AppNavigation() {
                     factory = viewModelFactory { initializer { CalendarViewModel(app.debts, app.subscriptions) } },
                 )
                 val events by vm.events.collectAsStateWithLifecycle()
+                val undated by vm.undated.collectAsStateWithLifecycle()
                 CalendarScreen(
                     events = events,
+                    undated = undated,
                     mainCurrency = settings.defaultCurrency,
                     firstDayOfWeek = settings.firstDayOfWeek,
                     onOpenEvent = { e -> nav.navigate(if (e.kind == EventKind.DEBT) Routes.debt(e.refId) else Routes.sub(e.refId)) },
