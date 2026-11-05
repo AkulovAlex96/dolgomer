@@ -36,10 +36,12 @@ class NewDebt(
 
 data class ImportSummary(val added: Int, val skippedDuplicates: Int)
 
-class DebtRepository(private val db: KvityDatabase, private val attachments: AttachmentRepository? = null) {
-
-    /** За сколько дней до срока долг получает статус «скоро срок» (настройка пользователя). */
-    var dueSoonDays: Flow<Int> = kotlinx.coroutines.flow.flowOf(3)
+/** [dueSoonDays] — за сколько дней до срока долг получает статус «скоро срок» (настройка пользователя). */
+class DebtRepository(
+    private val db: KvityDatabase,
+    private val attachments: AttachmentRepository? = null,
+    private val dueSoonDays: Flow<Int> = kotlinx.coroutines.flow.flowOf(3),
+) {
 
     fun observeDebts(today: () -> LocalDate = LocalDate::now, includeArchived: Boolean = false): Flow<List<DebtView>> =
         combine(

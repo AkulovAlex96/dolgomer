@@ -123,6 +123,7 @@ class Migration4To5 : AutoMigrationSpec
 interface PauseDao {
     @Insert suspend fun insert(item: SubscriptionPauseEntity)
     @Update suspend fun update(item: SubscriptionPauseEntity)
+    @Query("DELETE FROM subscription_pauses WHERE id = :id") suspend fun delete(id: String)
     @Query("SELECT * FROM subscription_pauses") fun observeAll(): Flow<List<SubscriptionPauseEntity>>
     @Query("SELECT * FROM subscription_pauses") suspend fun all(): List<SubscriptionPauseEntity>
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insertAll(items: List<SubscriptionPauseEntity>)

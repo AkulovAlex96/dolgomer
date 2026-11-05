@@ -180,7 +180,8 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
         val today = LocalDate.now()
         val open = db.pauses().all().filter { it.subscriptionId == id && it.toDate == null }
         if (state == SubscriptionState.ACTIVE) {
-            open.forEach { db.pauses().update(it.copy(toDate = today)) }
+            // пауза, начатая и закрытая в один день, пустая: не оставляем после неё записи
+            open.forEach { if (it.fromDate == today) db.pauses().delete(it.id) else db.pauses().update(it.copy(toDate = today)) }
         } else if (open.isEmpty()) {
             db.pauses().insert(SubscriptionPauseEntity(UUID.randomUUID().toString(), id, today, null))
         }

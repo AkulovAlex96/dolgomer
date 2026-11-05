@@ -211,7 +211,7 @@ object Importer {
                 "отменена", "отменено" -> ImportSubState.CANCELLED
                 else -> ImportSubState.ACTIVE
             }
-            if (problems.isEmpty()) ImportSubscription(line, name, payer, sum!!, currency!!, period!!.first, period.second, anchor ?: today, state, c["Способ оплаты"].ifEmpty { null }, c["Комментарий"].ifEmpty { null }) else null
+            if (problems.isEmpty()) ImportSubscription(line, name, payer, sum!!, currency!!, period!!.first, period.second, anchor!!, state, c["Способ оплаты"].ifEmpty { null }, c["Комментарий"].ifEmpty { null }) else null
         }
 
     private fun parseShares(sheet: SheetData, header: List<String>) =

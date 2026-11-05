@@ -29,4 +29,19 @@ class MonthTotalsTest {
     @Test fun `empty month gives no totals`() {
         assertEquals(emptyList<MonthTotal>(), Events.monthTotals(listOf(ev("2026-11-01", MoneyFlow.IN, 1)), oct, "RUB"))
     }
+
+    private fun ev(date: String, flow: MoneyFlow, amount: Long, paid: Boolean) =
+        ev(date, flow, amount).copy(paid = paid)
+
+    @Test fun `paid events are not counted, both own charges and participant shares`() {
+        val events = listOf(
+            ev("2026-10-05", MoneyFlow.OUT, 300_00, paid = true), ev("2026-10-20", MoneyFlow.OUT, 300_00, paid = false),
+            ev("2026-10-05", MoneyFlow.IN, 150_00, paid = true), ev("2026-10-20", MoneyFlow.IN, 150_00, paid = false),
+        )
+        assertEquals(listOf(MonthTotal("RUB", 150_00, 300_00)), Events.monthTotals(events, oct, "RUB"))
+    }
+
+    @Test fun `month with only paid events gives no totals`() {
+        assertEquals(emptyList<MonthTotal>(), Events.monthTotals(listOf(ev("2026-10-05", MoneyFlow.OUT, 1, paid = true)), oct, "RUB"))
+    }
 }

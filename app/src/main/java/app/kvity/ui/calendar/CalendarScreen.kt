@@ -305,9 +305,10 @@ private fun DayDetails(
             val part = events.filter { it.kind == kind }
             if (part.isEmpty()) return@forEach
             Text(heading, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 10.dp))
-            part.map { it.currency }.distinct().forEach { code ->
-                val inn = part.filter { it.currency == code && it.flow == MoneyFlow.IN }.sumOf { it.amountMinor }
-                val out = part.filter { it.currency == code && it.flow == MoneyFlow.OUT }.sumOf { it.amountMinor }
+            val pending = part.filter { !it.paid } // итог дня, как и итог месяца, не считает оплаченное
+            pending.map { it.currency }.distinct().forEach { code ->
+                val inn = pending.filter { it.currency == code && it.flow == MoneyFlow.IN }.sumOf { it.amountMinor }
+                val out = pending.filter { it.currency == code && it.flow == MoneyFlow.OUT }.sumOf { it.amountMinor }
                 Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TotalBox("Входящие", if (inn > 0) "+" + formatMoney(inn, code) else "—", c.incomeBg, c.income, Modifier.weight(1f))
                     TotalBox("Исходящие", if (out > 0) "−" + formatMoney(out, code) else "—", c.expenseBg, c.expense, Modifier.weight(1f))

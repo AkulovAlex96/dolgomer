@@ -46,7 +46,7 @@ object SubscriptionCalc {
         amountHistory: List<Pair<LocalDate, Long>> = emptyList(),
     ): List<ShareDue> =
         occurrences(anchor, periodicity, interval, maxOf(activeFrom, anchor), horizonEnd)
-            .filter { !isPaused(it, pauses) }
+            .filter { it in paidPeriods || !isPaused(it, pauses) } // оплаченный период остаётся в истории, даже если позже попал в паузу
             .map {
                 // оплаченный период хранит сумму оплаты; неоплаченный берёт сумму, действовавшую на его дату
                 val amount = if (it in paidPeriods) paidAmounts[it] ?: amountAt(it, amountMinor, amountHistory) else amountAt(it, amountMinor, amountHistory)

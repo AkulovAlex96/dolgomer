@@ -36,9 +36,13 @@ data class MonthTotal(val currency: String, val incomingMinor: Long, val outgoin
 
 object Events {
 
-    /** Суммы событий за месяц по валютам: основная валюта первой, остальные по алфавиту. */
+    /**
+     * Суммы событий за месяц по валютам: основная валюта первой, остальные по алфавиту.
+     * Единое правило: считается то, что ещё предстоит, оплаченные события (свои списания и доли участников) в итог не входят,
+     * как и оплаченные взносы по долгам.
+     */
     fun monthTotals(events: List<CalendarEvent>, month: YearMonth, mainCurrency: String): List<MonthTotal> =
-        events.filter { YearMonth.from(it.date) == month }
+        events.filter { YearMonth.from(it.date) == month && !it.paid }
             .groupBy { it.currency }
             .map { (code, list) ->
                 MonthTotal(
@@ -77,7 +81,7 @@ object Events {
             // Просрочкой считаются только неотмеченные списания с момента, как подписка заведена в приложении
             val trackedFrom = Instant.ofEpochMilli(s.createdAt).atZone(ZoneId.systemDefault()).toLocalDate()
             if (s.state == SubscriptionState.ACTIVE) {
-                SubscriptionCalc.occurrences(s.anchorDate, s.periodicity, s.interval, today.minusDays(365), horizon).filter { !SubscriptionCalc.isPaused(it, v.pauses) }.forEach { d ->
+                SubscriptionCalc.occurrences(s.anchorDate, s.periodicity, s.interval, today.minusDays(365), horizon).filter { it in v.paidCharges || !SubscriptionCalc.isPaused(it, v.pauses) }.forEach { d ->
                     out += CalendarEvent(
                         date = d, kind = EventKind.SUBSCRIPTION, flow = MoneyFlow.OUT, title = s.name,
                         subtitle = if (s.payer == SubscriptionPayer.ME) "списание" else "возвращаю ${v.payerName.orEmpty()}",
