@@ -42,6 +42,8 @@ import app.kvity.domain.Periodicity
 import app.kvity.domain.ScheduleGenerator
 import app.kvity.domain.ScheduleRule
 import app.kvity.domain.TermType
+import app.kvity.ui.components.FormChanges
+import app.kvity.ui.components.rememberExitGuard
 import app.kvity.ui.components.DatePickerField
 import app.kvity.ui.components.SectionCard
 import app.kvity.ui.currencyOf
@@ -83,6 +85,10 @@ fun NewDebtScreen(
     var countText by rememberSaveable { mutableStateOf(d?.paymentCount?.toString() ?: "") }
     var note by rememberSaveable { mutableStateOf(d?.note ?: "") }
 
+    val snapshot = FormChanges.snapshot(direction, name, amountText, currencyCode, termType, dueEpoch, installmentText, periodicity, firstEpoch, intervalText, dayText, countText, note)
+    val initialSnapshot = rememberSaveable { snapshot }
+    val exit = rememberExitGuard(FormChanges.isDirty(initialSnapshot, snapshot), onBack)
+
     val currency = currencyOf(currencyCode)
     val principal = AmountParser.parseMinor(amountText, currency.fractionDigits)
     val installment = AmountParser.parseMinor(installmentText, currency.fractionDigits)
@@ -113,7 +119,7 @@ fun NewDebtScreen(
         topBar = {
             TopAppBar(
                 title = { Text(if (initial == null) "Новый долг" else "Изменить долг") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Отмена") } },
+                navigationIcon = { TextButton(onClick = exit) { Text("Отмена") } },
             )
         },
     ) { padding ->

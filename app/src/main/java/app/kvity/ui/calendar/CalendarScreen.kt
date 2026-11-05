@@ -41,6 +41,7 @@ import app.kvity.data.EventKind
 import app.kvity.data.Events
 import app.kvity.data.MonthTotal
 import app.kvity.data.MoneyFlow
+import app.kvity.data.UndatedPayment
 import app.kvity.domain.AmountFormatter
 import app.kvity.ui.components.LabelRow
 import app.kvity.ui.components.Pill
@@ -66,6 +67,7 @@ private val monthNames = listOf(
 @Composable
 fun CalendarScreen(
     events: List<CalendarEvent>,
+    undated: List<UndatedPayment>,
     mainCurrency: String,
     firstDayOfWeek: DayOfWeek,
     onOpenEvent: (CalendarEvent) -> Unit,
@@ -114,9 +116,12 @@ fun CalendarScreen(
             if (filter != CalendarFilter.DEBTS) {
                 MonthSummary("Регулярные платежи", Events.monthTotals(filtered.filter { it.kind == EventKind.SUBSCRIPTION }, month, mainCurrency), legend = filter == CalendarFilter.SUBSCRIPTIONS)
             }
+            if (filter != CalendarFilter.SUBSCRIPTIONS) {
+                UndatedSummary(Events.undatedTotals(undated, month, mainCurrency))
+            }
             MonthGrid(month, firstDayOfWeek, today, selected, byDate, mainCurrency) { selected = it; month = YearMonth.from(it) }
 
-            selected?.let { day -> DayDetails(day, byDate[day].orEmpty(), onOpenEvent, onMarkSharePaid) }
+            selected?.let { day -> DayDetails(day, byDate[day].orEmpty(), mainCurrency, onOpenEvent, onMarkSharePaid) }
         }
     }
 }
@@ -141,6 +146,25 @@ private fun MonthSummary(title: String, totals: List<MonthTotal>, legend: Boolea
         if (legend) Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(7.dp).background(c.expense, CircleShape))
             Text("просрочка", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/** Платежи по долгам, у которых известен только месяц: отдельная строка с суммами по валютам, в ячейки дней не попадают. */
+@Composable
+private fun UndatedSummary(totals: List<MonthTotal>) {
+    if (totals.isEmpty()) return
+    val c = MaterialTheme.kvity
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text("Без точной даты", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        totals.forEach { t ->
+            val parts = listOfNotNull(
+                t.incomingMinor.takeIf { it > 0 }?.let { "+" + formatMoney(it, t.currency) to c.income },
+                t.outgoingMinor.takeIf { it > 0 }?.let { "−" + formatMoney(it, t.currency) to c.expense },
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                parts.forEach { (text, color) -> Text(text, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = color) }
+            }
         }
     }
 }
@@ -210,8 +234,10 @@ private fun DayCell(
     onClick: () -> Unit,
 ) {
     val c = MaterialTheme.kvity
-    val debts = events.filter { it.kind == EventKind.DEBT }
-    val regular = events.filter { it.kind == EventKind.SUBSCRIPTION }
+    // просроченное в суммы дня не входит (ТЗ 3.5): о нём говорит красная точка
+    val counted = events.filter { !it.overdue }
+    val debts = counted.filter { it.kind == EventKind.DEBT }
+    val regular = counted.filter { it.kind == EventKind.SUBSCRIPTION }
     // долги по каждой валюте и направлению: основная валюта первой, входящие раньше исходящих
     val debtLines = debts.groupBy { it.currency to it.flow }
         .toSortedMap(compareBy<Pair<String, MoneyFlow>> { it.first != mainCurrency }.thenBy { it.first }.thenBy { it.second })
@@ -291,6 +317,7 @@ private fun DayCell(
 private fun DayDetails(
     day: LocalDate,
     events: List<CalendarEvent>,
+    mainCurrency: String,
     onOpen: (CalendarEvent) -> Unit,
     onMarkSharePaid: (CalendarEvent) -> Unit,
 ) {
@@ -305,10 +332,11 @@ private fun DayDetails(
             val part = events.filter { it.kind == kind }
             if (part.isEmpty()) return@forEach
             Text(heading, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 10.dp))
-            val pending = part.filter { !it.paid } // итог дня, как и итог месяца, не считает оплаченное
-            pending.map { it.currency }.distinct().forEach { code ->
-                val inn = pending.filter { it.currency == code && it.flow == MoneyFlow.IN }.sumOf { it.amountMinor }
-                val out = pending.filter { it.currency == code && it.flow == MoneyFlow.OUT }.sumOf { it.amountMinor }
+            // итог дня, как и итог месяца, не считает оплаченное, а просроченное показывает только в списке ниже
+            Events.dayTotals(part, mainCurrency).forEach { t ->
+                val code = t.currency
+                val inn = t.incomingMinor
+                val out = t.outgoingMinor
                 Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TotalBox("Входящие", if (inn > 0) "+" + formatMoney(inn, code) else "—", c.incomeBg, c.income, Modifier.weight(1f))
                     TotalBox("Исходящие", if (out > 0) "−" + formatMoney(out, code) else "—", c.expenseBg, c.expense, Modifier.weight(1f))
@@ -320,9 +348,10 @@ private fun DayDetails(
             part.sortedBy { it.flow }.forEach { e ->
                 LabelRow(
                     onClick = { onOpen(e) },
-                    label = e.title, subtitle = listOfNotNull(e.subtitle, if (e.overdue) "просрочено" else if (e.paid) "оплачено" else null).joinToString(" · ").ifEmpty { null },
+                    label = e.title, subtitle = listOfNotNull(e.subtitle, if (e.paid) "оплачено" else null).joinToString(" · ").ifEmpty { null },
                     trailing = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (e.overdue) Text("просрочено", color = c.expense, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(end = 6.dp))
                             Text(
                                 (if (e.flow == MoneyFlow.IN) "+" else "−") + formatMoney(e.amountMinor, e.currency),
                                 color = if (e.flow == MoneyFlow.IN) c.income else c.expense, fontWeight = FontWeight.Bold,

@@ -23,6 +23,7 @@ import app.kvity.domain.Periodicity
 import app.kvity.ui.components.ChipRow
 import app.kvity.ui.components.DatePickerField
 import app.kvity.ui.components.DropdownField
+import app.kvity.ui.components.FormChanges
 import app.kvity.ui.components.FormScreen
 import app.kvity.ui.currencyOf
 import app.kvity.ui.minorToInput
@@ -56,6 +57,8 @@ fun SubscriptionFormScreen(
     var note by rememberSaveable { mutableStateOf(s?.note ?: "") }
     var category by rememberSaveable { mutableStateOf(s?.category ?: "") }
     var intervalText by rememberSaveable { mutableStateOf((s?.interval ?: 1).toString()) }
+    val snapshot = FormChanges.snapshot(name, currency, amountText, periodicity, anchorEpoch, payer, payerName, method, trialEpoch, note, category, intervalText)
+    val initialSnapshot = rememberSaveable { snapshot }
     val interval = intervalText.toIntOrNull()?.takeIf { it in 1..99 }
 
     val amount = AmountParser.parseMinor(amountText, currencyOf(currency).fractionDigits)
@@ -63,7 +66,7 @@ fun SubscriptionFormScreen(
     val valid = name.isNotBlank() && amount != null && anchor != null && interval != null &&
         (payer == SubscriptionPayer.ME || payerName.isNotBlank())
 
-    FormScreen(title = if (initial == null) "Новый регулярный платёж" else "Изменить регулярный платёж", onBack = onBack, backLabel = "Отмена") {
+    FormScreen(title = if (initial == null) "Новый регулярный платёж" else "Изменить регулярный платёж", onBack = onBack, backLabel = "Отмена", hasChanges = FormChanges.isDirty(initialSnapshot, snapshot)) {
         OutlinedTextField(name, { name = it.take(Limits.NAME) }, label = { Text("Название (ChatGPT, GitHub…)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
