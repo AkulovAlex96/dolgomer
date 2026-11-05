@@ -11,6 +11,31 @@ class DebtCalculatorTest {
 
     private fun d(month: Int, day: Int) = LocalDate.of(2026, month, day)
 
+    @Test fun `linked payment closes its own planned payment first`() {
+        val planned = listOf(PlannedPayment(d(11, 1), 1_000, "a"), PlannedPayment(d(12, 1), 1_000, "b"), PlannedPayment(d(12, 20), 1_000, "c"))
+        val plan = DebtCalculator.allocate(planned, listOf(PaymentAmount(1_000, "b")))
+        assertEquals(listOf(0L, 1_000L, 0L), plan.map { it.paidMinor })
+    }
+
+    @Test fun `linked overpayment spills to the oldest unpaid`() {
+        val planned = listOf(PlannedPayment(d(11, 1), 1_000, "a"), PlannedPayment(d(12, 1), 1_000, "b"), PlannedPayment(d(12, 20), 1_000, "c"))
+        val plan = DebtCalculator.allocate(planned, listOf(PaymentAmount(1_500, "b")))
+        assertEquals(listOf(500L, 1_000L, 0L), plan.map { it.paidMinor })
+    }
+
+    @Test fun `skipped planned payment is ignored`() {
+        val planned = listOf(PlannedPayment(d(11, 1), 1_000, "a", skipped = true), PlannedPayment(d(12, 1), 1_000, "b"))
+        val plan = DebtCalculator.allocate(planned, 1_000)
+        assertEquals(1, plan.size)
+        assertEquals(InstallmentState.PAID, plan.single().state)
+    }
+
+    @Test fun `unknown link falls back to oldest first`() {
+        val planned = listOf(PlannedPayment(d(11, 1), 1_000, "a"), PlannedPayment(d(12, 1), 1_000, "b"))
+        val plan = DebtCalculator.allocate(planned, listOf(PaymentAmount(1_000, "gone")))
+        assertEquals(listOf(1_000L, 0L), plan.map { it.paidMinor })
+    }
+
     @Test fun `payments close the oldest installments first`() {
         val planned = listOf(
             PlannedPayment(d(10, 10), 1_000),

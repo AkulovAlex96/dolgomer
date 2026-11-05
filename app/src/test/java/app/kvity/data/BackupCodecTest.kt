@@ -27,7 +27,8 @@ class BackupCodecTest {
         val share = SubscriptionShareEntity("sh1", "s1", "p1", 2350, "USD", LocalDate.of(2026, 10, 2))
         return BackupData(
             createdAt = 10L, counterparties = listOf(person), debts = listOf(debt),
-            payments = listOf(PaymentEntity("pay1", "d1", LocalDate.of(2026, 10, 18), 1_000_000, null, 4L)),
+            payments = listOf(PaymentEntity("pay1", "d1", LocalDate.of(2026, 10, 18), 1_000_000, null, 4L, plannedId = "pp1", monthOnly = true)),
+            plannedPayments = listOf(PlannedPaymentEntity("pp1", "d1", LocalDate.of(2026, 11, 10), 1_000_000, skipped = true)),
             subscriptions = listOf(sub), shares = listOf(share),
             sharePayments = listOf(SharePaymentEntity("sp1", "sh1", LocalDate.of(2026, 10, 2), LocalDate.of(2026, 10, 3), 2350)),
             attachments = listOf(AttachmentEntity("a1", AttachmentOwner.DEBT, "d1", "расписка.jpg", "image/jpeg", 5, "a1.jpg", 5L)),

@@ -2,6 +2,7 @@
 
 package app.kvity.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
@@ -59,6 +60,12 @@ data class DebtEntity(
     val archived: Boolean = false,
     val note: String? = null,
     val createdAt: Long,
+    /** День платежа («до 10 числа») для графика по месяцам и годам; null: день первого платежа. */
+    val dayOfMonth: Int? = null,
+    /** Количество платежей в графике; null: «до погашения». */
+    val paymentCount: Int? = null,
+    /** true: плановые платежи хранятся в таблице planned_payments (их можно править), иначе строятся из условий. */
+    @ColumnInfo(defaultValue = "0") val planMaterialized: Boolean = false,
 ) {
     /** Плановые платежи строятся из условий возврата. */
     fun plannedPayments(): List<PlannedPayment> = when (termType) {
@@ -68,7 +75,7 @@ data class DebtEntity(
             val inst = installmentMinor
             val first = firstDate
             if (p != null && inst != null && first != null) {
-                ScheduleGenerator.generate(ScheduleRule(p, inst, first, interval), principalMinor)
+                ScheduleGenerator.generate(ScheduleRule(p, inst, first, interval, dayOfMonth, paymentCount), principalMinor)
             } else {
                 emptyList()
             }
@@ -97,6 +104,32 @@ data class PaymentEntity(
     val amountMinor: Long,
     val note: String? = null,
     val createdAt: Long,
+    /** Плановый платёж, который закрывает этот платёж; null: по умолчанию самый старый неоплаченный. */
+    val plannedId: String? = null,
+    /** Указан только месяц, день неизвестен: [date] хранит первое число месяца. */
+    @ColumnInfo(defaultValue = "0") val monthOnly: Boolean = false,
+)
+
+/** Плановый платёж долга: создаётся из условий, но каждый можно изменить, пропустить или удалить. */
+@Serializable
+@Entity(
+    tableName = "planned_payments",
+    foreignKeys = [
+        ForeignKey(
+            entity = DebtEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["debtId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index("debtId")],
+)
+data class PlannedPaymentEntity(
+    @PrimaryKey val id: String,
+    val debtId: String,
+    val dueDate: LocalDate,
+    val amountMinor: Long,
+    val skipped: Boolean = false,
 )
 
 // ---- Подписки ----

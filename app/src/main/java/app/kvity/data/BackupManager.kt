@@ -32,6 +32,7 @@ class BackupManager(
         rates = db.rates().all(),
         chargePayments = db.chargePayments().all(),
         pauses = db.pauses().all(),
+        plannedPayments = db.plannedPayments().all(),
         shareAmounts = db.shareAmounts().all(),
     )
 
@@ -78,6 +79,7 @@ class BackupManager(
         db.withTransaction {
             db.chargePayments().deleteAll()
             db.pauses().deleteAll()
+            db.plannedPayments().deleteAll()
             db.shareAmounts().deleteAll()
             db.sharePayments().deleteAll()
             db.shares().deleteAll()
@@ -93,6 +95,7 @@ class BackupManager(
             db.counterparties().insertAll(d.counterparties)
             db.debts().insertAll(d.debts)
             db.payments().insertAll(d.payments)
+            db.plannedPayments().insertAll(d.plannedPayments)
             db.subscriptions().insertAll(d.subscriptions)
             db.shares().insertAll(d.shares)
             db.shareAmounts().insertAll(d.shareAmounts)

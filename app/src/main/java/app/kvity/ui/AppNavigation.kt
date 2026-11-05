@@ -225,10 +225,17 @@ fun AppNavigation() {
                     key = id, factory = viewModelFactory { initializer { DebtDetailViewModel(app.debts, id) } },
                 )
                 val view by vm.view.collectAsStateWithLifecycle()
+                val recalcOffer by vm.recalcOffer.collectAsStateWithLifecycle()
                 DebtDetailScreen(
                     view = view,
                     onBack = { nav.popBackStack() },
-                    onAddPayment = vm::addPayment,
+                    onAddPayment = { date, minor, plannedId, monthOnly -> vm.addPayment(date, minor, plannedId, monthOnly) },
+                    onUpdatePlanned = vm::updatePlanned,
+                    onSkipPlanned = vm::skipPlanned,
+                    onDeletePlanned = vm::deletePlanned,
+                    recalcOffer = recalcOffer,
+                    onRecalc = vm::recalc,
+                    onDismissRecalc = vm::dismissRecalc,
                     onDeletePayment = vm::deletePayment,
                     onDeleteDebt = { vm.deleteDebt(); nav.popBackStack() },
                     onEdit = { nav.navigate(Routes.editDebt(id)) },

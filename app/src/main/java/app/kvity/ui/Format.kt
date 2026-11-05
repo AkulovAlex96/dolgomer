@@ -39,3 +39,8 @@ fun minorToInput(minor: Long?, currencyCode: String): String {
     val c = currencyOf(currencyCode)
     return AmountFormatter.format(minor, c).removeSuffix("\u00A0" + c.symbol).replace("\u00A0", "")
 }
+
+fun formatMonth(date: LocalDate): String {
+    val names = listOf("январь", "февраль", "март", "апрель", "май", "июнь", "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь")
+    return "${names[date.monthValue - 1]} ${date.year}"
+}
