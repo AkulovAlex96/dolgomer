@@ -45,7 +45,6 @@
     <string name="settings_notifications">Notifications</string>
     <string name="settings_notify_payments">Payment reminders</string>
     <string name="settings_notify_due">About debt due dates</string>
-    <string name="settings_notify_1">1 day before</string>
     <string name="settings_notify_3_1">3 and 1 days before</string>
     <string name="settings_notify_7_3_1">7, 3 and 1 days before</string>
     <string name="settings_notify_same_day">only on the due date</string>
@@ -53,18 +52,11 @@
     <string name="settings_overdue_repeat">When overdue, repeat</string>
     <string name="settings_repeat_never">never</string>
     <string name="settings_repeat_daily">every day</string>
-    <string name="settings_repeat_3d">every 3 days</string>
     <string name="settings_repeat_weekly">once a week</string>
     <string name="settings_notify_sub">About recurring payment charges</string>
     <string name="settings_sub_same_day">on the charge day</string>
-    <string name="settings_sub_1">1 day before</string>
-    <string name="settings_sub_2">2 days before</string>
-    <string name="settings_sub_3">3 days before</string>
     <string name="settings_stale">Debt without a due date: no payment for a while</string>
     <string name="settings_stale_never">do not remind</string>
-    <string name="settings_stale_14">after 14 days</string>
-    <string name="settings_stale_30">after 30 days</string>
-    <string name="settings_stale_60">after 60 days</string>
     <string name="settings_hide_amounts">Hide amounts and names</string>
     <string name="settings_hide_amounts_sub">In notification text, so they are not visible on the lock screen</string>
     <string name="settings_exact_alarm_note">Without the exact alarms permission, notifications may be delayed in power-saving mode.</string>

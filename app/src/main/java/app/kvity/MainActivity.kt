@@ -12,9 +12,11 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.fragment.app.FragmentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kvity.data.ThemeMode
+import app.kvity.domain.AppTexts
+import app.kvity.ui.ResourceTexts
 import app.kvity.notify.NotificationNav
 import app.kvity.notify.Notifier
 import app.kvity.security.Biometrics
@@ -23,11 +25,13 @@ import app.kvity.ui.AppNavigation
 import app.kvity.ui.onboarding.OnboardingScreen
 import app.kvity.ui.theme.KvityTheme
 
-class MainActivity : FragmentActivity() {
+class MainActivity : AppCompatActivity() {
     private val app get() = application as KvityApp
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // язык мог смениться (активность пересоздаётся): тексты для кода без Context берутся из ресурсов нового языка
+        AppTexts.default = ResourceTexts(resources)
         enableEdgeToEdge()
         // новым установкам разрешение предлагает онбординг; существующим — как раньше, при запуске
         if (android.os.Build.VERSION.SDK_INT >= 33 && app.settings.current.onboardingDone && !Notifier.canPost(this)) {

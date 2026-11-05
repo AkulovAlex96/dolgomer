@@ -1,6 +1,7 @@
 package app.kvity.ui.people
 
 import app.kvity.R
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -70,7 +71,7 @@ fun PeopleScreen(
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(p.person.name, fontWeight = FontWeight.SemiBold)
-                            Text(stringResource(R.string.people_counts, p.debtCount, p.shareCount), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(pluralStringResource(R.plurals.people_debts_count, p.debtCount, p.debtCount) + " · " + pluralStringResource(R.plurals.people_subs_count, p.shareCount, p.shareCount), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Column(horizontalAlignment = Alignment.End) {
                             if (p.balance.isEmpty()) Text("—", color = MaterialTheme.colorScheme.onSurfaceVariant)

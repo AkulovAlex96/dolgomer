@@ -66,6 +66,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     // Явно новая версия: biometric тянет fragment 1.2.5, из-за которого системные окна выбора файла падают
     implementation(libs.androidx.fragment)
+    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.work.runtime)
 

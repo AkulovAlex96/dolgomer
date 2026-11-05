@@ -67,4 +67,24 @@ class MoneyTest {
         assertEquals("23,5", AmountFormatter.compact(2350))
         assertEquals("1,5к", AmountFormatter.compact(150_000))
     }
+
+    @Test
+    fun compactEnglishSuffixes() {
+        val en = MoneySuffixes.EN
+        assertEquals("8k", AmountFormatter.compact(800_000, 2, en))
+        assertEquals("1.2M", AmountFormatter.compact(120_000_000, 2, en))
+        assertEquals("23.5", AmountFormatter.compact(2350, 2, en))
+        assertEquals("1.5k", AmountFormatter.compact(150_000, 2, en))
+        assertEquals("1M", AmountFormatter.compact(99_995_000, 2, en))
+    }
+
+    @Test
+    fun parserAcceptsBothSuffixSets() {
+        assertEquals(150_000L, AmountParser.parseMinor("1,5к"))
+        assertEquals(150_000L, AmountParser.parseMinor("1.5k"))
+        assertEquals(150_000L, AmountParser.parseMinor("1.5K"))
+        assertEquals(200_000_000L, AmountParser.parseMinor("2м"))
+        assertEquals(200_000_000L, AmountParser.parseMinor("2M"))
+        assertEquals(200_000_000L, AmountParser.parseMinor("2m"))
+    }
 }

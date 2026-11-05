@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="format_locale_tag">en</string>
+    <string name="format_date_pattern">MMM d, yyyy</string>
+    <string name="format_decimal_separator">.</string>
+    <string name="money_suffix_thousand">k</string>
+    <string name="money_suffix_million">M</string>
+
+    <string name="unit_byte">B</string>
+    <string name="unit_kilobyte">KB</string>
+    <string name="unit_megabyte">MB</string>
+
+    <string name="bucket_overdue">Overdue</string>
+    <string name="bucket_today">Today</string>
+    <string name="bucket_tomorrow">Tomorrow</string>
+    <string name="bucket_this_week">This week</string>
+    <string name="bucket_this_month">This month</string>
+    <string name="bucket_next_month">Next month</string>
+
+    <string name="event_installment_of">payment %1$d of %2$d</string>
+    <string name="event_charge">charge</string>
+    <string name="event_repaying">repaying %1$s</string>
+
+    <string-array name="format_months">
+        <item>January</item>
+        <item>February</item>
+        <item>March</item>
+        <item>April</item>
+        <item>May</item>
+        <item>June</item>
+        <item>July</item>
+        <item>August</item>
+        <item>September</item>
+        <item>October</item>
+        <item>November</item>
+        <item>December</item>
+    </string-array>
+
+    <plurals name="comp_overdue_days_plural">
+        <item quantity="one">Overdue %d day</item>
+        <item quantity="other">Overdue %d days</item>
+    </plurals>
+    <plurals name="settings_before_days">
+        <item quantity="one">%d day before</item>
+        <item quantity="other">%d days before</item>
+    </plurals>
+    <plurals name="settings_after_days">
+        <item quantity="one">after %d day</item>
+        <item quantity="other">after %d days</item>
+    </plurals>
+    <plurals name="settings_every_days">
+        <item quantity="one">every %d day</item>
+        <item quantity="other">every %d days</item>
+    </plurals>
+    <plurals name="people_debts_count">
+        <item quantity="one">%d debt</item>
+        <item quantity="other">%d debts</item>
+    </plurals>
+    <plurals name="people_subs_count">
+        <item quantity="one">%d recurring payment</item>
+        <item quantity="other">%d recurring payments</item>
+    </plurals>
+
+    <string name="settings_language">Language</string>
+    <string name="settings_language_system">System default</string>
+    <string name="settings_language_ru">Русский</string>
+    <string name="settings_language_en">English</string>
+</resources>

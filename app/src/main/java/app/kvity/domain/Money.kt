@@ -23,7 +23,7 @@ object AmountParser {
     private const val MAX_INTEGER_DIGITS = 15
 
     /**
-     * Разбирает ввод пользователя: «50000», «50 000», «1,5к», «10к», «2м».
+     * Разбирает ввод пользователя: «50000», «50 000», «1,5к», «10к», «2м»; латинские «k» и «m» тоже понимаются, независимо от языка приложения.
      * Возвращает сумму в минимальных единицах или null, если ввод некорректен.
      */
     fun parseMinor(input: String, fractionDigits: Int = 2): Long? {
@@ -73,19 +73,19 @@ object AmountFormatter {
         return (if (negative) "−" else "") + body + "\u00A0" + currency.symbol
     }
 
-    /** Короткая запись для ячейки календаря: «8к», «1,2м», «23,5». Знак и валюта добавляются снаружи. */
-    fun compact(minor: Long, fractionDigits: Int = 2): String {
+    /** Короткая запись для ячейки календаря: «8к», «1,2м», «23,5» (по-английски «8k», «1.2M», «23.5»). Знак и валюта добавляются снаружи. */
+    fun compact(minor: Long, fractionDigits: Int = 2, suffixes: MoneySuffixes = MoneySuffixes.RU): String {
         val whole = kotlin.math.abs(minor) / pow10(fractionDigits).toDouble()
         return when {
-            whole >= 999_950 -> trimmed(whole / 1_000_000) + "м"
-            whole >= 1_000 -> trimmed(whole / 1_000) + "к"
-            else -> trimmed(whole)
+            whole >= 999_950 -> trimmed(whole / 1_000_000, suffixes.decimal) + suffixes.million
+            whole >= 1_000 -> trimmed(whole / 1_000, suffixes.decimal) + suffixes.thousand
+            else -> trimmed(whole, suffixes.decimal)
         }
     }
 
-    private fun trimmed(value: Double): String {
+    private fun trimmed(value: Double, separator: Char): String {
         val rounded = BigDecimal(value).setScale(1, RoundingMode.HALF_UP).stripTrailingZeros()
-        return rounded.toPlainString().replace('.', ',')
+        return rounded.toPlainString().replace('.', separator)
     }
 
     private fun groupThousands(digits: String): String =

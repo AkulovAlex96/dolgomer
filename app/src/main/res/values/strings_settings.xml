@@ -45,7 +45,6 @@
     <string name="settings_notifications">Уведомления</string>
     <string name="settings_notify_payments">Напоминания о платежах</string>
     <string name="settings_notify_due">О сроке долга</string>
-    <string name="settings_notify_1">за 1 день</string>
     <string name="settings_notify_3_1">за 3 и 1 день</string>
     <string name="settings_notify_7_3_1">за 7, 3 и 1 день</string>
     <string name="settings_notify_same_day">только в день срока</string>
@@ -53,18 +52,11 @@
     <string name="settings_overdue_repeat">При просрочке повторять</string>
     <string name="settings_repeat_never">не повторять</string>
     <string name="settings_repeat_daily">каждый день</string>
-    <string name="settings_repeat_3d">каждые 3 дня</string>
     <string name="settings_repeat_weekly">раз в неделю</string>
     <string name="settings_notify_sub">О списании регулярного платежа</string>
     <string name="settings_sub_same_day">в день списания</string>
-    <string name="settings_sub_1">за 1 день</string>
-    <string name="settings_sub_2">за 2 дня</string>
-    <string name="settings_sub_3">за 3 дня</string>
     <string name="settings_stale">Долг без срока: давно не было платежа</string>
     <string name="settings_stale_never">не напоминать</string>
-    <string name="settings_stale_14">через 14 дней</string>
-    <string name="settings_stale_30">через 30 дней</string>
-    <string name="settings_stale_60">через 60 дней</string>
     <string name="settings_hide_amounts">Скрывать суммы и имена</string>
     <string name="settings_hide_amounts_sub">В тексте уведомлений, чтобы не было видно на экране блокировки</string>
     <string name="settings_exact_alarm_note">Без разрешения на точные будильники уведомления могут приходить с задержкой в режиме энергосбережения.</string>

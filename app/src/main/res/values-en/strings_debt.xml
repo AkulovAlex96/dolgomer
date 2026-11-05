@@ -11,7 +11,6 @@
     <string name="comp_attach_hint">You can attach receipts, checks and other files here.</string>
     <string name="comp_attach_no_app">No app to open this file</string>
     <string name="comp_attach_delete_title">Delete attachment?</string>
-    <string name="comp_overdue_days">Overdue %1$d d.</string>
     <string name="comp_due_soon">Due soon</string>
     <string name="comp_closed">Closed</string>
     <string name="comp_date_picker_ok">Done</string>

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="format_locale_tag">ru</string>
+    <string name="format_date_pattern">dd.MM.yyyy</string>
+    <string name="format_decimal_separator">,</string>
+    <string name="money_suffix_thousand">к</string>
+    <string name="money_suffix_million">м</string>
+
+    <string name="unit_byte">Б</string>
+    <string name="unit_kilobyte">КБ</string>
+    <string name="unit_megabyte">МБ</string>
+
+    <string name="bucket_overdue">Просрочено</string>
+    <string name="bucket_today">Сегодня</string>
+    <string name="bucket_tomorrow">Завтра</string>
+    <string name="bucket_this_week">На этой неделе</string>
+    <string name="bucket_this_month">В этом месяце</string>
+    <string name="bucket_next_month">В следующем месяце</string>
+
+    <string name="event_installment_of">платёж %1$d из %2$d</string>
+    <string name="event_charge">списание</string>
+    <string name="event_repaying">возвращаю %1$s</string>
+
+    <string-array name="format_months">
+        <item>январь</item>
+        <item>февраль</item>
+        <item>март</item>
+        <item>апрель</item>
+        <item>май</item>
+        <item>июнь</item>
+        <item>июль</item>
+        <item>август</item>
+        <item>сентябрь</item>
+        <item>октябрь</item>
+        <item>ноябрь</item>
+        <item>декабрь</item>
+    </string-array>
+
+    <plurals name="comp_overdue_days_plural">
+        <item quantity="one">Просрочен %d день</item>
+        <item quantity="few">Просрочен %d дня</item>
+        <item quantity="many">Просрочен %d дней</item>
+        <item quantity="other">Просрочен %d дня</item>
+    </plurals>
+    <plurals name="settings_before_days">
+        <item quantity="one">за %d день</item>
+        <item quantity="few">за %d дня</item>
+        <item quantity="many">за %d дней</item>
+        <item quantity="other">за %d дня</item>
+    </plurals>
+    <plurals name="settings_after_days">
+        <item quantity="one">через %d день</item>
+        <item quantity="few">через %d дня</item>
+        <item quantity="many">через %d дней</item>
+        <item quantity="other">через %d дня</item>
+    </plurals>
+    <plurals name="settings_every_days">
+        <item quantity="one">каждый %d день</item>
+        <item quantity="few">каждые %d дня</item>
+        <item quantity="many">каждые %d дней</item>
+        <item quantity="other">каждые %d дня</item>
+    </plurals>
+    <plurals name="people_debts_count">
+        <item quantity="one">%d долг</item>
+        <item quantity="few">%d долга</item>
+        <item quantity="many">%d долгов</item>
+        <item quantity="other">%d долга</item>
+    </plurals>
+    <plurals name="people_subs_count">
+        <item quantity="one">%d регулярный платёж</item>
+        <item quantity="few">%d регулярных платежа</item>
+        <item quantity="many">%d регулярных платежей</item>
+        <item quantity="other">%d регулярного платежа</item>
+    </plurals>
+
+    <string name="settings_language">Язык</string>
+    <string name="settings_language_system">Как в системе</string>
+    <string name="settings_language_ru">Русский</string>
+    <string name="settings_language_en">English</string>
+</resources>

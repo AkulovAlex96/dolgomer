@@ -2,7 +2,6 @@
 <resources>
     <string name="people_title">Люди</string>
     <string name="people_empty">Здесь появятся люди, с которыми есть долги или общие регулярные платежи.</string>
-    <string name="people_counts">долгов: %1$d · подписок: %2$d</string>
     <string name="people_archive_header">Архив (%1$d)</string>
     <string name="people_in_archive">в архиве</string>
     <string name="people_unarchive">Вернуть из архива</string>

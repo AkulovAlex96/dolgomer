@@ -2,6 +2,8 @@ package app.kvity
 
 import android.app.Application
 import app.kvity.data.AttachmentRepository
+import app.kvity.domain.AppTexts
+import app.kvity.ui.ResourceTexts
 import app.kvity.data.BackupManager
 import app.kvity.data.DebtRepository
 import app.kvity.data.ImportApplier
@@ -42,6 +44,7 @@ class KvityApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        AppTexts.default = ResourceTexts(resources)
         db = KvityDatabase.create(this)
         attachments = AttachmentRepository(this, db)
         settings = SettingsStore(this)

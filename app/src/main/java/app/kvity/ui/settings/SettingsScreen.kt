@@ -81,6 +81,16 @@ fun GeneralSettingsScreen(
                 settings.theme, { t -> onChange { it.copy(theme = t) } },
                 Modifier.padding(top = 6.dp),
             )
+            var language by remember { mutableStateOf(AppLanguage.current()) }
+            DropdownField(
+                stringResource(R.string.settings_language),
+                listOf(
+                    AppLanguage.SYSTEM to stringResource(R.string.settings_language_system),
+                    AppLanguage.RU to stringResource(R.string.settings_language_ru),
+                    AppLanguage.EN to stringResource(R.string.settings_language_en),
+                ),
+                language, { l -> language = l; AppLanguage.apply(l) },
+            )
             SettingSwitch(
                 stringResource(R.string.settings_colorblind), stringResource(R.string.settings_colorblind_sub),
                 settings.colorBlindPalette, { v -> onChange { it.copy(colorBlindPalette = v) } },

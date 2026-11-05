@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AppCompat нужен для AppCompatDelegate.setApplicationLocales на Android до 13 -->
+    <style name="Theme.Kvity" parent="Theme.AppCompat.Light.NoActionBar" />
+</resources>
