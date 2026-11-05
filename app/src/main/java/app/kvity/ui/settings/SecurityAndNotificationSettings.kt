@@ -172,11 +172,23 @@ fun NotificationsSection(settings: Settings, onChange: ((Settings) -> Settings) 
                 listOf(0 to "в день списания", 1 to "за 1 день", 2 to "за 2 дня", 3 to "за 3 дня"),
                 settings.subscriptionNotifyDays, { d -> onChange { it.copy(subscriptionNotifyDays = d) } },
             )
+            DropdownField(
+                "Долг без срока: давно не было платежа",
+                listOf(0 to "не напоминать", 14 to "через 14 дней", 30 to "через 30 дней", 60 to "через 60 дней"),
+                settings.staleDebtDays, { d -> onChange { it.copy(staleDebtDays = d) } },
+            )
             SettingSwitch(
                 "Скрывать суммы и имена", "В тексте уведомлений, чтобы не было видно на экране блокировки",
                 settings.hideAmountsInNotifications, { v -> onChange { it.copy(hideAmountsInNotifications = v) } },
             )
             val context = androidx.compose.ui.platform.LocalContext.current
+            if (!app.kvity.notify.ReminderAlarm.canScheduleExact(context)) {
+                Text(
+                    "Без разрешения на точные будильники уведомления могут приходить с задержкой в режиме энергосбережения.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                TextButton(onClick = { app.kvity.notify.ReminderAlarm.requestExactPermission(context) }) { Text("Разрешить точные напоминания") }
+            }
             TextButton(onClick = { app.kvity.notify.ReminderWorker.runNow(context) }) { Text("Проверить сейчас") }
         }
     }

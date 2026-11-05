@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kvity.data.ThemeMode
+import app.kvity.notify.NotificationNav
 import app.kvity.notify.Notifier
 import app.kvity.security.Biometrics
 import app.kvity.security.LockScreen
@@ -33,6 +34,7 @@ class MainActivity : FragmentActivity() {
                 this, arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1001,
             )
         }
+        handleIntent(intent)
         setContent {
             val settings by app.settings.settings.collectAsStateWithLifecycle()
             val locked by app.lock.locked.collectAsStateWithLifecycle()
@@ -77,6 +79,18 @@ class MainActivity : FragmentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    /** Нажатие на уведомление или его действие: запоминаем экран, который нужно открыть. */
+    private fun handleIntent(intent: android.content.Intent?) {
+        val route = intent?.getStringExtra(Notifier.EXTRA_ROUTE) ?: return
+        intent.removeExtra(Notifier.EXTRA_ROUTE)
+        NotificationNav.pendingRoute.value = route
     }
 
     private companion object {

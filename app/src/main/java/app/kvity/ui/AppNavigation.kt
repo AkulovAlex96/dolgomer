@@ -7,6 +7,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,6 +27,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import app.kvity.KvityApp
+import app.kvity.notify.NotificationNav
 import app.kvity.data.AttachmentOwner
 import app.kvity.data.DebtView
 import app.kvity.ui.components.AttachmentsCard
@@ -101,6 +103,15 @@ fun AppNavigation() {
     val settings by app.settings.settings.collectAsStateWithLifecycle()
     val route = nav.currentBackStackEntryAsState().value?.destination?.route
     var reminder by remember { mutableStateOf<ReminderContext?>(null) }
+
+    // переход по нажатию на уведомление
+    val notifyRoute by NotificationNav.pendingRoute.collectAsStateWithLifecycle()
+    LaunchedEffect(notifyRoute) {
+        notifyRoute?.let {
+            nav.navigate(it) { launchSingleTop = true }
+            NotificationNav.consume()
+        }
+    }
 
     val peopleVm: PeopleViewModel = viewModel(
         key = "people",
