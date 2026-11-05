@@ -1,5 +1,7 @@
 package app.kvity.ui.debt
 
+import androidx.compose.ui.res.stringResource
+import app.kvity.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,10 +55,10 @@ import app.kvity.ui.minorToInput
 import java.time.LocalDate
 
 private val periodicityUnits = listOf(
-    Periodicity.DAYS to "дн.",
-    Periodicity.WEEK to "нед.",
-    Periodicity.MONTH to "мес.",
-    Periodicity.YEAR to "г.",
+    Periodicity.DAYS to R.string.debt_unit_days,
+    Periodicity.WEEK to R.string.debt_unit_week,
+    Periodicity.MONTH to R.string.debt_unit_month,
+    Periodicity.YEAR to R.string.debt_unit_year,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -118,8 +120,8 @@ fun NewDebtScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text(if (initial == null) "Новый долг" else "Изменить долг") },
-                navigationIcon = { TextButton(onClick = exit) { Text("Отмена") } },
+                title = { Text(if (initial == null) stringResource(R.string.debt_new_title) else stringResource(R.string.debt_edit_title)) },
+                navigationIcon = { TextButton(onClick = exit) { Text(stringResource(R.string.debt_cancel)) } },
             )
         },
     ) { padding ->
@@ -135,13 +137,13 @@ fun NewDebtScreen(
                 FilterChip(
                     selected = direction == Direction.OWED_TO_ME,
                     onClick = { direction = Direction.OWED_TO_ME },
-                    label = { Text("Мне должны") },
+                    label = { Text(stringResource(R.string.debt_dir_owed_to_me)) },
                     modifier = Modifier.weight(1f),
                 )
                 FilterChip(
                     selected = direction == Direction.I_OWE,
                     onClick = { direction = Direction.I_OWE },
-                    label = { Text("Я должен") },
+                    label = { Text(stringResource(R.string.debt_dir_i_owe)) },
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -149,7 +151,7 @@ fun NewDebtScreen(
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it.take(Limits.NAME) },
-                label = { Text(if (direction == Direction.I_OWE) "Кому" else "Кто") },
+                label = { Text(if (direction == Direction.I_OWE) stringResource(R.string.debt_who_to) else stringResource(R.string.debt_who_from)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -164,7 +166,7 @@ fun NewDebtScreen(
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { amountText = it },
-                    label = { Text("Сумма (можно «50к»)") },
+                    label = { Text(stringResource(R.string.debt_amount_hint)) },
                     singleLine = true,
                     isError = amountText.isNotBlank() && principal == null,
                     modifier = Modifier.weight(1f),
@@ -174,32 +176,32 @@ fun NewDebtScreen(
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(
-                    TermType.ONE_TIME to "Разовый",
-                    TermType.SCHEDULE to "По графику",
-                    TermType.NONE to "Без срока",
+                    TermType.ONE_TIME to R.string.debt_term_one_time,
+                    TermType.SCHEDULE to R.string.debt_term_schedule,
+                    TermType.NONE to R.string.debt_term_none,
                 ).forEach { (type, label) ->
                     FilterChip(
                         selected = termType == type,
                         onClick = { termType = type },
-                        label = { Text(label) },
+                        label = { Text(stringResource(label)) },
                         modifier = Modifier.weight(1f),
                     )
                 }
             }
 
             when (termType) {
-                TermType.ONE_TIME -> DatePickerField("Срок возврата", dueDate, { dueEpoch = it.toEpochDay() })
+                TermType.ONE_TIME -> DatePickerField(stringResource(R.string.debt_return_due), dueDate, { dueEpoch = it.toEpochDay() })
                 TermType.SCHEDULE -> {
                     OutlinedTextField(
                         value = installmentText,
                         onValueChange = { installmentText = it },
-                        label = { Text("Сумма платежа") },
+                        label = { Text(stringResource(R.string.debt_installment)) },
                         singleLine = true,
                         isError = installmentText.isNotBlank() && installment == null,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        Text("Каждые")
+                        Text(stringResource(R.string.debt_every))
                         OutlinedTextField(
                             value = intervalText,
                             onValueChange = { intervalText = it.filter(Char::isDigit).take(4) },
@@ -210,33 +212,33 @@ fun NewDebtScreen(
                         )
                         PeriodicityMenu(periodicity, onSelect = { periodicity = it }, modifier = Modifier.weight(0.7f))
                     }
-                    DatePickerField("Первый платёж", firstDate, { firstEpoch = it.toEpochDay() })
+                    DatePickerField(stringResource(R.string.debt_first_payment), firstDate, { firstEpoch = it.toEpochDay() })
                     if (usesDay) {
                         OutlinedTextField(
                             value = dayText,
                             onValueChange = { dayText = it.filter(Char::isDigit).take(2) },
-                            label = { Text("День платежа («до 10 числа»), необязательно") },
+                            label = { Text(stringResource(R.string.debt_day_label)) },
                             singleLine = true,
                             isError = !dayValid,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            supportingText = { Text("Пусто: день первого платежа. В коротких месяцах платёж переносится на последний день.") },
+                            supportingText = { Text(stringResource(R.string.debt_day_hint)) },
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
                     OutlinedTextField(
                         value = countText,
                         onValueChange = { countText = it.filter(Char::isDigit).take(4) },
-                        label = { Text("Количество платежей") },
+                        label = { Text(stringResource(R.string.debt_count_label)) },
                         singleLine = true,
                         isError = !countValid,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        supportingText = { Text("Пусто: до погашения долга.") },
+                        supportingText = { Text(stringResource(R.string.debt_count_hint)) },
                         modifier = Modifier.fillMaxWidth(),
                     )
 
                     if (scheduleTooLong) {
                         Text(
-                            "Слишком много платежей: в графике не больше ${ScheduleGenerator.MAX_ITEMS}. Увеличьте сумму платежа или выберите более редкий период.",
+                            stringResource(R.string.debt_too_many, ScheduleGenerator.MAX_ITEMS),
                             color = MaterialTheme.colorScheme.error,
                         )
                     } else if (principal != null && rule != null) {
@@ -244,7 +246,7 @@ fun NewDebtScreen(
                     }
                 }
                 TermType.NONE -> Text(
-                    "Срок не задан: платежи вносятся по мере возврата.",
+                    stringResource(R.string.debt_no_term_hint),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -252,7 +254,7 @@ fun NewDebtScreen(
             OutlinedTextField(
                 value = note,
                 onValueChange = { note = it.take(Limits.NOTE) },
-                label = { Text("Комментарий") },
+                label = { Text(stringResource(R.string.debt_comment)) },
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -279,7 +281,7 @@ fun NewDebtScreen(
                         ),
                     )
                 },
-            ) { Text("Сохранить") }
+            ) { Text(stringResource(R.string.debt_save)) }
         }
     }
 }
@@ -292,7 +294,7 @@ private fun SchedulePreview(
 ) {
     val plan = ScheduleGenerator.generate(rule, principal)
     SectionCard {
-        Text("Будет создано платежей: ${plan.size}", style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.debt_preview_count, plan.size), style = MaterialTheme.typography.titleSmall)
         val shown = plan.take(4).joinToString(" · ") { formatDate(it.dueDate) }
         Text(
             if (plan.size > 4) "$shown · …" else shown,
@@ -300,7 +302,7 @@ private fun SchedulePreview(
         )
         plan.lastOrNull()?.let {
             Text(
-                "Последний: ${formatDate(it.dueDate)}, ${formatMoney(it.amountMinor, currencyCode)}",
+                stringResource(R.string.debt_preview_last, formatDate(it.dueDate), formatMoney(it.amountMinor, currencyCode)),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -330,11 +332,11 @@ private fun PeriodicityMenu(selected: Periodicity, onSelect: (Periodicity) -> Un
     var open by remember { mutableStateOf(false) }
     Box(modifier) {
         OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) {
-            Text(periodicityUnits.first { it.first == selected }.second)
+            Text(stringResource(periodicityUnits.first { it.first == selected }.second))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             periodicityUnits.forEach { (p, label) ->
-                DropdownMenuItem(text = { Text(label) }, onClick = { onSelect(p); open = false })
+                DropdownMenuItem(text = { Text(stringResource(label)) }, onClick = { onSelect(p); open = false })
             }
         }
     }

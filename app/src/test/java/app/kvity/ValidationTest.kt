@@ -35,10 +35,14 @@ class RateParserTest {
 
 class FileSizeTest {
     @Test fun `formats bytes, kilobytes and megabytes`() {
+        val saved = java.util.Locale.getDefault()
+        java.util.Locale.setDefault(java.util.Locale("ru"))
+        try {
         assertEquals("22 Б", formatFileSize(22))
         assertEquals("0 Б", formatFileSize(0))
         assertEquals("1,5 КБ", formatFileSize(1536))
         assertEquals("5,0 МБ", formatFileSize(5L * 1024 * 1024))
+        } finally { java.util.Locale.setDefault(saved) }
     }
 }
 

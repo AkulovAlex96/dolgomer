@@ -1,5 +1,7 @@
 package app.kvity.ui.components
 
+import androidx.compose.ui.res.stringResource
+import app.kvity.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,7 +24,7 @@ import androidx.compose.ui.unit.dp
 fun FormScreen(
     title: String,
     onBack: () -> Unit,
-    backLabel: String = "Назад",
+    backLabel: String = stringResource(R.string.comp_back),
     hasChanges: Boolean = false,
     actions: @Composable () -> Unit = {},
     content: @Composable () -> Unit,

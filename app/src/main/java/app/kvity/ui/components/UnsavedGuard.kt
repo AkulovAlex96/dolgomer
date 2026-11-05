@@ -1,5 +1,7 @@
 package app.kvity.ui.components
 
+import androidx.compose.ui.res.stringResource
+import app.kvity.R
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
@@ -29,10 +31,10 @@ fun rememberExitGuard(dirty: Boolean, onExit: () -> Unit): () -> Unit {
     if (asking) {
         AlertDialog(
             onDismissRequest = { asking = false },
-            title = { Text("Отменить изменения?") },
-            text = { Text("Введённые данные не сохранены и будут потеряны.") },
-            confirmButton = { TextButton(onClick = { asking = false; onExit() }) { Text("Выйти") } },
-            dismissButton = { TextButton(onClick = { asking = false }) { Text("Остаться") } },
+            title = { Text(stringResource(R.string.comp_unsaved_title)) },
+            text = { Text(stringResource(R.string.comp_unsaved_text)) },
+            confirmButton = { TextButton(onClick = { asking = false; onExit() }) { Text(stringResource(R.string.comp_unsaved_exit)) } },
+            dismissButton = { TextButton(onClick = { asking = false }) { Text(stringResource(R.string.comp_unsaved_stay)) } },
         )
     }
     return { if (dirty) asking = true else onExit() }

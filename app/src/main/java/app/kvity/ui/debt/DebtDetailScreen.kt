@@ -1,5 +1,7 @@
 package app.kvity.ui.debt
 
+import androidx.compose.ui.res.stringResource
+import app.kvity.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -91,18 +93,18 @@ fun DebtDetailScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Долг") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Назад") } },
+                title = { Text(stringResource(R.string.debt_title)) },
+                navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.debt_back)) } },
                 actions = {
-                    TextButton(onClick = onEdit) { Text("Изменить") }
-                    TextButton(onClick = { deleteDialog = true }) { Text("Удалить") }
+                    TextButton(onClick = onEdit) { Text(stringResource(R.string.debt_edit)) }
+                    TextButton(onClick = { deleteDialog = true }) { Text(stringResource(R.string.debt_delete)) }
                 },
             )
         },
     ) { padding ->
         if (view == null) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("Загрузка…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.debt_loading), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             return@Scaffold
         }
@@ -146,15 +148,12 @@ fun DebtDetailScreen(
         if (recalcOffer) {
             AlertDialog(
                 onDismissRequest = onDismissRecalc,
-                title = { Text("Пересчитать график?") },
+                title = { Text(stringResource(R.string.debt_recalc_title)) },
                 text = {
-                    Text(
-                        "Платёж больше, чем требовал график. Сейчас ближайшие плановые платежи закрыты им, " +
-                            "а срок сократился. Можно оставить как есть или уменьшить суммы оставшихся платежей, сохранив их даты.",
-                    )
+                    Text(stringResource(R.string.debt_recalc_text))
                 },
-                confirmButton = { TextButton(onClick = onRecalc) { Text("Уменьшить платёж") } },
-                dismissButton = { TextButton(onClick = onDismissRecalc) { Text("Оставить, сократить срок") } },
+                confirmButton = { TextButton(onClick = onRecalc) { Text(stringResource(R.string.debt_recalc_reduce)) } },
+                dismissButton = { TextButton(onClick = onDismissRecalc) { Text(stringResource(R.string.debt_recalc_keep)) } },
             )
         }
         openedPayment?.let { pid ->
@@ -176,12 +175,12 @@ fun DebtDetailScreen(
         if (deleteDialog) {
             AlertDialog(
                 onDismissRequest = { deleteDialog = false },
-                title = { Text("Удалить долг?") },
-                text = { Text("Долг и все его платежи будут удалены без возможности восстановления.") },
+                title = { Text(stringResource(R.string.debt_delete_title)) },
+                text = { Text(stringResource(R.string.debt_delete_text)) },
                 confirmButton = {
-                    TextButton(onClick = { deleteDialog = false; onDeleteDebt() }) { Text("Удалить") }
+                    TextButton(onClick = { deleteDialog = false; onDeleteDebt() }) { Text(stringResource(R.string.debt_delete)) }
                 },
-                dismissButton = { TextButton(onClick = { deleteDialog = false }) { Text("Отмена") } },
+                dismissButton = { TextButton(onClick = { deleteDialog = false }) { Text(stringResource(R.string.debt_cancel)) } },
             )
         }
     }
@@ -203,14 +202,14 @@ private fun Hero(view: DebtView, onAddPayment: () -> Unit, onRemind: () -> Unit,
             Column {
                 Text(view.counterpartyName, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Text(
-                    (if (mine) "мне должен · " else "я должен · ") + currencyOf(view.debt.currency).code,
+                    (if (mine) stringResource(R.string.debt_owes_me) else stringResource(R.string.debt_i_owe)) + " · " + currencyOf(view.debt.currency).code,
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
                 if (view.debt.archived) {
-                    Pill("архив", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
+                    Pill(stringResource(R.string.debt_archive_pill), MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 StatusPill(s.status, s.overdueDays)
             }
@@ -224,7 +223,7 @@ private fun Hero(view: DebtView, onAddPayment: () -> Unit, onRemind: () -> Unit,
             modifier = Modifier.padding(top = 10.dp),
         )
         Text(
-            "остаток из ${formatMoney(s.principalMinor, view.debt.currency)}",
+            stringResource(R.string.debt_remaining_of, formatMoney(s.principalMinor, view.debt.currency)),
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -245,13 +244,13 @@ private fun Hero(view: DebtView, onAddPayment: () -> Unit, onRemind: () -> Unit,
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(
-                "возвращено ${formatMoney(s.paidMinor, view.debt.currency)}",
+                stringResource(R.string.debt_returned, formatMoney(s.paidMinor, view.debt.currency)),
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             s.nextDue?.let {
                 Text(
-                    "следующий платёж ${formatDate(it.dueDate)}",
+                    stringResource(R.string.debt_next_payment, formatDate(it.dueDate)),
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -259,7 +258,7 @@ private fun Hero(view: DebtView, onAddPayment: () -> Unit, onRemind: () -> Unit,
         }
         if (s.status == DebtStatus.OVERDUE) {
             Text(
-                "Просрочено: ${formatMoney(s.overdueMinor, view.debt.currency)}",
+                stringResource(R.string.debt_overdue_amount, formatMoney(s.overdueMinor, view.debt.currency)),
                 color = c.expense,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(top = 6.dp),
@@ -268,12 +267,12 @@ private fun Hero(view: DebtView, onAddPayment: () -> Unit, onRemind: () -> Unit,
 
         if (s.status != DebtStatus.CLOSED) {
             Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onAddPayment, modifier = Modifier.weight(1f)) { Text("+ Платёж") }
-                if (mine) OutlinedButton(onClick = onRemind, modifier = Modifier.weight(1f)) { Text("Напомнить") }
+                Button(onClick = onAddPayment, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.debt_add_payment)) }
+                if (mine) OutlinedButton(onClick = onRemind, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.debt_remind)) }
             }
         }
         TextButton(onClick = { onSetArchived(!view.debt.archived) }) {
-            Text(if (view.debt.archived) "Вернуть из архива" else "В архив")
+            Text(if (view.debt.archived) stringResource(R.string.debt_unarchive) else stringResource(R.string.debt_archive))
         }
     }
 }
@@ -285,14 +284,14 @@ private fun ScheduleCard(view: DebtView, onEdit: (PlanItem) -> Unit, onRestore: 
     val closed = view.summary.status == DebtStatus.CLOSED
     val c = MaterialTheme.kvity
     SectionCard {
-        Text("График", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.debt_schedule), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
         val today = LocalDate.now()
         plan.forEach { item ->
             val (note, color) = when {
-                item.state == InstallmentState.PAID -> "оплачен" to c.income
-                closed -> "не требуется" to MaterialTheme.colorScheme.onSurfaceVariant
-                item.state == InstallmentState.PARTIAL -> "оплачен частично" to c.warn
-                item.dueDate.isBefore(today) -> "просрочен" to c.expense
+                item.state == InstallmentState.PAID -> stringResource(R.string.debt_plan_paid) to c.income
+                closed -> stringResource(R.string.debt_plan_not_needed) to MaterialTheme.colorScheme.onSurfaceVariant
+                item.state == InstallmentState.PARTIAL -> stringResource(R.string.debt_plan_partial) to c.warn
+                item.dueDate.isBefore(today) -> stringResource(R.string.debt_plan_overdue) to c.expense
                 else -> "" to MaterialTheme.colorScheme.onSurface
             }
             LabelRow(
@@ -310,15 +309,15 @@ private fun ScheduleCard(view: DebtView, onEdit: (PlanItem) -> Unit, onRestore: 
             )
         }
         if (view.skipped.isNotEmpty()) {
-            Text("Пропущено", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
+            Text(stringResource(R.string.debt_skipped), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
             view.skipped.forEach { item ->
                 LabelRow(
                     label = formatDate(item.dueDate),
-                    subtitle = "пропущен, в остаток не входит",
+                    subtitle = stringResource(R.string.debt_skipped_note),
                     trailing = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(formatMoney(item.amountMinor, view.debt.currency), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            item.id?.let { id -> TextButton(onClick = { onRestore(id) }) { Text("Вернуть") } }
+                            item.id?.let { id -> TextButton(onClick = { onRestore(id) }) { Text(stringResource(R.string.debt_restore)) } }
                         }
                     },
                 )
@@ -333,25 +332,25 @@ private fun PaymentsCard(view: DebtView, onDelete: (String) -> Unit, onOpen: (St
     pendingDelete?.let { id ->
         val p = view.payments.firstOrNull { it.id == id }
         ConfirmDialog(
-            title = "Удалить платёж?",
-            text = if (p == null) "Платёж будет удалён." else "Платёж ${formatMoney(p.amountMinor, view.debt.currency)} от ${formatDate(p.date)} будет удалён, остаток долга пересчитается.",
+            title = stringResource(R.string.debt_pay_delete_title),
+            text = if (p == null) stringResource(R.string.debt_pay_delete_simple) else stringResource(R.string.debt_pay_delete_text, formatMoney(p.amountMinor, view.debt.currency), formatDate(p.date)),
             onConfirm = { pendingDelete = null; onDelete(id) },
             onDismiss = { pendingDelete = null },
         )
     }
     SectionCard {
-        Text("Платежи", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.debt_payments), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (view.payments.isEmpty()) {
-            Text("Платежей пока нет", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
+            Text(stringResource(R.string.debt_no_payments), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
         }
         view.payments.forEach { p ->
             LabelRow(
                 onClick = { onOpen(p.id) },
                 label = if (p.monthOnly) formatMonth(p.date) else formatDate(p.date),
-                subtitle = (if (p.monthOnly) "без точной даты · " else "") +
-                    (if (p.plannedId != null) "привязан к плановому платежу · " else "") +
+                subtitle = (if (p.monthOnly) stringResource(R.string.debt_pay_month_only) else "") +
+                    (if (p.plannedId != null) stringResource(R.string.debt_pay_linked) else "") +
                     (p.paymentMethod?.let { "$it · " } ?: "") + (p.note?.let { "$it · " } ?: "") +
-                    "нажмите, чтобы изменить или приложить чек",
+                    stringResource(R.string.debt_pay_tap),
                 trailing = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(formatMoney(p.amountMinor, view.debt.currency), fontWeight = FontWeight.Bold)
@@ -385,45 +384,45 @@ private fun PaymentDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initial == null) "Новый платёж" else "Платёж") },
+        title = { Text(if (initial == null) stringResource(R.string.debt_new_payment) else stringResource(R.string.debt_payment)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { amountText = it },
-                    label = { Text("Сумма, ${currencyOf(currencyCode).symbol}") },
+                    label = { Text(stringResource(R.string.debt_amount_with_symbol, currencyOf(currencyCode).symbol)) },
                     singleLine = true,
                     isError = amountText.isNotBlank() && amount == null,
                     // переплата возможна (проценты, округление): предупреждаем, но не запрещаем
                     supportingText = if (amount != null && amount > remainingMinor) ({
                         Text(
-                            "Больше остатка долга (${formatMoney(remainingMinor, currencyCode)}). Платёж всё равно можно добавить.",
+                            stringResource(R.string.debt_overpay, formatMoney(remainingMinor, currencyCode)),
                             color = MaterialTheme.kvity.warn,
                         )
                     }) else null,
                 )
-                DatePickerField(if (monthOnly) "Любой день нужного месяца" else "Дата", date, { date = it })
+                DatePickerField(if (monthOnly) stringResource(R.string.debt_any_day) else stringResource(R.string.debt_date), date, { date = it })
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = monthOnly, onCheckedChange = { monthOnly = it })
-                    Text("Известен только месяц", Modifier.clickable { monthOnly = !monthOnly })
+                    Text(stringResource(R.string.debt_month_only), Modifier.clickable { monthOnly = !monthOnly })
                 }
                 if (openItems.isNotEmpty()) {
                     Box {
                         OutlinedButton(onClick = { menuOpen = true }, modifier = Modifier.fillMaxWidth()) {
                             val chosen = openItems.firstOrNull { it.id == plannedId }
                             Text(
-                                if (chosen == null) "Закрывает: самый старый неоплаченный"
-                                else "Закрывает: ${formatDate(chosen.dueDate)}",
+                                if (chosen == null) stringResource(R.string.debt_closes_oldest)
+                                else stringResource(R.string.debt_closes, formatDate(chosen.dueDate)),
                             )
                         }
                         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                             DropdownMenuItem(
-                                text = { Text("Самый старый неоплаченный") },
+                                text = { Text(stringResource(R.string.debt_oldest_unpaid)) },
                                 onClick = { plannedId = null; menuOpen = false },
                             )
                             openItems.forEach { item ->
                                 DropdownMenuItem(
-                                    text = { Text("${formatDate(item.dueDate)}, осталось ${formatMoney(item.remainingMinor, currencyCode)}") },
+                                    text = { Text(stringResource(R.string.debt_item_left, formatDate(item.dueDate), formatMoney(item.remainingMinor, currencyCode))) },
                                     onClick = { plannedId = item.id; menuOpen = false },
                                 )
                             }
@@ -431,19 +430,19 @@ private fun PaymentDialog(
                     }
                 }
                 OutlinedTextField(
-                    value = method, onValueChange = { method = it.take(Limits.NAME) }, label = { Text("Способ оплаты") },
-                    placeholder = { Text("например, Карта Tinkoff") }, singleLine = true,
+                    value = method, onValueChange = { method = it.take(Limits.NAME) }, label = { Text(stringResource(R.string.debt_pay_method)) },
+                    placeholder = { Text(stringResource(R.string.debt_pay_method_hint)) }, singleLine = true,
                 )
-                OutlinedTextField(value = note, onValueChange = { note = it.take(Limits.NOTE) }, label = { Text("Комментарий") })
+                OutlinedTextField(value = note, onValueChange = { note = it.take(Limits.NOTE) }, label = { Text(stringResource(R.string.debt_comment)) })
                 if (initial != null) attachments()
             }
         },
         confirmButton = {
             TextButton(enabled = amount != null, onClick = {
                 onConfirm(date, amount!!, plannedId, monthOnly, method.ifBlank { null }, note.ifBlank { null })
-            }) { Text(if (initial == null) "Добавить" else "Сохранить") }
+            }) { Text(if (initial == null) stringResource(R.string.debt_add) else stringResource(R.string.debt_save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.debt_cancel)) } },
     )
 }
 
@@ -463,30 +462,30 @@ private fun PlannedDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Плановый платёж") },
+        title = { Text(stringResource(R.string.debt_planned_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 DatePickerField("Дата", date, { date = it })
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { amountText = it },
-                    label = { Text("Сумма, ${currencyOf(currencyCode).symbol}") },
+                    label = { Text(stringResource(R.string.debt_amount_with_symbol, currencyOf(currencyCode).symbol)) },
                     singleLine = true,
                     isError = amount == null,
                 )
                 if (item.paidMinor > 0) {
                     Text(
-                        "Уже оплачено ${formatMoney(item.paidMinor, currencyCode)}.",
+                        stringResource(R.string.debt_already_paid, formatMoney(item.paidMinor, currencyCode)),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Row {
-                    TextButton(onClick = onSkip) { Text("Пропустить") }
-                    TextButton(onClick = onDelete) { Text("Удалить") }
+                    TextButton(onClick = onSkip) { Text(stringResource(R.string.debt_skip)) }
+                    TextButton(onClick = onDelete) { Text(stringResource(R.string.debt_delete)) }
                 }
             }
         },
-        confirmButton = { TextButton(enabled = amount != null, onClick = { onSave(date, amount!!) }) { Text("Сохранить") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
+        confirmButton = { TextButton(enabled = amount != null, onClick = { onSave(date, amount!!) }) { Text(stringResource(R.string.debt_save)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.debt_cancel)) } },
     )
 }

@@ -1,5 +1,7 @@
 package app.kvity.ui.components
 
+import androidx.compose.ui.res.stringResource
+import app.kvity.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -43,13 +45,13 @@ fun SectionCard(modifier: Modifier = Modifier, content: @Composable () -> Unit) 
 
 /** Подтверждение необратимого действия (удаление). */
 @Composable
-fun ConfirmDialog(title: String, text: String, onConfirm: () -> Unit, onDismiss: () -> Unit, confirmLabel: String = "Удалить") {
+fun ConfirmDialog(title: String, text: String, onConfirm: () -> Unit, onDismiss: () -> Unit, confirmLabel: String = stringResource(R.string.comp_delete)) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = { Text(text) },
         confirmButton = { TextButton(onClick = onConfirm) { Text(confirmLabel) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.comp_cancel)) } },
     )
 }
 
@@ -68,9 +70,9 @@ fun Pill(text: String, background: Color, foreground: Color) {
 fun StatusPill(status: DebtStatus, overdueDays: Long = 0) {
     val c = MaterialTheme.kvity
     when (status) {
-        DebtStatus.OVERDUE -> Pill("Просрочен $overdueDays дн.", c.expenseBg, c.expense)
-        DebtStatus.DUE_SOON -> Pill("Скоро срок", c.warnBg, c.warn)
-        DebtStatus.CLOSED -> Pill("Закрыт", c.incomeBg, c.income)
+        DebtStatus.OVERDUE -> Pill(stringResource(R.string.comp_overdue_days, overdueDays.toInt()), c.expenseBg, c.expense)
+        DebtStatus.DUE_SOON -> Pill(stringResource(R.string.comp_due_soon), c.warnBg, c.warn)
+        DebtStatus.CLOSED -> Pill(stringResource(R.string.comp_closed), c.incomeBg, c.income)
         DebtStatus.ACTIVE -> Unit
     }
 }
