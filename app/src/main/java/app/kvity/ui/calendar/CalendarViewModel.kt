@@ -7,6 +7,7 @@ import app.kvity.data.DebtRepository
 import app.kvity.data.EventKind
 import app.kvity.data.Events
 import app.kvity.data.SubscriptionRepository
+import app.kvity.data.ticker
 import java.time.LocalDate
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,8 +20,8 @@ class CalendarViewModel(
     private val subscriptions: SubscriptionRepository,
 ) : ViewModel() {
 
-    val events: StateFlow<List<CalendarEvent>> = combine(debts.observeDebts(), subscriptions.observeAll()) { d, s ->
-        Events.build(d, s, LocalDate.now())
+    val events: StateFlow<List<CalendarEvent>> = combine(debts.observeDebts(), subscriptions.observeAll(), ticker()) { d, s, today ->
+        Events.build(d, s, today)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun markSharePaid(e: CalendarEvent) {

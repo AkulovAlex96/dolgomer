@@ -24,6 +24,8 @@ data class SubscriptionView(
     val shares: List<ShareView>,
     /** Периоды, за которые моё списание отмечено оплаченным. */
     val paidCharges: Set<LocalDate> = emptySet(),
+    /** Интервалы пауз и отмены: [from, to), to = null — продолжается. */
+    val pauses: List<Pair<LocalDate, LocalDate?>> = emptyList(),
 )
 
 class NewShare(val counterpartyName: String, val amountMinor: Long, val currency: String, val activeFrom: LocalDate)
@@ -54,20 +56,38 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
     fun observeAll(today: () -> LocalDate = LocalDate::now): Flow<List<SubscriptionView>> =
         ticker(today).flatMapLatest { now -> build(now) }
 
+    private class Core(
+        val subs: List<SubscriptionEntity>,
+        val shares: List<SubscriptionShareEntity>,
+        val payments: List<SharePaymentEntity>,
+        val people: List<CounterpartyEntity>,
+        val charges: List<ChargePaymentEntity>,
+    )
+
     private fun build(now: LocalDate): Flow<List<SubscriptionView>> =
         combine(
-            db.subscriptions().observeAll(),
-            db.shares().observeAll(),
-            db.sharePayments().observeAll(),
-            db.counterparties().observeAll(),
-            db.chargePayments().observeAll(),
-        ) { subs, shares, payments, people, charges ->
-            val paidCharges = charges.groupBy { it.subscriptionId }.mapValues { (_, v) -> v.map { it.periodDate }.toSet() }
-            val names = people.associateBy { it.id }
-            val paidByShare = payments.groupBy { it.shareId }.mapValues { (_, v) -> v.associate { it.periodDate to it.amountMinor } }
+            combine(
+                db.subscriptions().observeAll(),
+                db.shares().observeAll(),
+                db.sharePayments().observeAll(),
+                db.counterparties().observeAll(),
+                db.chargePayments().observeAll(),
+            ) { subs, shares, payments, people, charges -> Core(subs, shares, payments, people, charges) },
+            db.pauses().observeAll(),
+            db.shareAmounts().observeAll(),
+        ) { core, pauses, amounts ->
+            val paidCharges = core.charges.groupBy { it.subscriptionId }.mapValues { (_, v) -> v.map { it.periodDate }.toSet() }
+            val names = core.people.associateBy { it.id }
+            val paidByShare = core.payments.groupBy { it.shareId }.mapValues { (_, v) -> v.associate { it.periodDate to it.amountMinor } }
+            val pausesBySub = pauses.groupBy { it.subscriptionId }
+            val amountsByShare = amounts.groupBy { it.shareId }
             val horizon = now.plusDays(HORIZON_DAYS)
-            subs.map { s -> buildView(s, shares.filter { it.subscriptionId == s.id }, paidByShare, names, horizon, now, paidCharges[s.id].orEmpty()) }
-                .sortedBy { it.subscription.name.lowercase() }
+            core.subs.map { s ->
+                buildView(
+                    s, core.shares.filter { it.subscriptionId == s.id }, paidByShare, names, horizon, now,
+                    paidCharges[s.id].orEmpty(), pausesBySub[s.id].orEmpty(), amountsByShare,
+                )
+            }.sortedBy { it.subscription.name.lowercase() }
         }
 
     fun observe(id: String, today: () -> LocalDate = LocalDate::now): Flow<SubscriptionView?> =
@@ -81,16 +101,21 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
         horizon: LocalDate,
         now: LocalDate,
         paidCharges: Set<LocalDate>,
+        pauseRows: List<SubscriptionPauseEntity>,
+        amountsByShare: Map<String, List<ShareAmountEntity>>,
     ): SubscriptionView {
-        val end = if (s.state == SubscriptionState.ACTIVE) horizon else minOf(s.stateChangedOn ?: now, now)
+        val pauses = pauseRows.map { it.fromDate to it.toDate }
+        // подписка со старым состоянием без записанной паузы (данные до появления истории): доли идут до сегодняшнего дня
+        val end = if (s.state == SubscriptionState.ACTIVE || pauses.any { it.second == null }) horizon else now
         val views = shares.map { sh ->
             val dues = if (!sh.active) emptyList() else SubscriptionCalc.shareDues(
                 s.anchorDate, s.periodicity, s.interval, sh.activeFrom, sh.amountMinor, sh.currency,
                 paidByShare[sh.id].orEmpty().keys, end, paidByShare[sh.id].orEmpty(),
+                pauses, amountsByShare[sh.id].orEmpty().map { it.fromDate to it.amountMinor },
             )
             ShareView(sh, names[sh.counterpartyId]?.name.orEmpty(), names[sh.counterpartyId]?.phone, dues)
         }
-        return SubscriptionView(s, s.payerCounterpartyId?.let { names[it]?.name }, views, paidCharges)
+        return SubscriptionView(s, s.payerCounterpartyId?.let { names[it]?.name }, views, paidCharges, pauses)
     }
 
     private suspend fun person(name: String): CounterpartyEntity {
@@ -108,7 +133,7 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
 
     suspend fun update(id: String, input: SubscriptionInput) {
         val old = db.subscriptions().all().first { it.id == id }
-        val updated = toEntity(id, input, old.createdAt).copy(state = old.state, stateChangedOn = old.stateChangedOn)
+        val updated = toEntity(id, input, old.createdAt).copy(state = old.state)
         db.subscriptions().update(updated)
         if (old.anchorDate != updated.anchorDate || old.periodicity != updated.periodicity || old.interval != updated.interval) remapMarks(old, updated)
     }
@@ -149,10 +174,17 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
         paymentMethodNote = i.paymentMethodNote, trialEndsOn = i.trialEndsOn, note = i.note, category = i.category, createdAt = createdAt,
     )
 
-    suspend fun setState(id: String, state: SubscriptionState) {
+    suspend fun setState(id: String, state: SubscriptionState) = db.withTransaction {
         val old = db.subscriptions().all().first { it.id == id }
-        if (old.state == state) return
-        db.subscriptions().update(old.copy(state = state, stateChangedOn = if (state == SubscriptionState.ACTIVE) null else LocalDate.now()))
+        if (old.state == state) return@withTransaction
+        val today = LocalDate.now()
+        val open = db.pauses().all().filter { it.subscriptionId == id && it.toDate == null }
+        if (state == SubscriptionState.ACTIVE) {
+            open.forEach { db.pauses().update(it.copy(toDate = today)) }
+        } else if (open.isEmpty()) {
+            db.pauses().insert(SubscriptionPauseEntity(UUID.randomUUID().toString(), id, today, null))
+        }
+        db.subscriptions().update(old.copy(state = state))
     }
 
     suspend fun delete(id: String) {
@@ -169,7 +201,15 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
         return id
     }
 
-    suspend fun updateShare(share: SubscriptionShareEntity, amountMinor: Long, currency: String, activeFrom: LocalDate) {
+    suspend fun updateShare(share: SubscriptionShareEntity, amountMinor: Long, currency: String, activeFrom: LocalDate) = db.withTransaction {
+        if (amountMinor != share.amountMinor) {
+            // новая сумма действует с сегодняшнего дня; прошлые периоды остаются со старой
+            val history = db.shareAmounts().all().filter { it.shareId == share.id }
+            if (history.isEmpty()) db.shareAmounts().insert(ShareAmountEntity(UUID.randomUUID().toString(), share.id, share.activeFrom, share.amountMinor))
+            val today = LocalDate.now()
+            db.shareAmounts().deleteFor(share.id, today)
+            db.shareAmounts().insert(ShareAmountEntity(UUID.randomUUID().toString(), share.id, today, amountMinor))
+        }
         db.shares().update(share.copy(amountMinor = amountMinor, currency = currency, activeFrom = activeFrom))
     }
 

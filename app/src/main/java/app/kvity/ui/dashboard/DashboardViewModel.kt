@@ -13,6 +13,7 @@ import app.kvity.data.SubscriptionPayer
 import app.kvity.data.SubscriptionRepository
 import app.kvity.data.SubscriptionState
 import app.kvity.data.SubscriptionView
+import app.kvity.data.ticker
 import app.kvity.domain.Bucket
 import app.kvity.domain.Buckets
 import app.kvity.domain.DebtStatus
@@ -64,8 +65,8 @@ class DashboardViewModel(
     }
 
     val state: StateFlow<DashboardState> = combine(
-        debts.observeDebts(), subscriptions.observeAll(), settings.settings,
-    ) { d, s, set -> buildState(d, s, LocalDate.now(), set.firstDayOfWeek) }
+        debts.observeDebts(), subscriptions.observeAll(), settings.settings, ticker(),
+    ) { d, s, set, today -> buildState(d, s, today, set.firstDayOfWeek) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardState())
 
     companion object {

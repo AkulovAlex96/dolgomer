@@ -7,6 +7,8 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Update
 import androidx.room.AutoMigration
+import androidx.room.DeleteColumn
+import androidx.room.migration.AutoMigrationSpec
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -113,6 +115,31 @@ interface SharePaymentDao {
     @Query("DELETE FROM share_payments") suspend fun deleteAll()
 }
 
+/** Версия 5: интервалы пауз заменяют одну дату «stateChangedOn». */
+@DeleteColumn(tableName = "subscriptions", columnName = "stateChangedOn")
+class Migration4To5 : AutoMigrationSpec
+
+@Dao
+interface PauseDao {
+    @Insert suspend fun insert(item: SubscriptionPauseEntity)
+    @Update suspend fun update(item: SubscriptionPauseEntity)
+    @Query("SELECT * FROM subscription_pauses") fun observeAll(): Flow<List<SubscriptionPauseEntity>>
+    @Query("SELECT * FROM subscription_pauses") suspend fun all(): List<SubscriptionPauseEntity>
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insertAll(items: List<SubscriptionPauseEntity>)
+    @Query("DELETE FROM subscription_pauses") suspend fun deleteAll()
+}
+
+@Dao
+interface ShareAmountDao {
+    @Insert suspend fun insert(item: ShareAmountEntity)
+    @Query("DELETE FROM share_amounts WHERE shareId = :shareId AND fromDate = :fromDate")
+    suspend fun deleteFor(shareId: String, fromDate: LocalDate)
+    @Query("SELECT * FROM share_amounts") fun observeAll(): Flow<List<ShareAmountEntity>>
+    @Query("SELECT * FROM share_amounts") suspend fun all(): List<ShareAmountEntity>
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insertAll(items: List<ShareAmountEntity>)
+    @Query("DELETE FROM share_amounts") suspend fun deleteAll()
+}
+
 @Dao
 interface ChargePaymentDao {
     @Insert suspend fun insert(item: ChargePaymentEntity)
@@ -172,10 +199,12 @@ interface RateDao {
         SubscriptionEntity::class, SubscriptionShareEntity::class, SharePaymentEntity::class,
         AttachmentEntity::class, ReminderTemplateEntity::class, ReminderLogEntity::class,
         ExchangeRateEntity::class, ChargePaymentEntity::class,
+        SubscriptionPauseEntity::class, ShareAmountEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4),
+        AutoMigration(from = 4, to = 5, spec = Migration4To5::class)],
 )
 @TypeConverters(Converters::class)
 abstract class KvityDatabase : RoomDatabase() {
@@ -186,6 +215,8 @@ abstract class KvityDatabase : RoomDatabase() {
     abstract fun shares(): ShareDao
     abstract fun sharePayments(): SharePaymentDao
     abstract fun chargePayments(): ChargePaymentDao
+    abstract fun pauses(): PauseDao
+    abstract fun shareAmounts(): ShareAmountDao
     abstract fun attachments(): AttachmentDao
     abstract fun templates(): TemplateDao
     abstract fun reminderLog(): ReminderLogDao

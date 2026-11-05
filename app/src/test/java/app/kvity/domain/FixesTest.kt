@@ -45,4 +45,35 @@ class FixesTest {
         val now = LocalDateTime.of(2026, 11, 4, 9, 0, 30)
         assertEquals(24 * 3600 - 30L, ReminderWorker.delayUntilNext(now, 9, 0).seconds)
     }
+
+    @Test fun `periods inside a pause are skipped and resumed ones count again`() {
+        val dues = SubscriptionCalc.shareDues(
+            anchor = d(1, 10), periodicity = Periodicity.MONTH, interval = 1, activeFrom = d(1, 10),
+            amountMinor = 1000, currencyCode = "USD", paidPeriods = emptySet(), horizonEnd = d(6, 30),
+            pauses = listOf(d(3, 1) to d(6, 1)),
+        )
+        assertEquals(listOf(d(1, 10), d(2, 10), d(6, 10)), dues.map { it.periodDate })
+    }
+
+    @Test fun `open pause stops all later periods`() {
+        val dues = SubscriptionCalc.shareDues(
+            anchor = d(1, 10), periodicity = Periodicity.MONTH, interval = 1, activeFrom = d(1, 10),
+            amountMinor = 1000, currencyCode = "USD", paidPeriods = emptySet(), horizonEnd = d(6, 30),
+            pauses = listOf(d(3, 1) to null),
+        )
+        assertEquals(listOf(d(1, 10), d(2, 10)), dues.map { it.periodDate })
+    }
+
+    @Test fun `amount change applies only from its date`() {
+        val dues = SubscriptionCalc.shareDues(
+            anchor = d(1, 10), periodicity = Periodicity.MONTH, interval = 1, activeFrom = d(1, 10),
+            amountMinor = 1500, currencyCode = "USD", paidPeriods = emptySet(), horizonEnd = d(4, 30),
+            amountHistory = listOf(d(1, 10) to 1000L, d(3, 1) to 1500L),
+        )
+        assertEquals(listOf(1000L, 1000L, 1500L, 1500L), dues.map { it.amountMinor })
+    }
+
+    @Test fun `csv import strips the formula guard apostrophe`() {
+        assertEquals(listOf(listOf("+7 999", "x", "'plain")), Csv.parse("'+7 999;x;'plain"))
+    }
 }

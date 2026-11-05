@@ -77,7 +77,7 @@ object Events {
             // Просрочкой считаются только неотмеченные списания с момента, как подписка заведена в приложении
             val trackedFrom = Instant.ofEpochMilli(s.createdAt).atZone(ZoneId.systemDefault()).toLocalDate()
             if (s.state == SubscriptionState.ACTIVE) {
-                SubscriptionCalc.occurrences(s.anchorDate, s.periodicity, s.interval, today.minusDays(365), horizon).forEach { d ->
+                SubscriptionCalc.occurrences(s.anchorDate, s.periodicity, s.interval, today.minusDays(365), horizon).filter { !SubscriptionCalc.isPaused(it, v.pauses) }.forEach { d ->
                     out += CalendarEvent(
                         date = d, kind = EventKind.SUBSCRIPTION, flow = MoneyFlow.OUT, title = s.name,
                         subtitle = if (s.payer == SubscriptionPayer.ME) "списание" else "возвращаю ${v.payerName.orEmpty()}",

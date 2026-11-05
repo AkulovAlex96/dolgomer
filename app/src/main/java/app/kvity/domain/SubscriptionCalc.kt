@@ -42,10 +42,27 @@ object SubscriptionCalc {
         paidPeriods: Set<LocalDate>,
         horizonEnd: LocalDate,
         paidAmounts: Map<LocalDate, Long> = emptyMap(),
+        pauses: List<Pair<LocalDate, LocalDate?>> = emptyList(),
+        amountHistory: List<Pair<LocalDate, Long>> = emptyList(),
     ): List<ShareDue> =
         occurrences(anchor, periodicity, interval, maxOf(activeFrom, anchor), horizonEnd)
-            // оплаченный период хранит сумму, с которой был оплачен: последующая правка доли прошлое не меняет
-            .map { ShareDue(it, if (it in paidPeriods) paidAmounts[it] ?: amountMinor else amountMinor, currencyCode, it in paidPeriods) }
+            .filter { !isPaused(it, pauses) }
+            .map {
+                // оплаченный период хранит сумму оплаты; неоплаченный берёт сумму, действовавшую на его дату
+                val amount = if (it in paidPeriods) paidAmounts[it] ?: amountAt(it, amountMinor, amountHistory) else amountAt(it, amountMinor, amountHistory)
+                ShareDue(it, amount, currencyCode, it in paidPeriods)
+            }
+
+    /** Попадает ли дата периода в интервал паузы: [from, to), открытая пауза (to = null) не заканчивается. */
+    fun isPaused(date: LocalDate, pauses: List<Pair<LocalDate, LocalDate?>>): Boolean =
+        pauses.any { (from, to) -> !date.isBefore(from) && (to == null || date.isBefore(to)) }
+
+    /** Сумма доли на дату периода по истории изменений; до первой записи действует первая сумма, без истории — текущая. */
+    fun amountAt(date: LocalDate, current: Long, history: List<Pair<LocalDate, Long>>): Long {
+        if (history.isEmpty()) return current
+        val sorted = history.sortedBy { it.first }
+        return (sorted.lastOrNull { !it.first.isAfter(date) } ?: sorted.first()).second
+    }
 
     /** Приблизительная стоимость в месяц (для итогов «в месяц / в год»). Для периодов дольше месяца делится. */
     fun monthlyMinor(amountMinor: Long, periodicity: Periodicity, interval: Int): Long {

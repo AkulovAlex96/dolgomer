@@ -50,7 +50,12 @@ object Csv {
         val field = StringBuilder()
         var inQuotes = false
         var i = 0
-        fun endField() { row.add(field.toString()); field.setLength(0) }
+        fun endField() {
+            // апостроф перед «опасным» символом добавлен при экспорте (защита от формул): при импорте снимаем
+            val value = field.toString()
+            row.add(if (value.length >= 2 && value[0] == '\'' && value[1] in "=@+-\t\r") value.substring(1) else value)
+            field.setLength(0)
+        }
         fun endRow() {
             endField()
             if (!(row.size == 1 && row[0].isEmpty())) rows.add(row)

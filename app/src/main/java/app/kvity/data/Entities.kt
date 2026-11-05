@@ -128,8 +128,6 @@ data class SubscriptionEntity(
     val trialEndsOn: LocalDate? = null,
     val note: String? = null,
     val createdAt: Long,
-    /** Когда подписку приостановили или отменили: после этой даты доли участников не начисляются. */
-    val stateChangedOn: LocalDate? = null,
 )
 
 /** Доля участника общей подписки: сколько он возвращает мне за каждый период. */
@@ -151,6 +149,34 @@ data class SubscriptionShareEntity(
     /** С какой даты доля учитывается; более ранние периоды не считаются долгом. */
     val activeFrom: LocalDate,
     val active: Boolean = true,
+)
+
+/** Интервал, когда подписка стояла на паузе или была отменена: периоды с датой от [fromDate] до [toDate] (не включая) не начисляются. [toDate] = null — пауза продолжается. */
+@Serializable
+@Entity(
+    tableName = "subscription_pauses",
+    foreignKeys = [ForeignKey(SubscriptionEntity::class, ["id"], ["subscriptionId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("subscriptionId")],
+)
+data class SubscriptionPauseEntity(
+    @PrimaryKey val id: String,
+    val subscriptionId: String,
+    val fromDate: LocalDate,
+    val toDate: LocalDate? = null,
+)
+
+/** История суммы доли: с даты [fromDate] участник возвращает [amountMinor] за период. Прошлые периоды не пересчитываются. */
+@Serializable
+@Entity(
+    tableName = "share_amounts",
+    foreignKeys = [ForeignKey(SubscriptionShareEntity::class, ["id"], ["shareId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("shareId")],
+)
+data class ShareAmountEntity(
+    @PrimaryKey val id: String,
+    val shareId: String,
+    val fromDate: LocalDate,
+    val amountMinor: Long,
 )
 
 /** Отметка «участник оплатил свою долю за период, который начался в [periodDate]». */

@@ -71,7 +71,8 @@ fun CalendarScreen(
     onOpenEvent: (CalendarEvent) -> Unit,
     onMarkSharePaid: (CalendarEvent) -> Unit,
 ) {
-    val today = LocalDate.now()
+    // дата обновляется после полуночи; выбранный день и месяц при этом не сбрасываются
+    val today by androidx.compose.runtime.produceState(LocalDate.now()) { app.kvity.data.ticker().collect { value = it } }
     var month by remember { mutableStateOf(YearMonth.from(today)) }
     var selected by remember { mutableStateOf<LocalDate?>(today) }
     var filter by remember { mutableStateOf(CalendarFilter.ALL) }
