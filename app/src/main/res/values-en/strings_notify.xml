@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notify_channel_name">Payments</string>
+    <string name="notify_channel_desc">Debt due dates and subscription charges</string>
+    <string name="notify_group_owed_to_me">Owed to me</string>
+    <string name="notify_group_i_owe">I owe</string>
+    <string name="notify_group_subscriptions">Subscriptions</string>
+    <string name="notify_count_hidden">Payments: %1$d</string>
+    <string name="notify_payment_hidden">Payment: %1$s</string>
+    <string name="notify_action_paid">Mark as paid</string>
+    <string name="notify_action_remind">Remind</string>
+    <string name="notify_action_open">Open</string>
+    <string name="notify_trial_title">Trial period</string>
+    <string name="notify_trial_hidden">Trial period is ending</string>
+    <string name="notify_trial_today">%1$s: trial period ends today</string>
+    <string name="notify_trial_days">%1$s: trial period ends in %2$d days (%3$s)</string>
+    <string name="notify_stale_hidden">No payment for a long time</string>
+    <string name="notify_stale_text">%1$s: %2$s, no payment for a long time (%3$d days)</string>
+    <string name="notify_when_today">today</string>
+    <string name="notify_when_upcoming">in %1$d days (%2$s)</string>
+    <string name="notify_when_overdue">overdue by %1$d days</string>
+    <string name="notify_line">%1$s: %2$s, %3$s</string>
+    <plurals name="notify_payments_count">
+        <item quantity="one">%d payment</item>
+        <item quantity="other">%d payments</item>
+    </plurals>
+</resources>

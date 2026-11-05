@@ -1,5 +1,6 @@
 package app.kvity.data
 
+import app.kvity.exchange.Lang
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.InputStream
@@ -41,7 +42,7 @@ data class BackupData(
 )
 
 class BackupFormatException(message: String) : Exception(message)
-class WrongPasswordException : Exception("Неверный пароль или файл повреждён")
+class WrongPasswordException : Exception(Lang.system().t("Неверный пароль или файл повреждён", "Wrong password or the file is corrupted"))
 
 /**
  * Формат файла: 4 байта заголовка, затем архив zip (data.json и папка attachments).
@@ -91,7 +92,7 @@ object BackupCodec {
 
     fun read(input: InputStream, password: String?, tempDir: File): Decoded {
         val header = ByteArray(4)
-        if (readFully(input, header) < 4) throw BackupFormatException("Файл не является копией «Квитов»")
+        if (readFully(input, header) < 4) throw BackupFormatException(Lang.system().t("Файл не является копией «Квитов»", "The file is not a Kvity backup"))
         val magic = String(header, Charsets.ISO_8859_1)
         val stream: InputStream = when (magic) {
             PLAIN -> input
@@ -99,12 +100,12 @@ object BackupCodec {
                 if (password.isNullOrEmpty()) throw WrongPasswordException()
                 val salt = ByteArray(16)
                 val iv = ByteArray(12)
-                if (readFully(input, salt) < 16 || readFully(input, iv) < 12) throw BackupFormatException("Файл повреждён")
+                if (readFully(input, salt) < 16 || readFully(input, iv) < 12) throw BackupFormatException(Lang.system().t("Файл повреждён", "The file is corrupted"))
                 val cipher = Cipher.getInstance("AES/GCM/NoPadding")
                     .apply { init(Cipher.DECRYPT_MODE, key(password, salt), GCMParameterSpec(128, iv)) }
                 CipherInputStream(input, cipher)
             }
-            else -> throw BackupFormatException("Файл не является копией «Квитов»")
+            else -> throw BackupFormatException(Lang.system().t("Файл не является копией «Квитов»", "The file is not a Kvity backup"))
         }
 
         tempDir.deleteRecursively()
@@ -131,12 +132,12 @@ object BackupCodec {
             throw WrongPasswordException()
         } catch (e: java.io.IOException) {
             // ошибка проверки подлинности GCM приходит как IOException от CipherInputStream
-            throw if (magic == ENCRYPTED) WrongPasswordException() else BackupFormatException("Файл повреждён")
+            throw if (magic == ENCRYPTED) WrongPasswordException() else BackupFormatException(Lang.system().t("Файл повреждён", "The file is corrupted"))
         } catch (e: kotlinx.serialization.SerializationException) {
-            throw BackupFormatException("Файл повреждён")
+            throw BackupFormatException(Lang.system().t("Файл повреждён", "The file is corrupted"))
         }
-        val result = data ?: throw BackupFormatException("В файле нет данных")
-        if (result.version > VERSION) throw BackupFormatException("Копия создана более новой версией приложения")
+        val result = data ?: throw BackupFormatException(Lang.system().t("В файле нет данных", "The file contains no data"))
+        if (result.version > VERSION) throw BackupFormatException(Lang.system().t("Копия создана более новой версией приложения", "The backup was created by a newer version of the app"))
         return Decoded(result, tempDir)
     }
 
