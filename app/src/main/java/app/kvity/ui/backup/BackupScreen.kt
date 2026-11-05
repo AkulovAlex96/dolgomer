@@ -48,6 +48,7 @@ private sealed interface Step {
 @Composable
 fun BackupScreen(manager: BackupManager, lastBackupMillis: Long, onBack: () -> Unit) {
     val context = LocalContext.current
+    val resources = androidx.compose.ui.platform.LocalResources.current
     val scope = rememberCoroutineScope()
     var step by remember { mutableStateOf<Step>(Step.Idle) }
     var password by remember { mutableStateOf<String?>(null) }
@@ -60,9 +61,9 @@ fun BackupScreen(manager: BackupManager, lastBackupMillis: Long, onBack: () -> U
             busy = true
             message = try {
                 context.contentResolver.openOutputStream(uri)!!.use { manager.create(it, password) }
-                context.getString(R.string.backup_saved)
+                resources.getString(R.string.backup_saved)
             } catch (e: Exception) {
-                context.getString(R.string.backup_save_failed, e.message)
+                resources.getString(R.string.backup_save_failed, e.message)
             }
             busy = false
         }
@@ -81,7 +82,7 @@ fun BackupScreen(manager: BackupManager, lastBackupMillis: Long, onBack: () -> U
                 message = e.message
                 step = Step.Idle
             } catch (e: Exception) {
-                message = context.getString(R.string.backup_read_failed_detail, e.message)
+                message = resources.getString(R.string.backup_read_failed_detail, e.message)
                 step = Step.Idle
             }
             busy = false
@@ -93,7 +94,7 @@ fun BackupScreen(manager: BackupManager, lastBackupMillis: Long, onBack: () -> U
         val head = ByteArray(4)
         val read = runCatching { context.contentResolver.openInputStream(uri)!!.use { it.read(head) } }.getOrDefault(-1)
         when {
-            read < 4 -> { message = context.getString(R.string.backup_read_failed); step = Step.Idle }
+            read < 4 -> { message = resources.getString(R.string.backup_read_failed); step = Step.Idle }
             BackupCodec.isEncrypted(head) -> step = Step.AskRestorePassword(uri, wrong = false)
             else -> inspect(uri, null)
         }
@@ -104,14 +105,14 @@ fun BackupScreen(manager: BackupManager, lastBackupMillis: Long, onBack: () -> U
             busy = true
             message = try {
                 context.contentResolver.openInputStream(uri)!!.use { manager.restore(it, pass) }
-                context.getString(R.string.backup_restored)
+                resources.getString(R.string.backup_restored)
             } catch (e: WrongPasswordException) {
                 step = Step.AskRestorePassword(uri, wrong = true)
                 null
             } catch (e: BackupFormatException) {
                 e.message
             } catch (e: Exception) {
-                context.getString(R.string.backup_restore_failed, e.message)
+                resources.getString(R.string.backup_restore_failed, e.message)
             }
             busy = false
         }

@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import app.kvity.KvityApp
 import app.kvity.domain.Direction
+import app.kvity.exchange.Lang
 import app.kvity.exchange.Csv
 import app.kvity.exchange.ExportBuilder
 import app.kvity.exchange.ExportOptions
@@ -61,6 +62,7 @@ private class ExportFile(val name: String, val mime: String, val bytes: ByteArra
 @Composable
 fun ExportScreen(app: KvityApp, onBack: () -> Unit) {
     val context = LocalContext.current
+    val resources = androidx.compose.ui.platform.LocalResources.current
     val scope = rememberCoroutineScope()
     var format by remember { mutableStateOf(Format.XLSX) }
     var direction by remember { mutableStateOf<Direction?>(null) }
@@ -73,6 +75,7 @@ fun ExportScreen(app: KvityApp, onBack: () -> Unit) {
         val built = ExportBuilder.build(
             ExportOptions(tables, direction),
             app.debts.observeDebts(includeArchived = true).first(), app.subscriptions.observeAll().first(), app.people.observe().first(), today,
+            lang = Lang.system(),
         )
         val stamp = "%d-%02d-%02d".format(today.year, today.monthValue, today.dayOfMonth)
         val out = ByteArrayOutputStream()
@@ -101,7 +104,7 @@ fun ExportScreen(app: KvityApp, onBack: () -> Unit) {
         if (uri != null && file != null) {
             scope.launch(Dispatchers.IO) {
                 val ok = runCatching { context.contentResolver.openOutputStream(uri)!!.use { it.write(file.bytes) } }.isSuccess
-                withContext(Dispatchers.Main) { Toast.makeText(context, context.getString(if (ok) R.string.export_file_saved else R.string.export_save_failed), Toast.LENGTH_SHORT).show() }
+                withContext(Dispatchers.Main) { Toast.makeText(context, resources.getString(if (ok) R.string.export_file_saved else R.string.export_save_failed), Toast.LENGTH_SHORT).show() }
             }
         }
     }
@@ -165,7 +168,7 @@ fun ExportScreen(app: KvityApp, onBack: () -> Unit) {
                             putExtra(Intent.EXTRA_STREAM, uri)
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
-                        context.startActivity(Intent.createChooser(send, context.getString(R.string.export_send_file)))
+                        context.startActivity(Intent.createChooser(send, resources.getString(R.string.export_send_file)))
                         busy = false
                     }
                 },

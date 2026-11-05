@@ -43,6 +43,7 @@ fun AttachmentsCard(
     framed: Boolean = true,
 ) {
     val context = LocalContext.current
+    val resources = androidx.compose.ui.platform.LocalResources.current
     val scope = rememberCoroutineScope()
     val items by repo.observe(type, ownerId).collectAsStateWithLifecycle(emptyList())
     var confirmDelete by remember { mutableStateOf<AttachmentEntity?>(null) }
@@ -55,7 +56,7 @@ fun AttachmentsCard(
             } catch (e: AttachmentTooLargeException) {
                 Toast.makeText(context, e.message, Toast.LENGTH_LONG).show()
             } catch (e: Exception) {
-                Toast.makeText(context, context.getString(R.string.comp_attach_add_failed), Toast.LENGTH_LONG).show()
+                Toast.makeText(context, resources.getString(R.string.comp_attach_add_failed), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -63,7 +64,7 @@ fun AttachmentsCard(
     val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { add(it) } }
     val takePhoto = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
         val target = cameraTarget
-        if (ok && target != null) add(target.second, context.getString(R.string.comp_photo_filename))
+        if (ok && target != null) add(target.second, resources.getString(R.string.comp_photo_filename))
         cameraTarget?.first?.delete()
         cameraTarget = null
     }
@@ -80,7 +81,7 @@ fun AttachmentsCard(
         items.forEach { att ->
             LabelRow(
                 onClick = { runCatching { context.startActivity(repo.openIntent(att)) }.onFailure {
-                    Toast.makeText(context, context.getString(R.string.comp_attach_no_app), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, resources.getString(R.string.comp_attach_no_app), Toast.LENGTH_SHORT).show()
                 } },
                 label = att.fileName,
                 subtitle = formatFileSize(att.sizeBytes),

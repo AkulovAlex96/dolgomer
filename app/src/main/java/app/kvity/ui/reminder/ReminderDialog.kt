@@ -69,6 +69,7 @@ fun ReminderDialog(
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
+    val resources = androidx.compose.ui.platform.LocalResources.current
     var selected by remember { mutableStateOf(templates.firstOrNull()?.id) }
     val template = templates.firstOrNull { it.id == selected }
     val defaultText = stringResource(R.string.reminder_default_text)

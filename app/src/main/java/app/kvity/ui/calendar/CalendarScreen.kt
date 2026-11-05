@@ -62,7 +62,7 @@ import java.util.Locale
 enum class CalendarFilter { ALL, DEBTS, SUBSCRIPTIONS }
 
 private val appLocale: Locale
-    @Composable get() = androidx.compose.ui.platform.LocalContext.current.resources.configuration.locales[0]
+    @Composable get() = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
 
 @Composable
 fun CalendarScreen(
@@ -246,7 +246,7 @@ private fun DayCell(
             val text = (if (key.second == MoneyFlow.IN) "+" else "−") + AmountFormatter.compact(list.sumOf { it.amountMinor }, cur.fractionDigits) + cur.symbol
             text to key.second
         }
-    val debtShown = if (debtLines.size > 2) listOf(debtLines[0], androidx.compose.ui.platform.LocalContext.current.getString(R.string.cal_more, debtLines.size - 1) to null) else debtLines
+    val debtShown = if (debtLines.size > 2) listOf(debtLines[0], androidx.compose.ui.platform.LocalResources.current.getString(R.string.cal_more, debtLines.size - 1) to null) else debtLines
     // регулярные платежи считаются отдельно от долгов и по каждой валюте (основная первой): итог со знаком
     val regularLines = regular.groupBy { it.currency }
         .toSortedMap(compareBy<String> { it != mainCurrency }.thenBy { it })
@@ -256,7 +256,7 @@ private fun DayCell(
             (if (net < 0) "−" else if (net > 0) "+" else "") + AmountFormatter.compact(kotlin.math.abs(net), cur.fractionDigits) + cur.symbol
         }
     // две строки под регулярные; если валют больше, вторая строка сворачивается в «ещё N»
-    val regularShown = if (regularLines.size > 2) listOf(regularLines[0], androidx.compose.ui.platform.LocalContext.current.getString(R.string.cal_more, regularLines.size - 1)) else regularLines
+    val regularShown = if (regularLines.size > 2) listOf(regularLines[0], androidx.compose.ui.platform.LocalResources.current.getString(R.string.cal_more, regularLines.size - 1)) else regularLines
     val overdue = events.any { it.overdue }
 
     // высоты в sp: при крупном шрифте системы ячейка растёт вместе с текстом, а сумма внизу не обрезается

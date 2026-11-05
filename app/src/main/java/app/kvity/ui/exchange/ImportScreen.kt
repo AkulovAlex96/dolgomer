@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import app.kvity.KvityApp
 import app.kvity.data.ImportReport
 import app.kvity.domain.Direction
+import app.kvity.exchange.Lang
 import app.kvity.exchange.Csv
 import app.kvity.exchange.DebtImport
 import app.kvity.exchange.ImportBatch
@@ -69,6 +70,7 @@ private fun displayNameOf(context: Context, uri: Uri): String? =
 @Composable
 fun ImportScreen(app: KvityApp, onBack: () -> Unit) {
     val context = LocalContext.current
+    val resources = androidx.compose.ui.platform.LocalResources.current
     val scope = rememberCoroutineScope()
     var batch by remember { mutableStateOf<ImportBatch?>(null) }
     var fileName by remember { mutableStateOf<String?>(null) }
@@ -80,9 +82,9 @@ fun ImportScreen(app: KvityApp, onBack: () -> Unit) {
         if (uri != null) {
             scope.launch(Dispatchers.IO) {
                 val ok = runCatching {
-                    context.contentResolver.openOutputStream(uri)!!.use { it.write(Csv.write(DebtImport.template()).toByteArray()) }
+                    context.contentResolver.openOutputStream(uri)!!.use { it.write(Csv.write(DebtImport.template(Lang.system())).toByteArray()) }
                 }.isSuccess
-                withContext(Dispatchers.Main) { Toast.makeText(context, context.getString(if (ok) R.string.import_ui_template_saved else R.string.import_ui_save_failed), Toast.LENGTH_SHORT).show() }
+                withContext(Dispatchers.Main) { Toast.makeText(context, resources.getString(if (ok) R.string.import_ui_template_saved else R.string.import_ui_save_failed), Toast.LENGTH_SHORT).show() }
             }
         }
     }
@@ -98,11 +100,11 @@ fun ImportScreen(app: KvityApp, onBack: () -> Unit) {
                 }.getOrNull()
             }
             if (bytes == null) {
-                error = context.getString(R.string.import_ui_read_failed)
+                error = resources.getString(R.string.import_ui_read_failed)
                 batch = null
             } else {
                 fileName = displayNameOf(context, uri)
-                batch = withContext(Dispatchers.Default) { Importer.parse(bytes) }
+                batch = withContext(Dispatchers.Default) { Importer.parse(bytes, lang = Lang.system()) }
             }
         }
     }
@@ -187,7 +189,7 @@ fun ImportScreen(app: KvityApp, onBack: () -> Unit) {
                         scope.launch {
                             busy = true
                             report = runCatching { app.importer.apply(b) }.getOrElse {
-                                error = context.getString(R.string.import_ui_failed, it.message)
+                                error = resources.getString(R.string.import_ui_failed, it.message)
                                 null
                             }
                             if (report != null) batch = null

@@ -101,6 +101,7 @@ fun LockScreen(
     onUnlocked: () -> Unit,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    val resources = androidx.compose.ui.platform.LocalResources.current
     var message by remember { mutableStateOf<String?>(null) }
     var attempt by remember { mutableStateOf(0) }
     // Конец блокировки в монотонном времени (elapsedRealtime): перевод системных часов его не сдвигает.
@@ -111,7 +112,7 @@ fun LockScreen(
     LaunchedEffect(lockedUntil) {
         while (lockedUntil > SystemClock.elapsedRealtime()) {
             secondsLeft = (lockedUntil - SystemClock.elapsedRealtime()) / 1000 + 1
-            message = context.getString(R.string.lock_too_many, secondsLeft)
+            message = resources.getString(R.string.lock_too_many, secondsLeft)
             delay(500)
         }
         if (lockedUntil > 0) { message = null; lockedUntil = 0 }
@@ -125,7 +126,7 @@ fun LockScreen(
                 if (lockedUntil > SystemClock.elapsedRealtime()) { attempt++; return@PinPad }
                 when (val r = pinStore.verify(pin)) {
                     PinResult.Ok -> onUnlocked()
-                    is PinResult.Wrong -> { message = context.getString(R.string.lock_wrong_pin); attempt++ }
+                    is PinResult.Wrong -> { message = resources.getString(R.string.lock_wrong_pin); attempt++ }
                     is PinResult.Locked -> { lockedUntil = SystemClock.elapsedRealtime() + r.remainingMillis; attempt++ }
                 }
             },

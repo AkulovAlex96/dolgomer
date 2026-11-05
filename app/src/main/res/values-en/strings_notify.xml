@@ -17,7 +17,7 @@
     <string name="notify_stale_hidden">No payment for a long time</string>
     <string name="notify_stale_text">%1$s: %2$s, no payment for a long time (%3$d days)</string>
     <string name="notify_when_today">today</string>
-    <string name="notify_when_upcoming">in %1$d days (%2$s)</string>
+    <string name="notify_when_upcoming">in %1$d day(s) (%2$s)</string>
     <string name="notify_when_overdue">overdue by %1$d days</string>
     <string name="notify_line">%1$s: %2$s, %3$s</string>
     <plurals name="notify_payments_count">

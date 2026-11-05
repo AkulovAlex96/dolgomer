@@ -99,6 +99,7 @@ private val tabs = listOf(
 @Composable
 fun AppNavigation() {
     val context = LocalContext.current
+    val resources = androidx.compose.ui.platform.LocalResources.current
     val app = context.applicationContext as KvityApp
     val nav = rememberNavController()
     val scope = rememberCoroutineScope()
@@ -254,7 +255,7 @@ fun AppNavigation() {
                     onDeletePayment = vm::deletePayment,
                     onDeleteDebt = { vm.deleteDebt(); nav.popBackStack() },
                     onEdit = { nav.navigate(Routes.editDebt(id)) },
-                    onRemind = { view?.let { reminder = debtReminder(it, context.getString(R.string.nav_due_not_set)) } },
+                    onRemind = { view?.let { reminder = debtReminder(it, resources.getString(R.string.nav_due_not_set)) } },
                     extra = { AttachmentsCard(app.attachments, AttachmentOwner.DEBT, id, title = stringResource(R.string.nav_attachments_debt)) },
                     paymentAttachments = { pid -> AttachmentsCard(app.attachments, AttachmentOwner.PAYMENT, pid, title = stringResource(R.string.nav_attachments_receipts), framed = false) },
                 )

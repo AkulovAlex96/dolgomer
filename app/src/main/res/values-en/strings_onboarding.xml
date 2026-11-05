@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_start">Get started</string>
+    <string name="onboarding_step_description">Step %1$d of %2$d</string>
+
+    <string name="onboarding_debts_title">Keep track of debts</string>
+    <string name="onboarding_debts_text">Record who owes you and whom you owe. You can set up a payment schedule for each debt and see how much is left to pay.</string>
+
+    <string name="onboarding_recurring_title">Recurring payments</string>
+    <string name="onboarding_recurring_text">Track subscriptions and repeating payments, split their cost between participants and keep an eye on their shares.</string>
+
+    <string name="onboarding_notifications_title">Reminders</string>
+    <string name="onboarding_notifications_text">Kvity reminds you about upcoming and overdue payments. You can adjust when and how often notifications arrive.</string>
+    <string name="onboarding_notifications_allow">Allow notifications</string>
+    <string name="onboarding_notifications_allowed">Notifications allowed</string>
+
+    <string name="onboarding_data_title">Your data stays on your device</string>
+    <string name="onboarding_data_text">Everything is stored only with you: the database is encrypted, backups are available, and you can protect access with a PIN or biometrics.</string>
+
+    <string name="onboarding_settings_title">Introduction</string>
+    <string name="onboarding_settings_show_again">Show the introduction again</string>
+</resources>
