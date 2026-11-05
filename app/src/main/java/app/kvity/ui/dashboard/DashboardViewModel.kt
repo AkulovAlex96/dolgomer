@@ -50,6 +50,8 @@ data class DashboardState(
     val subs: List<SubscriptionView> = emptyList(),
     /** Неоплаченные платежи с прошедшим сроком: доли участников и мои списания. */
     val overdueShares: List<CalendarEvent> = emptyList(),
+    /** Сводка «Этот месяц» по валютам. */
+    val monthSummary: List<app.kvity.data.MonthSummaryRow> = emptyList(),
 )
 
 class DashboardViewModel(
@@ -137,6 +139,7 @@ class DashboardViewModel(
                 subsOutgoingMonthly = monthlyOut,
                 subs = subs,
                 overdueShares = events.filter { it.overdue }.sortedBy { it.date },
+                monthSummary = app.kvity.data.MonthSummary.build(allDebts, subs, today),
             )
         }
     }

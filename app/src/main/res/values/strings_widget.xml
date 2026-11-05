@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_label">Ближайшие платежи</string>
+    <string name="widget_description">Ближайшие платежи и просрочки</string>
+    <string name="widget_title">Ближайшие платежи</string>
+    <string name="widget_locked">Закрыто PIN-кодом</string>
+    <string name="widget_empty">Ближайших платежей нет</string>
+    <string name="widget_hidden_item">Платёж</string>
+    <string name="widget_overdue_mark">Просрочка</string>
+    <string name="widget_amount_hidden">•••</string>
+    <string name="dash_month_title">Этот месяц</string>
+    <string name="dash_month_received">Мне вернули</string>
+    <string name="dash_month_paid">Я вернул и заплатил</string>
+    <string name="dash_month_expect_in">Ожидаю получить</string>
+    <string name="dash_month_expect_out">Ещё заплатить</string>
+</resources>

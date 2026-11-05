@@ -127,6 +127,7 @@ fun DashboardScreen(
                 }
             } else {
                 item { BalanceCard(state) }
+                if (state.monthSummary.isNotEmpty()) item { MonthSummaryCard(state.monthSummary) }
                 item { BucketsCard(stringResource(R.string.dash_owed_to_me), state.owedToMe, MaterialTheme.kvity.income) }
                 item { BucketsCard(stringResource(R.string.dash_i_owe), state.iOwe, MaterialTheme.kvity.expense) }
 
@@ -210,6 +211,32 @@ private fun BalanceCard(state: DashboardState) {
             BalanceBox(stringResource(R.string.dash_owed_to_me), state.owedToMeTotal, c.incomeBg, c.income, Modifier.weight(1f))
             BalanceBox(stringResource(R.string.dash_i_owe), state.iOweTotal, c.expenseBg, c.expense, Modifier.weight(1f))
         }
+    }
+}
+
+@Composable
+private fun MonthSummaryCard(rows: List<app.kvity.data.MonthSummaryRow>) {
+    val c = MaterialTheme.kvity
+    SectionCard {
+        Text(stringResource(R.string.dash_month_title), fontWeight = FontWeight.SemiBold)
+        rows.forEach { r ->
+            Column(modifier = Modifier.padding(top = 6.dp)) {
+                if (rows.size > 1) Text(r.currency, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                MonthLine(R.string.dash_month_received, r.receivedMinor, r.currency, c.income)
+                MonthLine(R.string.dash_month_paid, r.paidMinor, r.currency, c.expense)
+                MonthLine(R.string.dash_month_expect_in, r.expectedInMinor, r.currency, c.income)
+                MonthLine(R.string.dash_month_expect_out, r.expectedOutMinor, r.currency, c.expense)
+            }
+        }
+    }
+}
+
+@Composable
+private fun MonthLine(label: Int, minor: Long, currency: String, color: Color) {
+    if (minor == 0L) return
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(stringResource(label), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(formatMoney(minor, currency), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = color)
     }
 }
 

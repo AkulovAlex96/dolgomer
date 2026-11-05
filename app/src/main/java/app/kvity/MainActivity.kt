@@ -20,6 +20,7 @@ import app.kvity.notify.Notifier
 import app.kvity.notify.RemindRequest
 import app.kvity.security.Biometrics
 import app.kvity.security.LockScreen
+import app.kvity.widget.KvityWidget
 import app.kvity.ui.AppNavigation
 import app.kvity.ui.onboarding.OnboardingScreen
 import app.kvity.ui.theme.KvityTheme
@@ -110,6 +111,7 @@ class MainActivity : FragmentActivity() {
     override fun onStop() {
         super.onStop()
         app.lock.onStop()
+        KvityWidget.refresh(this)
     }
 
     override fun onStart() {
