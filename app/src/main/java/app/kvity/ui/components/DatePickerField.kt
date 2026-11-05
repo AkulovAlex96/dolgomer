@@ -1,5 +1,7 @@
 package app.kvity.ui.components
 
+import androidx.compose.ui.res.stringResource
+import app.kvity.R
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -46,9 +48,9 @@ fun DatePickerField(
                         onDateChange(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate())
                     }
                     open = false
-                }) { Text("Готово") }
+                }) { Text(stringResource(R.string.comp_date_picker_ok)) }
             },
-            dismissButton = { TextButton(onClick = { open = false }) { Text("Отмена") } },
+            dismissButton = { TextButton(onClick = { open = false }) { Text(stringResource(R.string.comp_cancel)) } },
         ) {
             DatePicker(state = pickerState)
         }

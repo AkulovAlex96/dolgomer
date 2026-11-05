@@ -1,5 +1,7 @@
 package app.kvity.ui.components
 
+import androidx.compose.ui.res.stringResource
+import app.kvity.R
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -37,7 +39,7 @@ fun AttachmentsCard(
     repo: AttachmentRepository,
     type: AttachmentOwner,
     ownerId: String,
-    title: String = "Вложения",
+    title: String = stringResource(R.string.comp_attachments),
     framed: Boolean = true,
 ) {
     val context = LocalContext.current
@@ -53,7 +55,7 @@ fun AttachmentsCard(
             } catch (e: AttachmentTooLargeException) {
                 Toast.makeText(context, e.message, Toast.LENGTH_LONG).show()
             } catch (e: Exception) {
-                Toast.makeText(context, "Не удалось добавить файл", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.getString(R.string.comp_attach_add_failed), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -61,7 +63,7 @@ fun AttachmentsCard(
     val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { add(it) } }
     val takePhoto = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
         val target = cameraTarget
-        if (ok && target != null) add(target.second, "Фото.jpg")
+        if (ok && target != null) add(target.second, context.getString(R.string.comp_photo_filename))
         cameraTarget?.first?.delete()
         cameraTarget = null
     }
@@ -70,15 +72,15 @@ fun AttachmentsCard(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row {
-                TextButton(onClick = { cameraTarget = repo.newCameraTarget().also { takePhoto.launch(it.second) } }) { Text("Фото") }
-                TextButton(onClick = { pickFile.launch(arrayOf("*/*")) }) { Text("Файл") }
+                TextButton(onClick = { cameraTarget = repo.newCameraTarget().also { takePhoto.launch(it.second) } }) { Text(stringResource(R.string.comp_photo)) }
+                TextButton(onClick = { pickFile.launch(arrayOf("*/*")) }) { Text(stringResource(R.string.comp_file)) }
             }
         }
-        if (items.isEmpty()) Text("Расписки, чеки и другие файлы можно приложить сюда.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (items.isEmpty()) Text(stringResource(R.string.comp_attach_hint), color = MaterialTheme.colorScheme.onSurfaceVariant)
         items.forEach { att ->
             LabelRow(
                 onClick = { runCatching { context.startActivity(repo.openIntent(att)) }.onFailure {
-                    Toast.makeText(context, "Нет приложения для открытия файла", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.comp_attach_no_app), Toast.LENGTH_SHORT).show()
                 } },
                 label = att.fileName,
                 subtitle = formatFileSize(att.sizeBytes),
@@ -91,10 +93,10 @@ fun AttachmentsCard(
     confirmDelete?.let { att ->
         AlertDialog(
             onDismissRequest = { confirmDelete = null },
-            title = { Text("Удалить вложение?") },
+            title = { Text(stringResource(R.string.comp_attach_delete_title)) },
             text = { Text(att.fileName) },
-            confirmButton = { TextButton(onClick = { scope.launch { repo.delete(att) }; confirmDelete = null }) { Text("Удалить") } },
-            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("Отмена") } },
+            confirmButton = { TextButton(onClick = { scope.launch { repo.delete(att) }; confirmDelete = null }) { Text(stringResource(R.string.comp_delete)) } },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text(stringResource(R.string.comp_cancel)) } },
         )
     }
 }

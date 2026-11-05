@@ -3,6 +3,7 @@ package app.kvity.data
 import app.kvity.domain.DebtStatus
 import app.kvity.domain.Direction
 import app.kvity.domain.InstallmentState
+import app.kvity.domain.LocaleText
 import app.kvity.domain.SubscriptionCalc
 import java.time.Instant
 import java.time.LocalDate
@@ -104,7 +105,7 @@ object Events {
                 CalendarEvent(
                     date = it.dueDate, kind = EventKind.DEBT, flow = flow,
                     title = v.counterpartyName,
-                    subtitle = if (items.size > 1) "платёж $index из ${items.size}" else v.debt.title,
+                    subtitle = if (items.size > 1) LocaleText.pick("платёж $index из ${items.size}", "payment $index of ${items.size}") else v.debt.title,
                     amountMinor = it.remainingMinor, currency = v.debt.currency,
                     overdue = it.dueDate.isBefore(today), refId = v.debt.id,
                 )
@@ -123,7 +124,7 @@ object Events {
                 SubscriptionCalc.occurrences(s.anchorDate, s.periodicity, s.interval, today.minusDays(365), horizon).filter { it in v.paidCharges || !SubscriptionCalc.isPaused(it, v.pauses) }.forEach { d ->
                     out += CalendarEvent(
                         date = d, kind = EventKind.SUBSCRIPTION, flow = MoneyFlow.OUT, title = s.name,
-                        subtitle = if (s.payer == SubscriptionPayer.ME) "списание" else "возвращаю ${v.payerName.orEmpty()}",
+                        subtitle = if (s.payer == SubscriptionPayer.ME) LocaleText.pick("списание", "charge") else LocaleText.pick("возвращаю ${v.payerName.orEmpty()}", "repaying ${v.payerName.orEmpty()}"),
                         amountMinor = s.amountMinor, currency = s.currency, refId = s.id,
                         overdue = d !in v.paidCharges && d.isBefore(today) && !d.isBefore(trackedFrom),
                         periodDate = d, paid = d in v.paidCharges,

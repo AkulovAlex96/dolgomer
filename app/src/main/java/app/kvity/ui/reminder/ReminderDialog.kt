@@ -1,5 +1,7 @@
 package app.kvity.ui.reminder
 
+import androidx.compose.ui.res.stringResource
+import app.kvity.R
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -39,14 +41,14 @@ object ReminderSender {
         try {
             context.startActivity(intent)
         } catch (e: android.content.ActivityNotFoundException) {
-            android.widget.Toast.makeText(context, "Нет приложения для этого действия", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(context, context.getString(R.string.reminder_no_app), android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 
     /** Открывает системный выбор приложения (WhatsApp, Telegram и т.д.) с готовым текстом. */
     fun share(context: Context, text: String) {
         val send = Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, text) }
-        safeStart(context, Intent.createChooser(send, "Отправить напоминание").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        safeStart(context, Intent.createChooser(send, context.getString(R.string.reminder_send_chooser)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
     fun sms(context: Context, phone: String, text: String) {
@@ -69,33 +71,34 @@ fun ReminderDialog(
     val context = LocalContext.current
     var selected by remember { mutableStateOf(templates.firstOrNull()?.id) }
     val template = templates.firstOrNull { it.id == selected }
+    val defaultText = stringResource(R.string.reminder_default_text)
     fun render(t: ReminderTemplateEntity?) = TemplateText.render(
-        t?.text ?: "{имя}, напоминаю про долг: {остаток}.", ctx.name, ctx.amount, ctx.remaining, ctx.due, ctx.overdueDays,
+        t?.text ?: defaultText, ctx.name, ctx.amount, ctx.remaining, ctx.due, ctx.overdueDays,
     )
     var text by remember(selected) { mutableStateOf(render(template)) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Напомнить: ${ctx.name}") },
+        title = { Text(stringResource(R.string.reminder_title, ctx.name)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (templates.isNotEmpty()) {
-                    DropdownField("Шаблон", templates.map { it.id to it.name }, selected ?: templates.first().id, { selected = it })
+                    DropdownField(stringResource(R.string.reminder_template), templates.map { it.id to it.name }, selected ?: templates.first().id, { selected = it })
                 }
-                OutlinedTextField(text, { text = it }, label = { Text("Сообщение") })
+                OutlinedTextField(text, { text = it }, label = { Text(stringResource(R.string.reminder_message)) })
                 if (ctx.phone != null) {
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         TextButton(onClick = { ReminderSender.sms(context, ctx.phone, text); onLog("SMS", template?.name); onDismiss() }) { Text("SMS") }
-                        TextButton(onClick = { ReminderSender.dial(context, ctx.phone); onLog("Звонок", null); onDismiss() }) { Text("Позвонить") }
+                        TextButton(onClick = { ReminderSender.dial(context, ctx.phone); onLog("Звонок", null); onDismiss() }) { Text(stringResource(R.string.reminder_call)) }
                     }
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = { ReminderSender.share(context, text); onLog("Мессенджер", template?.name); onDismiss() }) {
-                Text("Отправить через…")
+                Text(stringResource(R.string.reminder_send_via))
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.comp_cancel)) } },
     )
 }
