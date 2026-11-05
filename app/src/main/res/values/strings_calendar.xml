@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cal_all">Всё</string>
+    <string name="cal_debts">Долги</string>
+    <string name="cal_regular">Регулярные платежи</string>
+    <string name="cal_incoming_box">Мне вернут</string>
+    <string name="cal_outgoing_box">Я верну</string>
+    <string name="cal_total">Итог</string>
+    <string name="cal_overdue_legend">просрочка</string>
+    <string name="cal_undated">Без точной даты</string>
+    <string name="cal_nothing">В этот день ничего нет</string>
+    <string name="cal_in">Входящие</string>
+    <string name="cal_out">Исходящие</string>
+    <string name="cal_paid">оплачено</string>
+    <string name="cal_overdue">просрочено</string>
+    <string name="cal_received">Получил</string>
+    <string name="cal_paid_btn">Оплатил</string>
+    <string name="cal_more">ещё %1$d</string>
+</resources>

@@ -23,6 +23,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import app.kvity.R
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,10 +61,8 @@ import java.util.Locale
 
 enum class CalendarFilter { ALL, DEBTS, SUBSCRIPTIONS }
 
-private val monthNames = listOf(
-    "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
-    "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
-)
+private val appLocale: Locale
+    @Composable get() = androidx.compose.ui.platform.LocalContext.current.resources.configuration.locales[0]
 
 @Composable
 fun CalendarScreen(
@@ -100,21 +100,21 @@ fun CalendarScreen(
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = { month = month.minusMonths(1) }) { Text("‹") }
-                Text("${monthNames[month.monthValue - 1]} ${month.year}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("${month.month.getDisplayName(TextStyle.FULL_STANDALONE, appLocale).replaceFirstChar { it.uppercase() }} ${month.year}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 TextButton(onClick = { month = month.plusMonths(1) }) { Text("›") }
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf(CalendarFilter.ALL to "Всё", CalendarFilter.DEBTS to "Долги", CalendarFilter.SUBSCRIPTIONS to "Регулярные платежи").forEach { (f, t) ->
+                listOf(CalendarFilter.ALL to stringResource(R.string.cal_all), CalendarFilter.DEBTS to stringResource(R.string.cal_debts), CalendarFilter.SUBSCRIPTIONS to stringResource(R.string.cal_regular)).forEach { (f, t) ->
                     FilterChip(selected = filter == f, onClick = { filter = f }, label = { Text(t) })
                 }
             }
 
             if (filter != CalendarFilter.SUBSCRIPTIONS) {
-                MonthSummary("Долги", Events.monthTotals(filtered.filter { it.kind == EventKind.DEBT }, month, mainCurrency), legend = true)
+                MonthSummary(stringResource(R.string.cal_debts), Events.monthTotals(filtered.filter { it.kind == EventKind.DEBT }, month, mainCurrency), legend = true)
             }
             if (filter != CalendarFilter.DEBTS) {
-                MonthSummary("Регулярные платежи", Events.monthTotals(filtered.filter { it.kind == EventKind.SUBSCRIPTION }, month, mainCurrency), legend = filter == CalendarFilter.SUBSCRIPTIONS)
+                MonthSummary(stringResource(R.string.cal_regular), Events.monthTotals(filtered.filter { it.kind == EventKind.SUBSCRIPTION }, month, mainCurrency), legend = filter == CalendarFilter.SUBSCRIPTIONS)
             }
             if (filter != CalendarFilter.SUBSCRIPTIONS) {
                 UndatedSummary(Events.undatedTotals(undated, month, mainCurrency))
@@ -136,16 +136,16 @@ private fun MonthSummary(title: String, totals: List<MonthTotal>, legend: Boolea
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(title, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SummaryBox("Мне вернут", lines({ "+" }) { it.incomingMinor }, c.incomeBg, c.income, Modifier.weight(1f))
-            SummaryBox("Я верну", lines({ "−" }) { it.outgoingMinor }, c.expenseBg, c.expense, Modifier.weight(1f))
+            SummaryBox(stringResource(R.string.cal_incoming_box), lines({ "+" }) { it.incomingMinor }, c.incomeBg, c.income, Modifier.weight(1f))
+            SummaryBox(stringResource(R.string.cal_outgoing_box), lines({ "−" }) { it.outgoingMinor }, c.expenseBg, c.expense, Modifier.weight(1f))
             SummaryBox(
-                "Итог", lines({ if (it > 0) "+" else "−" }) { it.incomingMinor - it.outgoingMinor },
+                stringResource(R.string.cal_total), lines({ if (it > 0) "+" else "−" }) { it.incomingMinor - it.outgoingMinor },
                 MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurface, Modifier.weight(1f),
             )
         }
         if (legend) Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(7.dp).background(c.expense, CircleShape))
-            Text("просрочка", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.cal_overdue_legend), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -156,7 +156,7 @@ private fun UndatedSummary(totals: List<MonthTotal>) {
     if (totals.isEmpty()) return
     val c = MaterialTheme.kvity
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text("Без точной даты", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.cal_undated), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
         totals.forEach { t ->
             val parts = listOfNotNull(
                 t.incomingMinor.takeIf { it > 0 }?.let { "+" + formatMoney(it, t.currency) to c.income },
@@ -196,7 +196,7 @@ private fun MonthGrid(
         for (i in 0 until 7) {
             val dow = firstDay.plus(i.toLong())
             Text(
-                dow.getDisplayName(TextStyle.SHORT, Locale("ru")).replaceFirstChar { it.uppercase() },
+                dow.getDisplayName(TextStyle.SHORT, appLocale).replaceFirstChar { it.uppercase() },
                 modifier = Modifier.weight(1f), textAlign = TextAlign.Center,
                 fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -246,7 +246,7 @@ private fun DayCell(
             val text = (if (key.second == MoneyFlow.IN) "+" else "−") + AmountFormatter.compact(list.sumOf { it.amountMinor }, cur.fractionDigits) + cur.symbol
             text to key.second
         }
-    val debtShown = if (debtLines.size > 2) listOf(debtLines[0], "ещё ${debtLines.size - 1}" to null) else debtLines
+    val debtShown = if (debtLines.size > 2) listOf(debtLines[0], androidx.compose.ui.platform.LocalContext.current.getString(R.string.cal_more, debtLines.size - 1) to null) else debtLines
     // регулярные платежи считаются отдельно от долгов и по каждой валюте (основная первой): итог со знаком
     val regularLines = regular.groupBy { it.currency }
         .toSortedMap(compareBy<String> { it != mainCurrency }.thenBy { it })
@@ -256,7 +256,7 @@ private fun DayCell(
             (if (net < 0) "−" else if (net > 0) "+" else "") + AmountFormatter.compact(kotlin.math.abs(net), cur.fractionDigits) + cur.symbol
         }
     // две строки под регулярные; если валют больше, вторая строка сворачивается в «ещё N»
-    val regularShown = if (regularLines.size > 2) listOf(regularLines[0], "ещё ${regularLines.size - 1}") else regularLines
+    val regularShown = if (regularLines.size > 2) listOf(regularLines[0], androidx.compose.ui.platform.LocalContext.current.getString(R.string.cal_more, regularLines.size - 1)) else regularLines
     val overdue = events.any { it.overdue }
 
     // высоты в sp: при крупном шрифте системы ячейка растёт вместе с текстом, а сумма внизу не обрезается
@@ -325,10 +325,10 @@ private fun DayDetails(
     SectionCard {
         Text(formatDate(day), fontWeight = FontWeight.Bold)
         if (events.isEmpty()) {
-            Text("В этот день ничего нет", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
+            Text(stringResource(R.string.cal_nothing), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
             return@SectionCard
         }
-        listOf(EventKind.DEBT to "Долги", EventKind.SUBSCRIPTION to "Регулярные платежи").forEach { (kind, heading) ->
+        listOf(EventKind.DEBT to stringResource(R.string.cal_debts), EventKind.SUBSCRIPTION to stringResource(R.string.cal_regular)).forEach { (kind, heading) ->
             val part = events.filter { it.kind == kind }
             if (part.isEmpty()) return@forEach
             Text(heading, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 10.dp))
@@ -338,25 +338,25 @@ private fun DayDetails(
                 val inn = t.incomingMinor
                 val out = t.outgoingMinor
                 Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TotalBox("Входящие", if (inn > 0) "+" + formatMoney(inn, code) else "—", c.incomeBg, c.income, Modifier.weight(1f))
-                    TotalBox("Исходящие", if (out > 0) "−" + formatMoney(out, code) else "—", c.expenseBg, c.expense, Modifier.weight(1f))
+                    TotalBox(stringResource(R.string.cal_in), if (inn > 0) "+" + formatMoney(inn, code) else "—", c.incomeBg, c.income, Modifier.weight(1f))
+                    TotalBox(stringResource(R.string.cal_out), if (out > 0) "−" + formatMoney(out, code) else "—", c.expenseBg, c.expense, Modifier.weight(1f))
                     val net = inn - out
-                    TotalBox("Итог", (if (net > 0) "+" else if (net < 0) "−" else "") + formatMoney(kotlin.math.abs(net), code),
+                    TotalBox(stringResource(R.string.cal_total), (if (net > 0) "+" else if (net < 0) "−" else "") + formatMoney(kotlin.math.abs(net), code),
                         MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
                 }
             }
             part.sortedBy { it.flow }.forEach { e ->
                 LabelRow(
                     onClick = { onOpen(e) },
-                    label = e.title, subtitle = listOfNotNull(e.subtitle, if (e.paid) "оплачено" else null).joinToString(" · ").ifEmpty { null },
+                    label = e.title, subtitle = listOfNotNull(e.subtitle, if (e.paid) stringResource(R.string.cal_paid) else null).joinToString(" · ").ifEmpty { null },
                     trailing = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (e.overdue) Text("просрочено", color = c.expense, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(end = 6.dp))
+                            if (e.overdue) Text(stringResource(R.string.cal_overdue), color = c.expense, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(end = 6.dp))
                             Text(
                                 (if (e.flow == MoneyFlow.IN) "+" else "−") + formatMoney(e.amountMinor, e.currency),
                                 color = if (e.flow == MoneyFlow.IN) c.income else c.expense, fontWeight = FontWeight.Bold,
                             )
-                            if (e.shareId != null || e.markable || e.kind == EventKind.DEBT) TextButton(onClick = { onMarkSharePaid(e) }) { Text(if (e.kind == EventKind.DEBT && e.flow == MoneyFlow.IN) "Получил" else "Оплатил") }
+                            if (e.shareId != null || e.markable || e.kind == EventKind.DEBT) TextButton(onClick = { onMarkSharePaid(e) }) { Text(if (e.kind == EventKind.DEBT && e.flow == MoneyFlow.IN) stringResource(R.string.cal_received) else stringResource(R.string.cal_paid_btn)) }
                         }
                     },
                 )

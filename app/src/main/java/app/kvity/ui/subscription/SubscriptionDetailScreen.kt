@@ -13,6 +13,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import app.kvity.R
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,12 +64,12 @@ fun SubscriptionDetailScreen(
     var deleteDialog by remember { mutableStateOf(false) }
 
     FormScreen(
-        title = view?.subscription?.name ?: "Регулярный платёж",
+        title = view?.subscription?.name ?: stringResource(R.string.sub_title_default),
         onBack = onBack,
-        actions = { TextButton(onClick = onEdit) { Text("Изменить") } },
+        actions = { TextButton(onClick = onEdit) { Text(stringResource(R.string.sub_edit)) } },
     ) {
         if (view == null) {
-            Text("Загрузка…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.sub_loading), color = MaterialTheme.colorScheme.onSurfaceVariant)
             return@FormScreen
         }
         val s = view.subscription
@@ -86,18 +88,18 @@ fun SubscriptionDetailScreen(
                 }
                 when (s.state) {
                     SubscriptionState.ACTIVE -> Unit
-                    SubscriptionState.PAUSED -> Pill("на паузе", c.warnBg, c.warn)
-                    SubscriptionState.CANCELLED -> Pill("отменена", c.expenseBg, c.expense)
+                    SubscriptionState.PAUSED -> Pill(stringResource(R.string.sub_paused), c.warnBg, c.warn)
+                    SubscriptionState.CANCELLED -> Pill(stringResource(R.string.sub_cancelled), c.expenseBg, c.expense)
                 }
             }
             if (s.state == SubscriptionState.ACTIVE && next != null) {
-                Text("Следующее списание: ${formatDate(next)}", modifier = Modifier.padding(top = 8.dp), fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.sub_next_charge, formatDate(next)), modifier = Modifier.padding(top = 8.dp), fontWeight = FontWeight.SemiBold)
             }
             if (s.payer == SubscriptionPayer.OTHER) {
-                Text("Платит ${view.payerName ?: "другой"}, это моя доля", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.sub_payer_my_share, view.payerName ?: stringResource(R.string.sub_other)), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            s.paymentMethodNote?.let { Text("Оплата: $it", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            s.trialEndsOn?.let { Text("Пробный период до ${formatDate(it)}", color = c.warn) }
+            s.paymentMethodNote?.let { Text(stringResource(R.string.sub_payment_method, it), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            s.trialEndsOn?.let { Text(stringResource(R.string.sub_trial_until, formatDate(it)), color = c.warn) }
             s.note?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
 
@@ -106,29 +108,29 @@ fun SubscriptionDetailScreen(
             val pending = charges.filter { it.markable && it.date <= today } + charges.filter { it.markable && it.date > today }.take(1)
             val lastPaid = charges.filter { it.paid }.takeLast(2)
             SectionCard {
-                Text("Мои списания", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.sub_my_charges), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (pending.isEmpty() && lastPaid.isEmpty()) {
-                    Text("Нет списаний", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.sub_no_charges), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 pending.forEach { e ->
                     LabelRow(
                         label = formatDate(e.date),
-                        subtitle = if (e.overdue) "просрочено" else if (e.date == today) "сегодня" else "ожидается",
+                        subtitle = if (e.overdue) stringResource(R.string.sub_overdue) else if (e.date == today) stringResource(R.string.sub_today) else stringResource(R.string.sub_expected),
                         trailing = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(formatMoney(e.amountMinor, e.currency), color = if (e.overdue) c.expense else MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
-                                TextButton(onClick = { onMarkChargePaid(e.date) }) { Text("Оплатил") }
+                                TextButton(onClick = { onMarkChargePaid(e.date) }) { Text(stringResource(R.string.sub_paid_btn)) }
                             }
                         },
                     )
                 }
                 lastPaid.forEach { e ->
                     LabelRow(
-                        label = formatDate(e.date), subtitle = "оплачено",
+                        label = formatDate(e.date), subtitle = stringResource(R.string.sub_paid_state),
                         trailing = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(formatMoney(e.amountMinor, e.currency), color = c.income, fontWeight = FontWeight.Bold)
-                                TextButton(onClick = { onMarkChargeUnpaid(e.date) }) { Text("Отменить") }
+                                TextButton(onClick = { onMarkChargeUnpaid(e.date) }) { Text(stringResource(R.string.sub_undo)) }
                             }
                         },
                     )
@@ -139,11 +141,11 @@ fun SubscriptionDetailScreen(
         if (s.payer == SubscriptionPayer.ME) {
             SectionCard {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("Участники", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    TextButton(onClick = { shareDialog = true }) { Text("+ Участник") }
+                    Text(stringResource(R.string.sub_participants), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    TextButton(onClick = { shareDialog = true }) { Text(stringResource(R.string.sub_add_participant)) }
                 }
                 if (view.shares.isEmpty()) {
-                    Text("Участников нет. Добавьте тех, кто возвращает вам долю.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.sub_no_participants), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             view.shares.forEach { sh ->
@@ -157,12 +159,12 @@ fun SubscriptionDetailScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 when (s.state) {
                     SubscriptionState.ACTIVE -> {
-                        OutlinedButton(onClick = { onSetState(SubscriptionState.PAUSED) }, modifier = Modifier.weight(1f)) { Text("Пауза") }
-                        OutlinedButton(onClick = { onSetState(SubscriptionState.CANCELLED) }, modifier = Modifier.weight(1f)) { Text("Отменить") }
+                        OutlinedButton(onClick = { onSetState(SubscriptionState.PAUSED) }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.sub_pause)) }
+                        OutlinedButton(onClick = { onSetState(SubscriptionState.CANCELLED) }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.sub_cancel_sub)) }
                     }
-                    else -> Button(onClick = { onSetState(SubscriptionState.ACTIVE) }, modifier = Modifier.weight(1f)) { Text("Возобновить") }
+                    else -> Button(onClick = { onSetState(SubscriptionState.ACTIVE) }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.sub_resume)) }
                 }
-                OutlinedButton(onClick = { deleteDialog = true }, modifier = Modifier.weight(1f)) { Text("Удалить") }
+                OutlinedButton(onClick = { deleteDialog = true }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.sub_delete)) }
             }
         }
     }
@@ -177,21 +179,22 @@ fun SubscriptionDetailScreen(
     if (deleteDialog) {
         AlertDialog(
             onDismissRequest = { deleteDialog = false },
-            title = { Text("Удалить регулярный платёж?") },
-            text = { Text("Регулярный платёж, участники и отметки об оплате будут удалены.") },
-            confirmButton = { TextButton(onClick = { deleteDialog = false; onDelete() }) { Text("Удалить") } },
-            dismissButton = { TextButton(onClick = { deleteDialog = false }) { Text("Отмена") } },
+            title = { Text(stringResource(R.string.sub_delete_title)) },
+            text = { Text(stringResource(R.string.sub_delete_text)) },
+            confirmButton = { TextButton(onClick = { deleteDialog = false; onDelete() }) { Text(stringResource(R.string.sub_delete)) } },
+            dismissButton = { TextButton(onClick = { deleteDialog = false }) { Text(stringResource(R.string.sub_dismiss)) } },
         )
     }
 }
 
+@Composable
 private fun periodText(s: app.kvity.data.SubscriptionEntity): String {
     val n = s.interval
     return when (s.periodicity) {
-        app.kvity.domain.Periodicity.WEEK -> if (n == 1) "раз в неделю" else "раз в $n нед."
-        app.kvity.domain.Periodicity.MONTH -> if (n == 1) "раз в месяц" else "раз в $n мес."
-        app.kvity.domain.Periodicity.YEAR -> if (n == 1) "раз в год" else "раз в $n г."
-        app.kvity.domain.Periodicity.DAYS -> "каждые $n дн."
+        app.kvity.domain.Periodicity.WEEK -> if (n == 1) stringResource(R.string.sub_weekly) else stringResource(R.string.sub_every_weeks, n)
+        app.kvity.domain.Periodicity.MONTH -> if (n == 1) stringResource(R.string.sub_monthly) else stringResource(R.string.sub_every_months, n)
+        app.kvity.domain.Periodicity.YEAR -> if (n == 1) stringResource(R.string.sub_yearly) else stringResource(R.string.sub_every_years, n)
+        app.kvity.domain.Periodicity.DAYS -> stringResource(R.string.sub_every_days, n)
     }
 }
 
@@ -212,9 +215,9 @@ private fun ShareCard(
     var confirmRemove by remember { mutableStateOf(false) }
     if (confirmRemove) {
         ConfirmDialog(
-            title = "Убрать участника?",
-            text = "${sh.counterpartyName} и его отметки об оплате будут удалены из этого регулярного платежа.",
-            confirmLabel = "Убрать",
+            title = stringResource(R.string.sub_remove_title),
+            text = stringResource(R.string.sub_remove_text, sh.counterpartyName),
+            confirmLabel = stringResource(R.string.sub_remove),
             onConfirm = { confirmRemove = false; onDelete() },
             onDismiss = { confirmRemove = false },
         )
@@ -225,23 +228,23 @@ private fun ShareCard(
             Column {
                 Text(sh.counterpartyName, fontWeight = FontWeight.Bold)
                 Text(
-                    "${formatMoney(sh.share.amountMinor, sh.share.currency)} за период",
+                    stringResource(R.string.sub_per_period, formatMoney(sh.share.amountMinor, sh.share.currency)),
                     fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (overdue.isNotEmpty()) Pill("не оплатил: ${overdue.size}", c.expenseBg, c.expense)
-            else if (upcoming != null && upcoming.periodDate == today) Pill("срок сегодня", c.warnBg, c.warn)
-            else Pill("в срок", c.incomeBg, c.income)
+            if (overdue.isNotEmpty()) Pill(stringResource(R.string.sub_unpaid_count, overdue.size), c.expenseBg, c.expense)
+            else if (upcoming != null && upcoming.periodDate == today) Pill(stringResource(R.string.sub_due_today), c.warnBg, c.warn)
+            else Pill(stringResource(R.string.sub_on_time), c.incomeBg, c.income)
         }
-        overdue.forEach { d -> DueRow(sh, d.periodDate, "просрочено", c.expense, paid = false, onMarkPaid, onMarkUnpaid, onRemind) }
-        upcoming?.let { d -> DueRow(sh, d.periodDate, "ожидается", MaterialTheme.colorScheme.onSurface, paid = false, onMarkPaid, onMarkUnpaid, onRemind) }
+        overdue.forEach { d -> DueRow(sh, d.periodDate, stringResource(R.string.sub_overdue), c.expense, paid = false, onMarkPaid, onMarkUnpaid, onRemind) }
+        upcoming?.let { d -> DueRow(sh, d.periodDate, stringResource(R.string.sub_expected), MaterialTheme.colorScheme.onSurface, paid = false, onMarkPaid, onMarkUnpaid, onRemind) }
         if (expanded) {
-            lastPaid.forEach { d -> DueRow(sh, d.periodDate, "оплачено", c.income, paid = true, onMarkPaid, onMarkUnpaid, onRemind) }
+            lastPaid.forEach { d -> DueRow(sh, d.periodDate, stringResource(R.string.sub_paid_state), c.income, paid = true, onMarkPaid, onMarkUnpaid, onRemind) }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            if (lastPaid.isNotEmpty()) TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "Скрыть оплаченные" else "Показать оплаченные") }
+            if (lastPaid.isNotEmpty()) TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) stringResource(R.string.sub_hide_paid) else stringResource(R.string.sub_show_paid)) }
             else Text("")
-            TextButton(onClick = { confirmRemove = true }) { Text("Убрать") }
+            TextButton(onClick = { confirmRemove = true }) { Text(stringResource(R.string.sub_remove)) }
         }
     }
 }
@@ -263,10 +266,10 @@ private fun DueRow(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(formatMoney(sh.share.amountMinor, sh.share.currency), color = color, fontWeight = FontWeight.Bold)
                 if (paid) {
-                    TextButton(onClick = { onMarkUnpaid(sh, period) }) { Text("Отменить") }
+                    TextButton(onClick = { onMarkUnpaid(sh, period) }) { Text(stringResource(R.string.sub_undo)) }
                 } else {
-                    TextButton(onClick = { onRemind(sh, period) }) { Text("Напомнить") }
-                    TextButton(onClick = { onMarkPaid(sh, period) }) { Text("Оплатил") }
+                    TextButton(onClick = { onRemind(sh, period) }) { Text(stringResource(R.string.sub_remind)) }
+                    TextButton(onClick = { onMarkPaid(sh, period) }) { Text(stringResource(R.string.sub_paid_btn)) }
                 }
             }
         },
@@ -291,10 +294,10 @@ private fun ShareDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Новый участник") },
+        title = { Text(stringResource(R.string.sub_new_participant)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(name, { name = it.take(Limits.NAME) }, label = { Text("Имя") }, singleLine = true)
+                OutlinedTextField(name, { name = it.take(Limits.NAME) }, label = { Text(stringResource(R.string.sub_name)) }, singleLine = true)
                 val hints = knownNames.filter { it.contains(name.trim(), true) && !it.equals(name.trim(), true) }.take(3)
                 if (name.isNotBlank() && hints.isNotEmpty()) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -302,15 +305,15 @@ private fun ShareDialog(
                     }
                 }
                 OutlinedTextField(
-                    amountText, { amountText = it }, label = { Text("Доля за период, ${cur.symbol}") },
+                    amountText, { amountText = it }, label = { Text(stringResource(R.string.sub_share_label, cur.symbol)) },
                     singleLine = true, isError = amountText.isNotBlank() && amount == null,
                 )
-                DatePickerField("Учитывать с", from, { from = it })
+                DatePickerField(stringResource(R.string.sub_count_from), from, { from = it })
             }
         },
         confirmButton = {
-            TextButton(enabled = name.isNotBlank() && amount != null, onClick = { onConfirm(name, amount!!, from) }) { Text("Добавить") }
+            TextButton(enabled = name.isNotBlank() && amount != null, onClick = { onConfirm(name, amount!!, from) }) { Text(stringResource(R.string.sub_add)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.sub_dismiss)) } },
     )
 }
