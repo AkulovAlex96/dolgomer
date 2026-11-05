@@ -1,5 +1,6 @@
 package app.kvity.security
 
+import android.os.SystemClock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -99,13 +100,14 @@ fun LockScreen(
 ) {
     var message by remember { mutableStateOf<String?>(null) }
     var attempt by remember { mutableStateOf(0) }
-    var lockedUntil by remember { mutableStateOf(pinStore.lockedUntil()) }
+    // Конец блокировки в монотонном времени (elapsedRealtime): перевод системных часов его не сдвигает.
+    var lockedUntil by remember { mutableStateOf(pinStore.lockRemainingMillis().let { if (it > 0) SystemClock.elapsedRealtime() + it else 0L }) }
     var secondsLeft by remember { mutableStateOf(0L) }
 
     LaunchedEffect(biometricEnabled) { if (biometricEnabled) onBiometric() }
     LaunchedEffect(lockedUntil) {
-        while (lockedUntil > System.currentTimeMillis()) {
-            secondsLeft = (lockedUntil - System.currentTimeMillis()) / 1000 + 1
+        while (lockedUntil > SystemClock.elapsedRealtime()) {
+            secondsLeft = (lockedUntil - SystemClock.elapsedRealtime()) / 1000 + 1
             message = "Слишком много попыток. Подождите $secondsLeft с."
             delay(500)
         }
@@ -117,11 +119,11 @@ fun LockScreen(
             length = pinStore.length, title = "Квиты", message = message,
             resetKey = attempt,
             onComplete = { pin ->
-                if (lockedUntil > System.currentTimeMillis()) { attempt++; return@PinPad }
+                if (lockedUntil > SystemClock.elapsedRealtime()) { attempt++; return@PinPad }
                 when (val r = pinStore.verify(pin)) {
                     PinResult.Ok -> onUnlocked()
                     is PinResult.Wrong -> { message = "Неверный PIN"; attempt++ }
-                    is PinResult.Locked -> { lockedUntil = r.untilMillis; attempt++ }
+                    is PinResult.Locked -> { lockedUntil = SystemClock.elapsedRealtime() + r.remainingMillis; attempt++ }
                 }
             },
             footer = {
