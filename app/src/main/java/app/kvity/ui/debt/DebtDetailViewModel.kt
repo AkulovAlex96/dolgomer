@@ -28,10 +28,28 @@ class DebtDetailViewModel(
         viewModelScope.launch { repository.ensureMaterialized(debtId) }
     }
 
-    fun addPayment(date: LocalDate, amountMinor: Long, plannedId: String? = null, monthOnly: Boolean = false) {
+    fun addPayment(
+        date: LocalDate, amountMinor: Long, plannedId: String? = null, monthOnly: Boolean = false,
+        paymentMethod: String? = null, note: String? = null,
+    ) {
         viewModelScope.launch {
-            _recalcOffer.value = repository.addPayment(debtId, date, amountMinor, plannedId = plannedId, monthOnly = monthOnly)
+            _recalcOffer.value = repository.addPayment(
+                debtId, date, amountMinor, note, plannedId = plannedId, monthOnly = monthOnly, paymentMethod = paymentMethod,
+            )
         }
+    }
+
+    fun updatePayment(
+        id: String, date: LocalDate, amountMinor: Long, plannedId: String?, monthOnly: Boolean,
+        paymentMethod: String?, note: String?,
+    ) {
+        viewModelScope.launch {
+            _recalcOffer.value = repository.updatePayment(id, date, amountMinor, plannedId, monthOnly, paymentMethod, note)
+        }
+    }
+
+    fun setArchived(archived: Boolean) {
+        viewModelScope.launch { repository.setArchived(debtId, archived) }
     }
 
     fun recalc() {

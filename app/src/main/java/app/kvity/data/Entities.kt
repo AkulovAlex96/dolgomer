@@ -28,6 +28,8 @@ data class CounterpartyEntity(
     val phone: String? = null,
     val note: String? = null,
     val createdAt: Long,
+    /** В архиве: не показывается в списке людей и подсказках имён, но история сохраняется. */
+    @ColumnInfo(defaultValue = "0") val archived: Boolean = false,
 )
 
 @Serializable
@@ -108,6 +110,8 @@ data class PaymentEntity(
     val plannedId: String? = null,
     /** Указан только месяц, день неизвестен: [date] хранит первое число месяца. */
     @ColumnInfo(defaultValue = "0") val monthOnly: Boolean = false,
+    /** Способ оплаты (текстовая заметка, например «Карта Tinkoff»). */
+    val paymentMethod: String? = null,
 )
 
 /** Плановый платёж долга: создаётся из условий, но каждый можно изменить, пропустить или удалить. */

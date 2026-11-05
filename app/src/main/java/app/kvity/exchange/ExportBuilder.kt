@@ -93,7 +93,7 @@ object ExportBuilder {
                 cell(date(d.startDate)),
                 cell(if (d.termType == TermType.ONE_TIME) date(d.dueDate) else ""),
                 cell(d.note),
-                money(s.remainingMinor, d.currency), cell(statusLabel(s.status)),
+                money(s.remainingMinor, d.currency), cell(if (d.archived) "архив" else statusLabel(s.status)),
                 cell(when (d.termType) { TermType.ONE_TIME -> "разовый"; TermType.SCHEDULE -> "по графику"; TermType.NONE -> "без срока" }),
                 cell(date(s.nextDue?.dueDate)),
             )
@@ -102,12 +102,12 @@ object ExportBuilder {
 
     private fun paymentsTable(debts: List<DebtView>) = Table(
         ExportTable.PAYMENTS.title,
-        listOf("Контрагент", "Направление", "Валюта", "Дата", "Сумма", "Комментарий"),
+        listOf("Контрагент", "Направление", "Валюта", "Дата", "Сумма", "Комментарий", "Способ оплаты"),
         debts.flatMap { v ->
             v.payments.sortedBy { it.date }.map { p ->
                 listOf(
                     cell(v.counterpartyName), cell(directionLabel(v.debt.direction)), cell(v.debt.currency),
-                    cell(date(p.date)), money(p.amountMinor, v.debt.currency), cell(p.note),
+                    cell(date(p.date)), money(p.amountMinor, v.debt.currency), cell(p.note), cell(p.paymentMethod),
                 )
             }
         },

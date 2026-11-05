@@ -2,6 +2,7 @@ package app.kvity.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.kvity.domain.ArchiveRules
 import app.kvity.data.DebtRepository
 import app.kvity.data.DebtView
 import app.kvity.data.NewShare
@@ -35,8 +36,21 @@ class PeopleViewModel(
         viewModelScope.launch { people.update(p.copy(name = name.trim(), phone = phone, note = note)) }
     }
 
-    fun delete(personId: String) {
-        viewModelScope.launch { people.deleteIfUnused(personId) }
+    /** Удаляет контрагента; [onResult] получает false, если удалить нельзя (есть долги, в том числе закрытые, или доли). */
+    fun delete(personId: String, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch { onResult(people.deleteIfUnused(personId)) }
+    }
+
+    /** Отправляет в архив. Возвращает причину отказа или null, если архивация выполнена. */
+    fun archive(personId: String): String? {
+        val p = persons.value.firstOrNull { it.person.id == personId } ?: return null
+        val reason = ArchiveRules.archiveBlockReason(p.balance, p.activeShareCount)
+        if (reason == null) viewModelScope.launch { people.setArchived(personId, true) }
+        return reason
+    }
+
+    fun unarchive(personId: String) {
+        viewModelScope.launch { people.setArchived(personId, false) }
     }
 }
 

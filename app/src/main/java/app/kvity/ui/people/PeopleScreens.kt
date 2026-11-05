@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -41,8 +42,15 @@ import app.kvity.ui.formatMoney
 import app.kvity.ui.theme.kvity
 
 @Composable
-fun PeopleScreen(people: List<PersonView>, onOpen: (String) -> Unit) {
+fun PeopleScreen(
+    people: List<PersonView>,
+    onOpen: (String) -> Unit,
+    /** Архивные контрагенты: показываются в свёрнутом разделе «Архив». */
+    archived: List<PersonView> = emptyList(),
+    onUnarchive: (String) -> Unit = {},
+) {
     val c = MaterialTheme.kvity
+    var archiveOpen by rememberSaveable { mutableStateOf(false) }
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
@@ -74,6 +82,30 @@ fun PeopleScreen(people: List<PersonView>, onOpen: (String) -> Unit) {
                     }
                 }
             }
+            if (archived.isNotEmpty()) {
+                item {
+                    Row(
+                        Modifier.fillMaxWidth().clickable { archiveOpen = !archiveOpen }.padding(top = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("Архив (${archived.size})", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(if (archiveOpen) "▲" else "▼", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                if (archiveOpen) {
+                    items(archived, key = { "archived-" + it.person.id }) { p ->
+                        SectionCard(modifier = Modifier.clickable { onOpen(p.person.id) }) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(p.person.name, fontWeight = FontWeight.SemiBold)
+                                    Text("в архиве", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                TextButton(onClick = { onUnarchive(p.person.id) }) { Text("Вернуть из архива") }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -85,9 +117,13 @@ fun PersonDetailScreen(
     subs: List<SubscriptionView>,
     onBack: () -> Unit,
     onSave: (name: String, phone: String?, note: String?) -> Unit,
-    onDelete: () -> Unit,
+    /** Удаление: результат приходит в переданный колбэк (false: удалить нельзя). */
+    onDelete: (onResult: (Boolean) -> Unit) -> Unit,
     onOpenDebt: (String) -> Unit,
     onOpenSubscription: (String) -> Unit,
+    /** Отправка в архив: возвращает причину отказа или null, если выполнено. */
+    onArchive: () -> String? = { null },
+    onUnarchive: () -> Unit = {},
     /** Имена остальных контрагентов в нижнем регистре: два контрагента с одним именем запутали бы импорт, где люди ищутся по имени. */
     otherNames: Set<String> = emptySet(),
 ) {
@@ -97,13 +133,14 @@ fun PersonDetailScreen(
         var name by rememberSaveable(person.person.id) { mutableStateOf(person.person.name) }
         var phone by rememberSaveable(person.person.id) { mutableStateOf(person.person.phone ?: "") }
         var note by rememberSaveable(person.person.id) { mutableStateOf(person.person.note ?: "") }
-        var error by rememberSaveable { mutableStateOf(false) }
+        var deleteBlocked by rememberSaveable { mutableStateOf(false) }
+        var archiveError by rememberSaveable { mutableStateOf<String?>(null) }
         var confirmDelete by rememberSaveable { mutableStateOf(false) }
         if (confirmDelete) {
             ConfirmDialog(
                 title = "Удалить контрагента?",
                 text = "«${person.person.name}» будет удалён.",
-                onConfirm = { confirmDelete = false; onDelete() },
+                onConfirm = { confirmDelete = false; onDelete { ok -> if (!ok) deleteBlocked = true } },
                 onDismiss = { confirmDelete = false },
             )
         }
@@ -168,9 +205,23 @@ fun PersonDetailScreen(
             }
         }
 
-        TextButton(onClick = {
-            if (person.debtCount == 0 && person.shareCount == 0) confirmDelete = true else error = true
-        }) { Text("Удалить контрагента") }
-        if (error) Text("Нельзя удалить: есть долги или регулярные платежи.", color = c.expense)
+        if (person.archived) {
+            Text("Контрагент в архиве: не показывается в списке людей и подсказках имён.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Button(onClick = onUnarchive, modifier = Modifier.fillMaxWidth()) { Text("Вернуть из архива") }
+        } else {
+            OutlinedButton(onClick = { archiveError = onArchive() }, modifier = Modifier.fillMaxWidth()) { Text("В архив") }
+        }
+        archiveError?.let { Text(it, color = c.expense) }
+        TextButton(onClick = { confirmDelete = true }) { Text("Удалить контрагента") }
+        if (deleteBlocked) {
+            Text(
+                "Нельзя удалить: у контрагента есть долги (в том числе закрытые) или регулярные платежи. " +
+                    "Вместо удаления отправьте его в архив: история сохранится.",
+                color = c.expense,
+            )
+            if (!person.archived) {
+                OutlinedButton(onClick = { deleteBlocked = false; archiveError = onArchive() }, modifier = Modifier.fillMaxWidth()) { Text("В архив") }
+            }
+        }
     }
 }

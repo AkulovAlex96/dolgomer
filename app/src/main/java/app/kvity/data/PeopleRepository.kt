@@ -12,7 +12,11 @@ data class PersonView(
     val balance: Map<String, Long>,
     val debtCount: Int,
     val shareCount: Int,
-)
+    /** Число действующих долей в общих подписках (мешает архивации). */
+    val activeShareCount: Int = 0,
+) {
+    val archived: Boolean get() = person.archived
+}
 
 private class SubsData(
     val shares: List<SubscriptionShareEntity>,
@@ -55,11 +59,13 @@ class PeopleRepository(private val db: KvityDatabase) {
             // подписки человека: он участник (возвращает долю) или он плательщик
             val subIds = shares.filter { it.counterpartyId == p.id && it.active }.map { it.subscriptionId }.toSet() +
                 subscriptions.filter { it.payerCounterpartyId == p.id }.map { it.id }
-            PersonView(p, balance.filterValues { it != 0L }, myDebts.size, subIds.size)
+            PersonView(p, balance.filterValues { it != 0L }, myDebts.size, subIds.size, shares.count { it.counterpartyId == p.id && it.active })
         }
     }
 
     suspend fun update(p: CounterpartyEntity) = db.counterparties().update(p)
+
+    suspend fun setArchived(id: String, archived: Boolean) = db.counterparties().setArchived(id, archived)
 
     /** Удаляет контрагента, если у него нет долгов и долей. Возвращает false, если удалить нельзя. */
     suspend fun deleteIfUnused(id: String): Boolean {
@@ -70,4 +76,12 @@ class PeopleRepository(private val db: KvityDatabase) {
         db.counterparties().delete(id)
         return true
     }
+}
+
+/** Ищет контрагента по имени; найденный архивный возвращается из архива (с ним снова заводят долг или платёж). */
+suspend fun CounterpartyDao.findByNameRevive(name: String): CounterpartyEntity? {
+    val found = findByName(name) ?: return null
+    if (!found.archived) return found
+    setArchived(found.id, false)
+    return found.copy(archived = false)
 }

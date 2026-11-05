@@ -40,6 +40,8 @@ data class DashboardState(
     val owedToMeTotal: Map<String, Long> = emptyMap(),
     val iOweTotal: Map<String, Long> = emptyMap(),
     val debts: List<DebtView> = emptyList(),
+    /** Архивные долги: показываются отдельным свёрнутым разделом, в суммы и календарь не входят. */
+    val archivedDebts: List<DebtView> = emptyList(),
     // подписки
     val subsIncoming: BucketTotals = emptyMap(),
     val subsOutgoing: BucketTotals = emptyMap(),
@@ -56,6 +58,12 @@ class DashboardViewModel(
     settings: SettingsStore,
 ) : ViewModel() {
 
+    private val debtRepo = debts
+
+    fun unarchiveDebt(id: String) {
+        viewModelScope.launch { debtRepo.setArchived(id, false) }
+    }
+
     fun markPaid(e: CalendarEvent) {
         val period = e.periodDate ?: return
         viewModelScope.launch {
@@ -65,17 +73,20 @@ class DashboardViewModel(
     }
 
     val state: StateFlow<DashboardState> = combine(
-        debts.observeDebts(), subscriptions.observeAll(), settings.settings, ticker(),
+        debts.observeDebts(includeArchived = true), subscriptions.observeAll(), settings.settings, ticker(),
     ) { d, s, set, today -> buildState(d, s, today, set.firstDayOfWeek) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardState())
 
     companion object {
         fun buildState(
-            debts: List<DebtView>,
+            allDebts: List<DebtView>,
             subs: List<SubscriptionView>,
             today: LocalDate,
             firstDay: DayOfWeek = DayOfWeek.MONDAY,
         ): DashboardState {
+            // архивные долги не влияют ни на суммы, ни на периоды
+            val debts = allDebts.filter { !it.debt.archived }
+            val archived = allDebts.filter { it.debt.archived }.sortedBy { it.counterpartyName.lowercase() }
             fun duesOf(direction: Direction): List<Due> = debts
                 .filter { it.debt.direction == direction && it.summary.status != DebtStatus.CLOSED }
                 .flatMap { v ->
@@ -119,6 +130,7 @@ class DashboardViewModel(
                         .thenBy { it.summary.status != DebtStatus.OVERDUE }
                         .thenBy { it.summary.nextDue?.dueDate ?: LocalDate.MAX },
                 ),
+                archivedDebts = archived,
                 subsIncoming = Buckets.aggregate(subDues(MoneyFlow.IN), today, firstDay),
                 subsOutgoing = Buckets.aggregate(subDues(MoneyFlow.OUT), today, firstDay),
                 subsIncomingMonthly = monthlyIn,
