@@ -1,11 +1,13 @@
 package app.kvity.data
 
+import android.content.Context
+import app.kvity.R
 import java.time.LocalDate
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 
 /** Справочники: курсы валют, шаблоны напоминаний, журнал напоминаний. */
-class ReferenceRepository(private val db: KvityDatabase) {
+class ReferenceRepository(private val db: KvityDatabase, private val appContext: Context? = null) {
 
     val rates: Flow<List<ExchangeRateEntity>> = db.rates().observeAll()
     val templates: Flow<List<ReminderTemplateEntity>> = db.templates().observeAll()
@@ -24,13 +26,14 @@ class ReferenceRepository(private val db: KvityDatabase) {
 
     suspend fun seedDefaults() {
         if (db.templates().count() > 0) return
+        val context = appContext ?: return
         saveTemplate(
-            "Мягкий",
-            "Привет, {имя}! Напоминаю про долг: осталось {остаток}, срок возврата {срок}. Когда сможешь вернуть?",
+            context.getString(R.string.settings_seed_soft_name),
+            context.getString(R.string.settings_seed_soft_text),
         )
         saveTemplate(
-            "Строгий",
-            "{имя}, срок возврата долга ({остаток}) {срок}. Просрочка {дней_просрочки} дн. Прошу вернуть в ближайшее время.",
+            context.getString(R.string.settings_seed_strict_name),
+            context.getString(R.string.settings_seed_strict_text),
         )
     }
 
@@ -45,8 +48,8 @@ class ReferenceRepository(private val db: KvityDatabase) {
 
 /** Подстановка переменных шаблона. */
 object TemplateText {
-    private val overdueSentence = Regex("""\s*[^.!?]*\{дней_просрочки\}[^.!?]*[.!?]?""")
-    private val otherPlaceholder = Regex("""\{(?!дней_просрочки\})""")
+    private val overdueSentence = Regex("""\s*[^.!?]*\{(?:дней_просрочки|overdue_days)\}[^.!?]*[.!?]?""")
+    private val otherPlaceholder = Regex("""\{(?!дней_просрочки\}|overdue_days\})""")
 
     /**
      * Если долг не просрочен, предложение вида «Просрочка {дней_просрочки} дн.» убирается целиком (иначе выйдет «Просрочка 0 дн.»).
@@ -66,9 +69,9 @@ object TemplateText {
         due: String,
         overdueDays: Long,
     ): String = withoutOverdueSentence(template, overdueDays)
-        .replace("{имя}", name)
-        .replace("{сумма}", amount)
-        .replace("{остаток}", remaining)
-        .replace("{срок}", due)
-        .replace("{дней_просрочки}", overdueDays.toString())
+        .replace("{имя}", name).replace("{name}", name)
+        .replace("{сумма}", amount).replace("{amount}", amount)
+        .replace("{остаток}", remaining).replace("{remaining}", remaining)
+        .replace("{срок}", due).replace("{due}", due)
+        .replace("{дней_просрочки}", overdueDays.toString()).replace("{overdue_days}", overdueDays.toString())
 }

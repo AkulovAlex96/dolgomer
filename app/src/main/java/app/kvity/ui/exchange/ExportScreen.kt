@@ -1,5 +1,7 @@
 package app.kvity.ui.exchange
 
+import app.kvity.R
+import androidx.compose.ui.res.stringResource
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -46,6 +48,14 @@ import kotlinx.coroutines.withContext
 
 private enum class Format(val title: String) { XLSX("Excel (.xlsx)"), CSV("CSV") }
 
+private fun tableTitle(t: ExportTable): Int = when (t) {
+    ExportTable.DEBTS -> R.string.export_table_debts
+    ExportTable.PAYMENTS -> R.string.export_table_payments
+    ExportTable.SUBSCRIPTIONS -> R.string.export_table_subscriptions
+    ExportTable.SHARES -> R.string.export_table_shares
+    ExportTable.PEOPLE -> R.string.export_table_people
+}
+
 private class ExportFile(val name: String, val mime: String, val bytes: ByteArray)
 
 @Composable
@@ -91,34 +101,36 @@ fun ExportScreen(app: KvityApp, onBack: () -> Unit) {
         if (uri != null && file != null) {
             scope.launch(Dispatchers.IO) {
                 val ok = runCatching { context.contentResolver.openOutputStream(uri)!!.use { it.write(file.bytes) } }.isSuccess
-                withContext(Dispatchers.Main) { Toast.makeText(context, if (ok) "Файл сохранён" else "Не удалось сохранить", Toast.LENGTH_SHORT).show() }
+                withContext(Dispatchers.Main) { Toast.makeText(context, context.getString(if (ok) R.string.export_file_saved else R.string.export_save_failed), Toast.LENGTH_SHORT).show() }
             }
         }
     }
 
-    FormScreen(title = "Экспорт", onBack = onBack) {
+    FormScreen(title = stringResource(R.string.export_title), onBack = onBack) {
         SectionCard {
-            Text("Формат", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.export_format), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             ChipRow(Format.entries.map { it to it.title }, format, { format = it })
             Text(
-                if (format == Format.XLSX) "Одна книга, каждая таблица на своём листе."
-                else "Для нескольких таблиц получится архив .zip с отдельным файлом на каждую. Разделитель «;», кодировка UTF-8: открывается в Excel.",
+                stringResource(if (format == Format.XLSX) R.string.export_xlsx_note else R.string.export_csv_note),
                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         SectionCard {
-            Text("Что выгрузить", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.export_what), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             ExportTable.entries.forEach { t ->
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = t in tables, onCheckedChange = { on -> tables = if (on) tables + t else tables - t })
-                    Text(t.title)
+                    Text(stringResource(tableTitle(t)))
                 }
             }
         }
         SectionCard {
-            Text("Долги и платежи", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.export_debts_and_payments), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             ChipRow(
-                listOf<Pair<Direction?, String>>(null to "Все", Direction.OWED_TO_ME to "Мне должны", Direction.I_OWE to "Я должен"),
+                listOf<Pair<Direction?, String>>(
+                    null to stringResource(R.string.export_all), Direction.OWED_TO_ME to stringResource(R.string.export_owed_to_me),
+                    Direction.I_OWE to stringResource(R.string.export_i_owe),
+                ),
                 direction, { direction = it },
             )
         }
@@ -134,7 +146,7 @@ fun ExportScreen(app: KvityApp, onBack: () -> Unit) {
                         busy = false
                     }
                 },
-            ) { Text("Сохранить в файл") }
+            ) { Text(stringResource(R.string.export_save_file)) }
             OutlinedButton(
                 enabled = tables.isNotEmpty() && !busy, modifier = Modifier.weight(1f),
                 onClick = {
@@ -153,11 +165,11 @@ fun ExportScreen(app: KvityApp, onBack: () -> Unit) {
                             putExtra(Intent.EXTRA_STREAM, uri)
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
-                        context.startActivity(Intent.createChooser(send, "Отправить файл"))
+                        context.startActivity(Intent.createChooser(send, context.getString(R.string.export_send_file)))
                         busy = false
                     }
                 },
-            ) { Text("Поделиться") }
+            ) { Text(stringResource(R.string.export_share)) }
         }
     }
 }

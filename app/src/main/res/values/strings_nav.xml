@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_tab_home">Главная</string>
+    <string name="nav_tab_calendar">Календарь</string>
+    <string name="nav_tab_people">Люди</string>
+    <string name="nav_tab_more">Ещё</string>
+    <string name="nav_more_settings">Настройки</string>
+    <string name="nav_more_settings_sub">Тема, валюты, уведомления, безопасность</string>
+    <string name="nav_more_backup">Резервная копия</string>
+    <string name="nav_more_backup_sub">Сохранить данные в файл или Google Drive, восстановить</string>
+    <string name="nav_more_export">Экспорт</string>
+    <string name="nav_more_export_sub">Долги, платежи и регулярные платежи в Excel или CSV</string>
+    <string name="nav_more_import">Импорт</string>
+    <string name="nav_more_import_sub">Загрузить данные из Excel, CSV или zip</string>
+    <string name="nav_more_rates">Курсы валют</string>
+    <string name="nav_more_rates_sub">Для необязательного пересчёта итогов</string>
+    <string name="nav_more_templates">Шаблоны сообщений</string>
+    <string name="nav_more_templates_sub">Напоминания должникам</string>
+    <string name="nav_attachments_debt">Вложения (расписка, документы)</string>
+    <string name="nav_attachments_receipts">Чеки</string>
+    <string name="nav_due_not_set">не задан</string>
+</resources>

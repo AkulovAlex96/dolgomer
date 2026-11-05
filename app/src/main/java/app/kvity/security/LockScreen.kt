@@ -1,5 +1,7 @@
 package app.kvity.security
 
+import app.kvity.R
+import androidx.compose.ui.res.stringResource
 import android.os.SystemClock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -98,6 +100,7 @@ fun LockScreen(
     onBiometric: () -> Unit,
     onUnlocked: () -> Unit,
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     var message by remember { mutableStateOf<String?>(null) }
     var attempt by remember { mutableStateOf(0) }
     // Конец блокировки в монотонном времени (elapsedRealtime): перевод системных часов его не сдвигает.
@@ -108,7 +111,7 @@ fun LockScreen(
     LaunchedEffect(lockedUntil) {
         while (lockedUntil > SystemClock.elapsedRealtime()) {
             secondsLeft = (lockedUntil - SystemClock.elapsedRealtime()) / 1000 + 1
-            message = "Слишком много попыток. Подождите $secondsLeft с."
+            message = context.getString(R.string.lock_too_many, secondsLeft)
             delay(500)
         }
         if (lockedUntil > 0) { message = null; lockedUntil = 0 }
@@ -116,19 +119,19 @@ fun LockScreen(
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
         PinPad(
-            length = pinStore.length, title = "Квиты", message = message,
+            length = pinStore.length, title = stringResource(R.string.app_name), message = message,
             resetKey = attempt,
             onComplete = { pin ->
                 if (lockedUntil > SystemClock.elapsedRealtime()) { attempt++; return@PinPad }
                 when (val r = pinStore.verify(pin)) {
                     PinResult.Ok -> onUnlocked()
-                    is PinResult.Wrong -> { message = "Неверный PIN"; attempt++ }
+                    is PinResult.Wrong -> { message = context.getString(R.string.lock_wrong_pin); attempt++ }
                     is PinResult.Locked -> { lockedUntil = SystemClock.elapsedRealtime() + r.remainingMillis; attempt++ }
                 }
             },
             footer = {
                 if (biometricEnabled) {
-                    TextButton(onClick = onBiometric, modifier = Modifier.padding(top = 12.dp)) { Text("Войти по отпечатку") }
+                    TextButton(onClick = onBiometric, modifier = Modifier.padding(top = 12.dp)) { Text(stringResource(R.string.lock_biometric_button)) }
                 }
             },
         )

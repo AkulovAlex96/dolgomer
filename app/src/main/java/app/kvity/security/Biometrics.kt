@@ -1,5 +1,6 @@
 package app.kvity.security
 
+import app.kvity.R
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
@@ -17,9 +18,9 @@ object Biometrics {
         }
         val prompt = BiometricPrompt(activity, ContextCompat.getMainExecutor(activity), callback)
         val info = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Квиты")
-            .setSubtitle("Подтвердите вход")
-            .setNegativeButtonText("Ввести PIN")
+            .setTitle(activity.getString(R.string.app_name))
+            .setSubtitle(activity.getString(R.string.lock_biometric_subtitle))
+            .setNegativeButtonText(activity.getString(R.string.lock_biometric_negative))
             .setAllowedAuthenticators(AUTH)
             .build()
         prompt.authenticate(info)

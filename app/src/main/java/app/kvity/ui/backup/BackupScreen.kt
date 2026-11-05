@@ -1,5 +1,7 @@
 package app.kvity.ui.backup
 
+import app.kvity.R
+import androidx.compose.ui.res.stringResource
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -58,9 +60,9 @@ fun BackupScreen(manager: BackupManager, lastBackupMillis: Long, onBack: () -> U
             busy = true
             message = try {
                 context.contentResolver.openOutputStream(uri)!!.use { manager.create(it, password) }
-                "Копия сохранена"
+                context.getString(R.string.backup_saved)
             } catch (e: Exception) {
-                "Не удалось сохранить копию: ${e.message}"
+                context.getString(R.string.backup_save_failed, e.message)
             }
             busy = false
         }
@@ -79,7 +81,7 @@ fun BackupScreen(manager: BackupManager, lastBackupMillis: Long, onBack: () -> U
                 message = e.message
                 step = Step.Idle
             } catch (e: Exception) {
-                message = "Не удалось прочитать файл: ${e.message}"
+                message = context.getString(R.string.backup_read_failed_detail, e.message)
                 step = Step.Idle
             }
             busy = false
@@ -91,7 +93,7 @@ fun BackupScreen(manager: BackupManager, lastBackupMillis: Long, onBack: () -> U
         val head = ByteArray(4)
         val read = runCatching { context.contentResolver.openInputStream(uri)!!.use { it.read(head) } }.getOrDefault(-1)
         when {
-            read < 4 -> { message = "Не удалось прочитать файл"; step = Step.Idle }
+            read < 4 -> { message = context.getString(R.string.backup_read_failed); step = Step.Idle }
             BackupCodec.isEncrypted(head) -> step = Step.AskRestorePassword(uri, wrong = false)
             else -> inspect(uri, null)
         }
@@ -102,42 +104,42 @@ fun BackupScreen(manager: BackupManager, lastBackupMillis: Long, onBack: () -> U
             busy = true
             message = try {
                 context.contentResolver.openInputStream(uri)!!.use { manager.restore(it, pass) }
-                "Данные восстановлены"
+                context.getString(R.string.backup_restored)
             } catch (e: WrongPasswordException) {
                 step = Step.AskRestorePassword(uri, wrong = true)
                 null
             } catch (e: BackupFormatException) {
                 e.message
             } catch (e: Exception) {
-                "Не удалось восстановить: ${e.message}"
+                context.getString(R.string.backup_restore_failed, e.message)
             }
             busy = false
         }
     }
 
-    FormScreen(title = "Резервная копия", onBack = onBack) {
+    FormScreen(title = stringResource(R.string.backup_title), onBack = onBack) {
         SectionCard {
             Text(
-                if (lastBackupMillis == 0L) "Копия ещё не создавалась"
-                else "Последняя копия: " + Instant.ofEpochMilli(lastBackupMillis).atZone(ZoneId.systemDefault()).toLocalDate()
-                    .let { "%02d.%02d.%d".format(it.dayOfMonth, it.monthValue, it.year) },
+                if (lastBackupMillis == 0L) stringResource(R.string.backup_none_yet)
+                else stringResource(R.string.backup_last, Instant.ofEpochMilli(lastBackupMillis).atZone(ZoneId.systemDefault()).toLocalDate()
+                    .let { "%02d.%02d.%d".format(it.dayOfMonth, it.monthValue, it.year) }),
             )
             Text(
-                "Копия содержит все долги, платежи, регулярные платежи, настройки справочников и вложения. Её можно сохранить в файл или в Google Drive через системный выбор места.",
+                stringResource(R.string.backup_description),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Button(enabled = !busy, onClick = { step = Step.AskCreatePassword }, modifier = Modifier.fillMaxWidth()) { Text("Создать копию") }
-        OutlinedButton(enabled = !busy, onClick = { pick.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth()) { Text("Восстановить из копии") }
+        Button(enabled = !busy, onClick = { step = Step.AskCreatePassword }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.backup_create)) }
+        OutlinedButton(enabled = !busy, onClick = { pick.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.backup_restore)) }
         message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
-        if (busy) Text("Подождите…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (busy) Text(stringResource(R.string.backup_wait), color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 
     when (val s = step) {
         Step.Idle -> Unit
         Step.AskCreatePassword -> PasswordDialog(
-            title = "Пароль для копии", hint = "Оставьте пустым, чтобы сохранить без шифрования. Забытый пароль восстановить нельзя.",
-            wrong = false, confirmLabel = "Далее", repeat = true, onDismiss = { step = Step.Idle },
+            title = stringResource(R.string.backup_password_title), hint = stringResource(R.string.backup_password_hint),
+            wrong = false, confirmLabel = stringResource(R.string.backup_next), repeat = true, onDismiss = { step = Step.Idle },
             onConfirm = { p ->
                 password = p.ifEmpty { null }
                 step = Step.Idle
@@ -146,23 +148,25 @@ fun BackupScreen(manager: BackupManager, lastBackupMillis: Long, onBack: () -> U
             },
         )
         is Step.AskRestorePassword -> PasswordDialog(
-            title = "Копия защищена паролем", hint = null, wrong = s.wrong, confirmLabel = "Далее",
+            title = stringResource(R.string.backup_protected), hint = null, wrong = s.wrong, confirmLabel = stringResource(R.string.backup_next),
             onDismiss = { step = Step.Idle },
             onConfirm = { p -> step = Step.Idle; inspect(s.uri, p) },
         )
         is Step.ConfirmRestore -> AlertDialog(
             onDismissRequest = { step = Step.Idle },
-            title = { Text("Заменить все данные?") },
+            title = { Text(stringResource(R.string.backup_replace_title)) },
             text = {
                 val c = s.summary
                 Text(
-                    "Копия от ${formatDate(Instant.ofEpochMilli(c.createdAt).atZone(ZoneId.systemDefault()).toLocalDate())}: " +
-                        "долгов ${c.debts}, платежей ${c.payments}, регулярных платежей ${c.subscriptions}, контрагентов ${c.counterparties}.\n\n" +
-                        "Текущие данные будут заменены данными из копии. Перед заменой приложение сохранит их во внутреннюю страховочную копию.",
+                    stringResource(
+                        R.string.backup_replace_text,
+                        formatDate(Instant.ofEpochMilli(c.createdAt).atZone(ZoneId.systemDefault()).toLocalDate()),
+                        c.debts, c.payments, c.subscriptions, c.counterparties,
+                    ),
                 )
             },
-            confirmButton = { TextButton(onClick = { step = Step.Idle; restore(s.uri, s.password) }) { Text("Восстановить") } },
-            dismissButton = { TextButton(onClick = { step = Step.Idle }) { Text("Отмена") } },
+            confirmButton = { TextButton(onClick = { step = Step.Idle; restore(s.uri, s.password) }) { Text(stringResource(R.string.backup_do_restore)) } },
+            dismissButton = { TextButton(onClick = { step = Step.Idle }) { Text(stringResource(R.string.backup_cancel)) } },
         )
     }
 }
@@ -188,20 +192,20 @@ private fun PasswordDialog(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 hint?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 OutlinedTextField(
-                    value = text, onValueChange = { text = it }, label = { Text("Пароль") }, singleLine = true,
+                    value = text, onValueChange = { text = it }, label = { Text(stringResource(R.string.backup_password)) }, singleLine = true,
                     visualTransformation = PasswordVisualTransformation(), isError = wrong,
-                    supportingText = if (wrong) ({ Text("Неверный пароль или файл повреждён") }) else null,
+                    supportingText = if (wrong) ({ Text(stringResource(R.string.backup_wrong_password)) }) else null,
                 )
                 if (repeat && text.isNotEmpty()) {
                     OutlinedTextField(
-                        value = again, onValueChange = { again = it }, label = { Text("Повторите пароль") }, singleLine = true,
+                        value = again, onValueChange = { again = it }, label = { Text(stringResource(R.string.backup_repeat_password)) }, singleLine = true,
                         visualTransformation = PasswordVisualTransformation(), isError = again.isNotEmpty() && mismatch,
-                        supportingText = if (again.isNotEmpty() && mismatch) ({ Text("Пароли не совпадают") }) else null,
+                        supportingText = if (again.isNotEmpty() && mismatch) ({ Text(stringResource(R.string.backup_passwords_differ)) }) else null,
                     )
                 }
             }
         },
         confirmButton = { TextButton(enabled = !mismatch, onClick = { onConfirm(text) }) { Text(confirmLabel) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.backup_cancel)) } },
     )
 }

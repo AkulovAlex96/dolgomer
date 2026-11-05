@@ -1,5 +1,7 @@
 package app.kvity.ui.exchange
 
+import app.kvity.R
+import androidx.compose.ui.res.stringResource
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -80,7 +82,7 @@ fun ImportScreen(app: KvityApp, onBack: () -> Unit) {
                 val ok = runCatching {
                     context.contentResolver.openOutputStream(uri)!!.use { it.write(Csv.write(DebtImport.template()).toByteArray()) }
                 }.isSuccess
-                withContext(Dispatchers.Main) { Toast.makeText(context, if (ok) "Шаблон сохранён" else "Не удалось сохранить", Toast.LENGTH_SHORT).show() }
+                withContext(Dispatchers.Main) { Toast.makeText(context, context.getString(if (ok) R.string.import_ui_template_saved else R.string.import_ui_save_failed), Toast.LENGTH_SHORT).show() }
             }
         }
     }
@@ -96,7 +98,7 @@ fun ImportScreen(app: KvityApp, onBack: () -> Unit) {
                 }.getOrNull()
             }
             if (bytes == null) {
-                error = "Не удалось прочитать файл или он больше 10 МБ"
+                error = context.getString(R.string.import_ui_read_failed)
                 batch = null
             } else {
                 fileName = displayNameOf(context, uri)
@@ -105,31 +107,32 @@ fun ImportScreen(app: KvityApp, onBack: () -> Unit) {
         }
     }
 
-    FormScreen(title = "Импорт", onBack = onBack) {
+    FormScreen(title = stringResource(R.string.import_ui_title), onBack = onBack) {
         SectionCard {
             Text(
-                "Загрузите файл Excel (.xlsx), CSV или архив .zip с CSV. Подойдёт и файл, выгруженный из этого приложения: " +
-                    "импортируются долги, платежи, регулярные платежи, их участники и контрагенты. Таблицы определяются по заголовкам колонок.",
+                stringResource(R.string.import_ui_intro),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                "Для долгов обязательны колонки Контрагент, Направление («мне должны» или «я должен»), Валюта (RUB, KZT, USD…), Сумма (можно «50к»). " +
-                    "Дубликаты пропускаются.",
+                stringResource(R.string.import_ui_columns),
                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        OutlinedButton(onClick = { saveTemplate.launch("kvity-import-template.csv") }, modifier = Modifier.fillMaxWidth()) { Text("Скачать шаблон долгов") }
-        Button(enabled = !busy, onClick = { pick.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth()) { Text("Выбрать файл") }
+        OutlinedButton(onClick = { saveTemplate.launch("kvity-import-template.csv") }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.import_ui_download_template)) }
+        Button(enabled = !busy, onClick = { pick.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.import_ui_pick)) }
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
         report?.let { r ->
             SectionCard {
-                Text("Готово: добавлено ${r.added}", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.import_ui_done, r.added), fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
                 Text(
-                    listOf("долгов" to r.debts, "платежей" to r.payments, "регулярных платежей" to r.subscriptions, "участников" to r.shares, "контрагентов" to r.people)
-                        .filter { it.second > 0 }.joinToString(", ") { "${it.first}: ${it.second}" }.ifEmpty { "ничего нового" },
+                    listOf(
+                        stringResource(R.string.import_ui_l_debts) to r.debts, stringResource(R.string.import_ui_l_payments) to r.payments,
+                        stringResource(R.string.import_ui_l_subs) to r.subscriptions, stringResource(R.string.import_ui_l_shares) to r.shares,
+                        stringResource(R.string.import_ui_l_people) to r.people,
+                    ).filter { it.second > 0 }.joinToString(", ") { "${it.first}: ${it.second}" }.ifEmpty { stringResource(R.string.import_ui_nothing_new) },
                 )
-                if (r.skippedDuplicates > 0) Text("Пропущено дубликатов: ${r.skippedDuplicates}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (r.skippedDuplicates > 0) Text(stringResource(R.string.import_ui_skipped_duplicates, r.skippedDuplicates), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 r.problems.forEach { Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.error) }
             }
         }
@@ -138,43 +141,45 @@ fun ImportScreen(app: KvityApp, onBack: () -> Unit) {
         val duplicates by produceState(0, batch) { value = batch?.let { runCatching { app.importer.countDuplicates(it) }.getOrDefault(0) } ?: 0 }
         batch?.let { b ->
             SectionCard {
-                Text(fileName ?: "Файл", fontWeight = FontWeight.SemiBold)
+                Text(fileName ?: stringResource(R.string.import_ui_file), fontWeight = FontWeight.SemiBold)
                 Text(
-                    listOf("долгов" to b.debts.size, "платежей" to b.payments.size, "регулярных платежей" to b.subscriptions.size,
-                        "участников" to b.shares.size, "контрагентов" to b.people.size)
-                        .filter { it.second > 0 }.joinToString(", ") { "${it.first}: ${it.second}" }.ifEmpty { "ничего не найдено" },
+                    listOf(
+                        stringResource(R.string.import_ui_l_debts) to b.debts.size, stringResource(R.string.import_ui_l_payments) to b.payments.size,
+                        stringResource(R.string.import_ui_l_subs) to b.subscriptions.size, stringResource(R.string.import_ui_l_shares) to b.shares.size,
+                        stringResource(R.string.import_ui_l_people) to b.people.size,
+                    ).filter { it.second > 0 }.joinToString(", ") { "${it.first}: ${it.second}" }.ifEmpty { stringResource(R.string.import_ui_nothing_found) },
                     color = MaterialTheme.colorScheme.primary,
                 )
-                if (duplicates > 0) Text("Уже есть в приложении: $duplicates (будут пропущены)", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (b.errors.isNotEmpty()) Text("Строк с ошибками: ${b.errors.size}", color = MaterialTheme.colorScheme.error)
-                if (b.ignoredSheets.isNotEmpty()) Text("Пропущены листы без известных заголовков: ${b.ignoredSheets.joinToString()}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (duplicates > 0) Text(stringResource(R.string.import_ui_already_have, duplicates), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (b.errors.isNotEmpty()) Text(stringResource(R.string.import_ui_error_rows, b.errors.size), color = MaterialTheme.colorScheme.error)
+                if (b.ignoredSheets.isNotEmpty()) Text(stringResource(R.string.import_ui_ignored_sheets, b.ignoredSheets.joinToString()), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (b.errors.isNotEmpty()) {
                 SectionCard {
-                    Text("Ошибки (эти строки не будут добавлены)", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.import_ui_errors_title), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     b.errors.take(20).forEach { e ->
-                        val where = listOfNotNull(e.sheet, if (e.line > 0) "строка ${e.line}" else null).joinToString(", ")
+                        val where = listOfNotNull(e.sheet, if (e.line > 0) stringResource(R.string.import_ui_line, e.line) else null).joinToString(", ")
                         Text((if (where.isNotEmpty()) "$where: " else "") + e.message, fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
                     }
-                    if (b.errors.size > 20) Text("…и ещё ${b.errors.size - 20}", fontSize = 12.sp)
+                    if (b.errors.size > 20) Text(stringResource(R.string.import_ui_and_more, b.errors.size - 20), fontSize = 12.sp)
                 }
             }
             if (b.debts.isNotEmpty()) {
                 SectionCard {
-                    Text("Долги (предпросмотр)", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.import_ui_preview), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     b.debts.take(6).forEach { row ->
                         LabelRow(
                             label = row.counterparty,
-                            subtitle = (if (row.direction == Direction.OWED_TO_ME) "мне должны" else "я должен") +
-                                (row.dueDate?.let { " · до ${formatDate(it)}" } ?: ""),
+                            subtitle = stringResource(if (row.direction == Direction.OWED_TO_ME) R.string.import_ui_owed_to_me else R.string.import_ui_i_owe) +
+                                (row.dueDate?.let { " · " + stringResource(R.string.import_ui_until, formatDate(it)) } ?: ""),
                             trailing = { Text(formatMoney(row.principalMinor, row.currency), fontWeight = FontWeight.Bold) },
                         )
                     }
-                    if (b.debts.size > 6) Text("…и ещё ${b.debts.size - 6}", fontSize = 12.sp)
+                    if (b.debts.size > 6) Text(stringResource(R.string.import_ui_and_more, b.debts.size - 6), fontSize = 12.sp)
                 }
             }
             if (b.total > 0 && b.total - duplicates <= 0) {
-                Text("Всё из файла уже есть в приложении, импортировать нечего.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.import_ui_all_present), color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else if (b.total > 0) {
                 Button(
                     enabled = !busy, modifier = Modifier.fillMaxWidth(),
@@ -182,14 +187,14 @@ fun ImportScreen(app: KvityApp, onBack: () -> Unit) {
                         scope.launch {
                             busy = true
                             report = runCatching { app.importer.apply(b) }.getOrElse {
-                                error = "Не удалось импортировать: ${it.message}"
+                                error = context.getString(R.string.import_ui_failed, it.message)
                                 null
                             }
                             if (report != null) batch = null
                             busy = false
                         }
                     },
-                ) { Text("Импортировать ${b.total - duplicates}") }
+                ) { Text(stringResource(R.string.import_ui_import_n, b.total - duplicates)) }
             }
         }
     }

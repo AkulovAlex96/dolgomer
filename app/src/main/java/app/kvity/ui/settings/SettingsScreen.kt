@@ -1,5 +1,7 @@
 package app.kvity.ui.settings
 
+import app.kvity.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -65,41 +67,45 @@ fun GeneralSettingsScreen(
 ) {
     var currenciesDialog by remember { mutableStateOf(false) }
 
-    FormScreen(title = "Настройки", onBack = onBack) {
+    FormScreen(title = stringResource(R.string.settings_title), onBack = onBack) {
         SectionCard {
-            GroupTitle("Внешний вид")
+            GroupTitle(stringResource(R.string.settings_appearance))
             DropdownField(
-                "Тема",
-                listOf(ThemeMode.SYSTEM to "Системная", ThemeMode.LIGHT to "Светлая", ThemeMode.DARK to "Тёмная"),
+                stringResource(R.string.settings_theme),
+                listOf(
+                    ThemeMode.SYSTEM to stringResource(R.string.settings_theme_system),
+                    ThemeMode.LIGHT to stringResource(R.string.settings_theme_light),
+                    ThemeMode.DARK to stringResource(R.string.settings_theme_dark),
+                ),
                 settings.theme, { t -> onChange { it.copy(theme = t) } },
                 Modifier.padding(top = 6.dp),
             )
             SettingSwitch(
-                "Палитра для дальтоников", "Синий и оранжевый вместо зелёного и красного",
+                stringResource(R.string.settings_colorblind), stringResource(R.string.settings_colorblind_sub),
                 settings.colorBlindPalette, { v -> onChange { it.copy(colorBlindPalette = v) } },
             )
             DropdownField(
-                "Первый день недели",
-                listOf(DayOfWeek.MONDAY to "Понедельник", DayOfWeek.SUNDAY to "Воскресенье"),
+                stringResource(R.string.settings_first_day),
+                listOf(DayOfWeek.MONDAY to stringResource(R.string.settings_monday), DayOfWeek.SUNDAY to stringResource(R.string.settings_sunday)),
                 settings.firstDayOfWeek, { d -> onChange { it.copy(firstDayOfWeek = d) } },
             )
         }
 
         SectionCard {
-            GroupTitle("Валюты")
+            GroupTitle(stringResource(R.string.settings_currencies))
             DropdownField(
-                "Основная",
+                stringResource(R.string.settings_main_currency),
                 settings.enabledCurrencies.map { it to "${currencyOf(it).symbol} $it" },
                 settings.defaultCurrency, { c -> onChange { it.copy(defaultCurrency = c) } },
                 Modifier.padding(top = 6.dp),
             )
-            TextButton(onClick = { currenciesDialog = true }) { Text("Мои валюты: ${settings.enabledCurrencies.joinToString(", ")}") }
-            TextButton(onClick = onOpenRates) { Text("Курсы валют") }
+            TextButton(onClick = { currenciesDialog = true }) { Text(stringResource(R.string.settings_my_currencies, settings.enabledCurrencies.joinToString(", "))) }
+            TextButton(onClick = onOpenRates) { Text(stringResource(R.string.settings_rates)) }
         }
 
         SectionCard {
-            GroupTitle("Напоминания должникам")
-            TextButton(onClick = onOpenTemplates) { Text("Шаблоны сообщений") }
+            GroupTitle(stringResource(R.string.settings_debtor_reminders))
+            TextButton(onClick = onOpenTemplates) { Text(stringResource(R.string.settings_templates)) }
         }
 
         sections()
@@ -109,7 +115,7 @@ fun GeneralSettingsScreen(
         var selected by remember { mutableStateOf(settings.enabledCurrencies.toSet()) }
         AlertDialog(
             onDismissRequest = { currenciesDialog = false },
-            title = { Text("Мои валюты") },
+            title = { Text(stringResource(R.string.settings_my_currencies_title)) },
             text = {
                 Column {
                     (Currencies.defaults.map { it.code } + listOf("GBP", "CNY", "UAH", "BYN", "TRY", "AED", "GEL", "UZS", "KGS"))
@@ -129,9 +135,9 @@ fun GeneralSettingsScreen(
                     val list = selected.toList().sorted()
                     onChange { s -> s.copy(enabledCurrencies = list, defaultCurrency = if (s.defaultCurrency in list) s.defaultCurrency else list.first()) }
                     currenciesDialog = false
-                }) { Text("Готово") }
+                }) { Text(stringResource(R.string.settings_done)) }
             },
-            dismissButton = { TextButton(onClick = { currenciesDialog = false }) { Text("Отмена") } },
+            dismissButton = { TextButton(onClick = { currenciesDialog = false }) { Text(stringResource(R.string.settings_cancel)) } },
         )
     }
 }

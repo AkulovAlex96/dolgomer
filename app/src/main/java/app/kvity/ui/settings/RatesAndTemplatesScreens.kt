@@ -1,5 +1,7 @@
 package app.kvity.ui.settings
 
+import app.kvity.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,25 +46,25 @@ fun RatesScreen(
     var pendingDelete by remember { mutableStateOf<ExchangeRateEntity?>(null) }
     pendingDelete?.let { r ->
         ConfirmDialog(
-            title = "Удалить курс?",
+            title = stringResource(R.string.settings_rate_delete_title),
             text = "1 ${r.fromCode} = ${r.rate.toString().removeSuffix(".0").replace('.', ',')} ${r.toCode}",
             onConfirm = { pendingDelete = null; onDelete(r.id) },
             onDismiss = { pendingDelete = null },
         )
     }
 
-    FormScreen(title = "Курсы валют", onBack = onBack, actions = { TextButton(onClick = { adding = true }) { Text("+ Курс") } }) {
+    FormScreen(title = stringResource(R.string.settings_rates_title), onBack = onBack, actions = { TextButton(onClick = { adding = true }) { Text(stringResource(R.string.settings_rate_add)) } }) {
         Text(
-            "Курсы вводятся вручную и нужны только для необязательного пересчёта итогов в одну валюту. Без них все суммы показываются раздельно.",
+            stringResource(R.string.settings_rates_hint),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         SectionCard {
-            if (rates.isEmpty()) Text("Курсов нет", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (rates.isEmpty()) Text(stringResource(R.string.settings_rates_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
             rates.forEach { r ->
                 LabelRow(
                     onClick = { editing = r },
                     label = "1 ${r.fromCode} = ${r.rate.toString().removeSuffix(".0").replace('.', ',')} ${r.toCode}",
-                    subtitle = "на ${formatDate(r.date)}",
+                    subtitle = stringResource(R.string.settings_rate_as_of, formatDate(r.date)),
                     trailing = { TextButton(onClick = { pendingDelete = r }) { Text("✕") } },
                 )
             }
@@ -78,20 +80,20 @@ fun RatesScreen(
         val opts = currencies.map { it to "${currencyOf(it).symbol} $it" }
         AlertDialog(
             onDismissRequest = { adding = false; editing = null },
-            title = { Text(if (e == null) "Новый курс" else "Изменить курс") },
+            title = { Text(stringResource(if (e == null) R.string.settings_rate_new else R.string.settings_rate_edit)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    DropdownField("1 единица", opts, from, { from = it })
-                    DropdownField("равна", opts, to, { to = it })
-                    OutlinedTextField(text, { text = it }, label = { Text("Курс") }, singleLine = true, isError = text.isNotBlank() && rate == null)
+                    DropdownField(stringResource(R.string.settings_rate_one_unit), opts, from, { from = it })
+                    DropdownField(stringResource(R.string.settings_rate_equals), opts, to, { to = it })
+                    OutlinedTextField(text, { text = it }, label = { Text(stringResource(R.string.settings_rate_field)) }, singleLine = true, isError = text.isNotBlank() && rate == null)
                 }
             },
             confirmButton = {
                 TextButton(enabled = rate != null && from != to, onClick = {
                     onSave(from, to, rate!!, e?.id); adding = false; editing = null
-                }) { Text("Сохранить") }
+                }) { Text(stringResource(R.string.settings_save)) }
             },
-            dismissButton = { TextButton(onClick = { adding = false; editing = null }) { Text("Отмена") } },
+            dismissButton = { TextButton(onClick = { adding = false; editing = null }) { Text(stringResource(R.string.settings_cancel)) } },
         )
     }
 }
@@ -108,16 +110,16 @@ fun TemplatesScreen(
     var pendingDelete by remember { mutableStateOf<ReminderTemplateEntity?>(null) }
     pendingDelete?.let { t ->
         ConfirmDialog(
-            title = "Удалить шаблон?",
-            text = "Шаблон «${t.name}» будет удалён.",
+            title = stringResource(R.string.settings_tpl_delete_title),
+            text = stringResource(R.string.settings_tpl_delete_text, t.name),
             onConfirm = { pendingDelete = null; onDelete(t.id) },
             onDismiss = { pendingDelete = null },
         )
     }
 
-    FormScreen(title = "Шаблоны сообщений", onBack = onBack, actions = { TextButton(onClick = { adding = true }) { Text("+ Шаблон") } }) {
+    FormScreen(title = stringResource(R.string.settings_tpl_title), onBack = onBack, actions = { TextButton(onClick = { adding = true }) { Text(stringResource(R.string.settings_tpl_add)) } }) {
         Text(
-            "Переменные: {имя}, {сумма}, {остаток}, {срок}, {дней_просрочки}",
+            stringResource(R.string.settings_tpl_vars),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         templates.forEach { t ->
@@ -125,8 +127,8 @@ fun TemplatesScreen(
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(t.name, fontWeight = FontWeight.Bold)
                     Row {
-                        TextButton(onClick = { editing = t }) { Text("Изменить") }
-                        TextButton(onClick = { pendingDelete = t }) { Text("Удалить") }
+                        TextButton(onClick = { editing = t }) { Text(stringResource(R.string.settings_tpl_edit_btn)) }
+                        TextButton(onClick = { pendingDelete = t }) { Text(stringResource(R.string.settings_tpl_delete_btn)) }
                     }
                 }
                 Text(t.text, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -140,19 +142,19 @@ fun TemplatesScreen(
         var text by remember { mutableStateOf(e?.text ?: "") }
         AlertDialog(
             onDismissRequest = { adding = false; editing = null },
-            title = { Text(if (e == null) "Новый шаблон" else "Изменить шаблон") },
+            title = { Text(stringResource(if (e == null) R.string.settings_tpl_new else R.string.settings_tpl_edit)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(name, { name = it.take(Limits.NAME) }, label = { Text("Название") }, singleLine = true)
-                    OutlinedTextField(text, { text = it.take(Limits.TEMPLATE) }, label = { Text("Текст") })
+                    OutlinedTextField(name, { name = it.take(Limits.NAME) }, label = { Text(stringResource(R.string.settings_tpl_name)) }, singleLine = true)
+                    OutlinedTextField(text, { text = it.take(Limits.TEMPLATE) }, label = { Text(stringResource(R.string.settings_tpl_text)) })
                 }
             },
             confirmButton = {
                 TextButton(enabled = name.isNotBlank() && text.isNotBlank(), onClick = {
                     onSave(name, text, e?.id); adding = false; editing = null
-                }) { Text("Сохранить") }
+                }) { Text(stringResource(R.string.settings_save)) }
             },
-            dismissButton = { TextButton(onClick = { adding = false; editing = null }) { Text("Отмена") } },
+            dismissButton = { TextButton(onClick = { adding = false; editing = null }) { Text(stringResource(R.string.settings_cancel)) } },
         )
     }
 }

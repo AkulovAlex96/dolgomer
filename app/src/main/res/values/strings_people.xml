@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="people_title">Люди</string>
+    <string name="people_empty">Здесь появятся люди, с которыми есть долги или общие регулярные платежи.</string>
+    <string name="people_counts">долгов: %1$d · подписок: %2$d</string>
+    <string name="people_archive_header">Архив (%1$d)</string>
+    <string name="people_in_archive">в архиве</string>
+    <string name="people_unarchive">Вернуть из архива</string>
+    <string name="people_counterparty">Контрагент</string>
+    <string name="people_loading">Загрузка…</string>
+    <string name="people_delete_title">Удалить контрагента?</string>
+    <string name="people_delete_text">«%1$s» будет удалён.</string>
+    <string name="people_name">Имя</string>
+    <string name="people_duplicate">Контрагент с таким именем уже есть</string>
+    <string name="people_phone">Телефон</string>
+    <string name="people_note">Заметка</string>
+    <string name="people_save">Сохранить</string>
+    <string name="people_balance">Баланс</string>
+    <string name="people_owes_me">мне должен</string>
+    <string name="people_i_owe">я должен</string>
+    <string name="people_debts">Долги</string>
+    <string name="people_closed">закрыт</string>
+    <string name="people_subscriptions">Регулярные платежи</string>
+    <string name="people_unpaid_periods">не оплачено периодов: %1$d</string>
+    <string name="people_archived_note">Контрагент в архиве: не показывается в списке людей и подсказках имён.</string>
+    <string name="people_to_archive">В архив</string>
+    <string name="people_delete">Удалить контрагента</string>
+    <string name="people_delete_blocked">Нельзя удалить: у контрагента есть долги (в том числе закрытые) или регулярные платежи. Вместо удаления отправьте его в архив: история сохранится.</string>
+</resources>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="import_ui_template_saved">Шаблон сохранён</string>
+    <string name="import_ui_save_failed">Не удалось сохранить</string>
+    <string name="import_ui_read_failed">Не удалось прочитать файл или он больше 10 МБ</string>
+    <string name="import_ui_title">Импорт</string>
+    <string name="import_ui_intro">Загрузите файл Excel (.xlsx), CSV или архив .zip с CSV. Подойдёт и файл, выгруженный из этого приложения: импортируются долги, платежи, регулярные платежи, их участники и контрагенты. Таблицы определяются по заголовкам колонок.</string>
+    <string name="import_ui_columns">Для долгов обязательны колонки Контрагент, Направление («мне должны» или «я должен»), Валюта (RUB, KZT, USD…), Сумма (можно «50к»). Дубликаты пропускаются.</string>
+    <string name="import_ui_download_template">Скачать шаблон долгов</string>
+    <string name="import_ui_pick">Выбрать файл</string>
+    <string name="import_ui_done">Готово: добавлено %1$d</string>
+    <string name="import_ui_nothing_new">ничего нового</string>
+    <string name="import_ui_skipped_duplicates">Пропущено дубликатов: %1$d</string>
+    <string name="import_ui_file">Файл</string>
+    <string name="import_ui_nothing_found">ничего не найдено</string>
+    <string name="import_ui_already_have">Уже есть в приложении: %1$d (будут пропущены)</string>
+    <string name="import_ui_error_rows">Строк с ошибками: %1$d</string>
+    <string name="import_ui_ignored_sheets">Пропущены листы без известных заголовков: %1$s</string>
+    <string name="import_ui_errors_title">Ошибки (эти строки не будут добавлены)</string>
+    <string name="import_ui_line">строка %1$d</string>
+    <string name="import_ui_and_more">…и ещё %1$d</string>
+    <string name="import_ui_preview">Долги (предпросмотр)</string>
+    <string name="import_ui_owed_to_me">мне должны</string>
+    <string name="import_ui_i_owe">я должен</string>
+    <string name="import_ui_until">до %1$s</string>
+    <string name="import_ui_all_present">Всё из файла уже есть в приложении, импортировать нечего.</string>
+    <string name="import_ui_failed">Не удалось импортировать: %1$s</string>
+    <string name="import_ui_import_n">Импортировать %1$d</string>
+    <string name="import_ui_l_debts">долгов</string>
+    <string name="import_ui_l_payments">платежей</string>
+    <string name="import_ui_l_subs">регулярных платежей</string>
+    <string name="import_ui_l_shares">участников</string>
+    <string name="import_ui_l_people">контрагентов</string>
+</resources>
