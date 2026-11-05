@@ -21,6 +21,8 @@ data class Settings(
     val notifyMinute: Int = 0,
     val overdueRepeatDays: Int = 3,
     val subscriptionNotifyDays: Int = 1,
+    /** Через сколько дней после последнего платежа напоминать о долге без срока; 0 — не напоминать. */
+    val staleDebtDays: Int = 0,
     val hideAmountsInNotifications: Boolean = false,
     // безопасность
     val pinEnabled: Boolean = false,
@@ -61,6 +63,7 @@ class SettingsStore(context: Context) {
             notifyMinute = prefs.getInt("notifyMinute", d.notifyMinute),
             overdueRepeatDays = prefs.getInt("overdueRepeat", d.overdueRepeatDays),
             subscriptionNotifyDays = prefs.getInt("subNotifyDays", d.subscriptionNotifyDays),
+            staleDebtDays = prefs.getInt("staleDebtDays", d.staleDebtDays),
             hideAmountsInNotifications = prefs.getBoolean("hideAmounts", d.hideAmountsInNotifications),
             pinEnabled = prefs.getBoolean("pin", d.pinEnabled),
             biometricEnabled = prefs.getBoolean("bio", d.biometricEnabled),
@@ -85,6 +88,7 @@ class SettingsStore(context: Context) {
             .putInt("notifyMinute", s.notifyMinute)
             .putInt("overdueRepeat", s.overdueRepeatDays)
             .putInt("subNotifyDays", s.subscriptionNotifyDays)
+            .putInt("staleDebtDays", s.staleDebtDays)
             .putBoolean("hideAmounts", s.hideAmountsInNotifications)
             .putBoolean("pin", s.pinEnabled)
             .putBoolean("bio", s.biometricEnabled)

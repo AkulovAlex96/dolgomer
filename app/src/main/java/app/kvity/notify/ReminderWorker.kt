@@ -16,7 +16,7 @@ import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.first
 
-/** Раз в сутки в заданное время (см. [schedule]) проверяет сроки и показывает уведомления. */
+/** Раз в сутки в заданное время (см. [schedule]; точный будильник или WorkManager) проверяет сроки и показывает уведомления. */
 class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
@@ -29,6 +29,15 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
         val subs = app.subscriptions.observeAll().first()
         val items = ReminderPlanner.plan(Events.build(debts, subs, today), today, settings)
         Notifier.post(applicationContext, items, settings.hideAmountsInNotifications)
+        for (stale in ReminderPlanner.planStale(debts, today, settings)) {
+            Notifier.postStale(applicationContext, stale, settings.hideAmountsInNotifications)
+        }
+        // пробный период: не чаще раза в день на подписку (запоминаем, о чём уже сообщили)
+        val trialStore = TrialNotifyStore(applicationContext)
+        val trials = ReminderPlanner.planTrials(subs.map { it.subscription }, today, settings, trialStore.all())
+        for (t in trials) {
+            if (Notifier.postTrial(applicationContext, t, settings.hideAmountsInNotifications)) trialStore.mark(t.subscriptionId, today)
+        }
         // следующий запуск ставится заново на ближайшее заданное время: так расписание не «уплывает» от фактического времени этого запуска
         schedule(applicationContext, settings)
         return Result.success()
@@ -51,9 +60,17 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
             val wm = WorkManager.getInstance(context)
             if (!settings.notificationsEnabled) {
                 wm.cancelUniqueWork(NAME)
+                ReminderAlarm.cancel(context)
                 return
             }
-            val delay = delayUntilNext(LocalDateTime.now(), settings.notifyHour, settings.notifyMinute)
+            val now = LocalDateTime.now()
+            // точный будильник, если разрешён (п. 3.6 ТЗ); иначе WorkManager: он может задержаться в режиме энергосбережения
+            if (ReminderAlarm.scheduleExact(context, nextTrigger(now, settings.notifyHour, settings.notifyMinute))) {
+                wm.cancelUniqueWork(NAME)
+                return
+            }
+            ReminderAlarm.cancel(context)
+            val delay = delayUntilNext(now, settings.notifyHour, settings.notifyMinute)
             val request = OneTimeWorkRequestBuilder<ReminderWorker>()
                 .setInitialDelay(delay.toMillis(), TimeUnit.MILLISECONDS)
                 .build()
@@ -61,11 +78,15 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
         }
 
         /** Сколько ждать до ближайших [hour]:[minute]; если это время уже наступило (или осталась минута), берётся завтрашнее. */
-        internal fun delayUntilNext(now: LocalDateTime, hour: Int, minute: Int): Duration {
+        internal fun delayUntilNext(now: LocalDateTime, hour: Int, minute: Int): Duration =
+            Duration.between(now, nextTrigger(now, hour, minute))
+
+        /** Ближайшие [hour]:[minute] по тем же правилам, что и [delayUntilNext]. */
+        internal fun nextTrigger(now: LocalDateTime, hour: Int, minute: Int): LocalDateTime {
             var next = now.toLocalDate().atTime(hour, minute)
             // запас в минуту: запуск, сработавший чуть раньше срока, не должен сразу назначить себя же на сегодня
             if (!next.isAfter(now.plusMinutes(1))) next = next.plusDays(1)
-            return Duration.between(now, next)
+            return next
         }
     }
 }
