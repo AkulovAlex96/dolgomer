@@ -120,7 +120,7 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
 
     private suspend fun person(name: String): CounterpartyEntity {
         val trimmed = name.trim()
-        return db.counterparties().findByName(trimmed)
+        return db.counterparties().findByNameRevive(trimmed)
             ?: CounterpartyEntity(UUID.randomUUID().toString(), trimmed, createdAt = System.currentTimeMillis())
                 .also { db.counterparties().insert(it) }
     }

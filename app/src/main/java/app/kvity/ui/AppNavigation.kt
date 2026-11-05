@@ -118,7 +118,8 @@ fun AppNavigation() {
         factory = viewModelFactory { initializer { PeopleViewModel(app.people, app.debts, app.subscriptions) } },
     )
     val persons by peopleVm.persons.collectAsStateWithLifecycle()
-    val knownNames = persons.map { it.person.name }
+    // архивные контрагенты в подсказках имён не показываются
+    val knownNames = persons.filter { !it.archived }.map { it.person.name }
     val templates by app.reference.templates.collectAsStateWithLifecycle(emptyList())
 
     Scaffold(
@@ -162,6 +163,7 @@ fun AppNavigation() {
                     backupHint = (state.debts.isNotEmpty() || state.subs.isNotEmpty()) &&
                         System.currentTimeMillis() - maxOf(settings.lastBackupMillis, settings.installedAtMillis) > 30L * 24 * 3600 * 1000,
                     onOpenBackup = { nav.navigate(Routes.BACKUP) },
+                    onUnarchiveDebt = vm::unarchiveDebt,
                 )
             }
 
@@ -180,7 +182,10 @@ fun AppNavigation() {
             }
 
             composable(Routes.PEOPLE) {
-                PeopleScreen(persons, onOpen = { nav.navigate(Routes.person(it)) })
+                PeopleScreen(
+                    persons.filter { !it.archived }, onOpen = { nav.navigate(Routes.person(it)) },
+                    archived = persons.filter { it.archived }, onUnarchive = peopleVm::unarchive,
+                )
             }
 
             composable(Routes.MORE) {
@@ -197,7 +202,9 @@ fun AppNavigation() {
                     subs = subs.filter { v -> v.shares.any { it.share.counterpartyId == id } || v.subscription.payerCounterpartyId == id },
                     onBack = { nav.popBackStack() },
                     onSave = { n, p, note -> peopleVm.save(id, n, p, note) },
-                    onDelete = { peopleVm.delete(id); nav.popBackStack() },
+                    onDelete = { done -> peopleVm.delete(id) { ok -> done(ok); if (ok) nav.popBackStack() } },
+                    onArchive = { peopleVm.archive(id) },
+                    onUnarchive = { peopleVm.unarchive(id) },
                     onOpenDebt = { nav.navigate(Routes.debt(it)) },
                     onOpenSubscription = { nav.navigate(Routes.sub(it)) },
                     otherNames = persons.filter { it.person.id != id }.map { it.person.name.trim().lowercase() }.toSet(),
@@ -229,7 +236,11 @@ fun AppNavigation() {
                 DebtDetailScreen(
                     view = view,
                     onBack = { nav.popBackStack() },
-                    onAddPayment = { date, minor, plannedId, monthOnly -> vm.addPayment(date, minor, plannedId, monthOnly) },
+                    onAddPayment = { date, minor, plannedId, monthOnly, method, note ->
+                        vm.addPayment(date, minor, plannedId, monthOnly, method, note)
+                    },
+                    onUpdatePayment = vm::updatePayment,
+                    onSetArchived = vm::setArchived,
                     onUpdatePlanned = vm::updatePlanned,
                     onSkipPlanned = vm::skipPlanned,
                     onDeletePlanned = vm::deletePlanned,

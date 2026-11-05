@@ -1,6 +1,8 @@
 package app.kvity.data
 
+import app.kvity.domain.ArchiveRules
 import app.kvity.domain.DebtCalculator
+import app.kvity.domain.Limits
 import app.kvity.domain.DebtSummary
 import app.kvity.domain.PaymentAmount
 import app.kvity.domain.PlannedPayment
@@ -84,7 +86,7 @@ class DebtRepository(
     suspend fun addDebt(input: NewDebt): String {
         val now = System.currentTimeMillis()
         val name = input.counterpartyName.trim()
-        val person = db.counterparties().findByName(name)
+        val person = db.counterparties().findByNameRevive(name)
             ?: CounterpartyEntity(UUID.randomUUID().toString(), name, createdAt = now)
                 .also { db.counterparties().insert(it) }
 
@@ -117,7 +119,7 @@ class DebtRepository(
     suspend fun updateDebt(id: String, input: NewDebt) {
         val old = db.debts().observe(id).first() ?: return
         val name = input.counterpartyName.trim()
-        val person = db.counterparties().findByName(name)
+        val person = db.counterparties().findByNameRevive(name)
             ?: CounterpartyEntity(UUID.randomUUID().toString(), name, createdAt = System.currentTimeMillis())
                 .also { db.counterparties().insert(it) }
         val updated = old.copy(
@@ -186,14 +188,40 @@ class DebtRepository(
      */
     suspend fun addPayment(
         debtId: String, date: LocalDate, amountMinor: Long, note: String? = null,
-        plannedId: String? = null, monthOnly: Boolean = false,
+        plannedId: String? = null, monthOnly: Boolean = false, paymentMethod: String? = null,
     ): Boolean {
         db.payments().insert(
             PaymentEntity(
-                UUID.randomUUID().toString(), debtId, if (monthOnly) date.withDayOfMonth(1) else date, amountMinor, note,
-                System.currentTimeMillis(), plannedId, monthOnly,
+                UUID.randomUUID().toString(), debtId, if (monthOnly) date.withDayOfMonth(1) else date, amountMinor,
+                ArchiveRules.cleanText(note, Limits.NOTE),
+                System.currentTimeMillis(), plannedId, monthOnly, ArchiveRules.cleanText(paymentMethod, Limits.NAME),
             ),
         )
+        return offerRecalc(debtId, date)
+    }
+
+    /**
+     * Меняет внесённый платёж. Остаток и график пересчитываются сами (они считаются из платежей),
+     * как и при добавлении. Возвращает true, если стоит предложить пересчитать график.
+     */
+    suspend fun updatePayment(
+        id: String, date: LocalDate, amountMinor: Long, plannedId: String?, monthOnly: Boolean,
+        paymentMethod: String?, note: String?,
+    ): Boolean {
+        val old = db.payments().get(id) ?: return false
+        // привязка действует только к плановому платежу этого же долга
+        val planned = plannedId?.takeIf { pid -> db.plannedPayments().get(pid)?.debtId == old.debtId }
+        db.payments().update(
+            old.copy(
+                date = if (monthOnly) date.withDayOfMonth(1) else date, amountMinor = amountMinor, plannedId = planned,
+                monthOnly = monthOnly, paymentMethod = ArchiveRules.cleanText(paymentMethod, Limits.NAME),
+                note = ArchiveRules.cleanText(note, Limits.NOTE),
+            ),
+        )
+        return offerRecalc(old.debtId, date)
+    }
+
+    private suspend fun offerRecalc(debtId: String, date: LocalDate): Boolean {
         val debt = db.debts().observe(debtId).first() ?: return false
         if (debt.termType != TermType.SCHEDULE) return false
         val planned = plannedOf(debt)

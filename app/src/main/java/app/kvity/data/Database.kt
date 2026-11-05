@@ -38,6 +38,9 @@ interface CounterpartyDao {
     @Query("DELETE FROM counterparties") suspend fun deleteAll()
 
     @Query("DELETE FROM counterparties WHERE id = :id") suspend fun delete(id: String)
+
+    @Query("UPDATE counterparties SET archived = :archived WHERE id = :id")
+    suspend fun setArchived(id: String, archived: Boolean)
 }
 
 @Dao
@@ -83,6 +86,9 @@ interface PlannedPaymentDao {
 @Dao
 interface PaymentDao {
     @Insert suspend fun insert(payment: PaymentEntity)
+    @Update suspend fun update(payment: PaymentEntity)
+
+    @Query("SELECT * FROM payments WHERE id = :id") suspend fun get(id: String): PaymentEntity?
 
     @Query("SELECT * FROM payments")
     fun observeAll(): Flow<List<PaymentEntity>>
@@ -223,10 +229,10 @@ interface RateDao {
         ExchangeRateEntity::class, ChargePaymentEntity::class,
         SubscriptionPauseEntity::class, ShareAmountEntity::class, PlannedPaymentEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
     autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4),
-        AutoMigration(from = 4, to = 5, spec = Migration4To5::class), AutoMigration(from = 5, to = 6)],
+        AutoMigration(from = 4, to = 5, spec = Migration4To5::class), AutoMigration(from = 5, to = 6), AutoMigration(from = 6, to = 7)],
 )
 @TypeConverters(Converters::class)
 abstract class KvityDatabase : RoomDatabase() {

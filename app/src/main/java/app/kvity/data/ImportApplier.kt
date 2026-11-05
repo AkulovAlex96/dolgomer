@@ -34,7 +34,7 @@ class ImportApplier(
         // Контрагенты
         var people = 0
         for (p in batch.people) {
-            val existing = db.counterparties().findByName(p.name.trim())
+            val existing = db.counterparties().findByNameRevive(p.name.trim())
             if (existing == null) {
                 db.counterparties().insert(CounterpartyEntity(UUID.randomUUID().toString(), p.name.trim(), p.phone, p.note, System.currentTimeMillis()))
                 people++
@@ -65,7 +65,7 @@ class ImportApplier(
             val n = (seen[k] ?: 0) + 1
             seen[k] = n
             if (n <= (stored[k] ?: 0)) { skipped++; continue }
-            debts.addPayment(target.id, p.date, p.amountMinor, p.note)
+            debts.addPayment(target.id, p.date, p.amountMinor, p.note, paymentMethod = p.method)
             payments++
         }
 

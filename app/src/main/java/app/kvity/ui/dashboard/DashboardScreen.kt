@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -58,8 +59,10 @@ fun DashboardScreen(
     onOpenSettings: () -> Unit,
     backupHint: Boolean = false,
     onOpenBackup: () -> Unit = {},
+    onUnarchiveDebt: (String) -> Unit = {},
 ) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    var archiveOpen by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -141,6 +144,27 @@ fun DashboardScreen(
                         )
                     }
                     items(state.debts, key = { it.debt.id }) { DebtRow(it, onClick = { onOpenDebt(it.debt.id) }) }
+                }
+                if (state.archivedDebts.isNotEmpty()) {
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable { archiveOpen = !archiveOpen }.padding(top = 6.dp, bottom = 2.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                "Архив (${state.archivedDebts.size})",
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(if (archiveOpen) "▲" else "▼", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    if (archiveOpen) {
+                        items(state.archivedDebts, key = { "archived-" + it.debt.id }) {
+                            ArchivedDebtRow(it, onClick = { onOpenDebt(it.debt.id) }, onRestore = { onUnarchiveDebt(it.debt.id) })
+                        }
+                    }
                 }
             }
         }
@@ -250,6 +274,31 @@ private fun DebtRow(view: DebtView, onClick: () -> Unit) {
                     color = if (mine) c.income else c.expense,
                 )
                 StatusPill(s.status, s.overdueDays)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ArchivedDebtRow(view: DebtView, onClick: () -> Unit, onRestore: () -> Unit) {
+    val mine = view.debt.direction == Direction.OWED_TO_ME
+    SectionCard(modifier = Modifier.clickable(onClick = onClick)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(view.counterpartyName, fontWeight = FontWeight.SemiBold)
+                Text(
+                    (if (mine) "мне должны · " else "я должен · ") + formatMoney(view.summary.remainingMinor, view.debt.currency),
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                app.kvity.ui.components.Pill("архив", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
+                androidx.compose.material3.TextButton(onClick = onRestore) { Text("Вернуть из архива") }
             }
         }
     }

@@ -16,6 +16,8 @@ import java.util.zip.ZipInputStream
 data class ImportPayment(
     val line: Int, val counterparty: String, val direction: Direction?, val currency: String?,
     val date: LocalDate, val amountMinor: Long, val note: String?,
+    /** Колонка «Способ оплаты»; в старых файлах её нет. */
+    val method: String? = null,
 )
 
 enum class ImportSubState { ACTIVE, PAUSED, CANCELLED }
@@ -172,7 +174,7 @@ object Importer {
             val date = DebtImport.parseDate(c["Дата"])
             if (date == null) problems += "некорректная дата «${c["Дата"]}»"
             val sum = amount(c["Сумма"], currency, problems, "Сумма")
-            if (problems.isEmpty()) ImportPayment(line, name, DebtImport.parseDirection(c["Направление"]), currency, date!!, sum!!, c["Комментарий"].ifEmpty { null }) else null
+            if (problems.isEmpty()) ImportPayment(line, name, DebtImport.parseDirection(c["Направление"]), currency, date!!, sum!!, c["Комментарий"].ifEmpty { null }, c["Способ оплаты"].take(Limits.NAME).ifEmpty { null }) else null
         }
 
     internal fun parsePeriod(text: String): Pair<Periodicity, Int>? {
