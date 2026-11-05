@@ -1,5 +1,6 @@
 package app.kvity.ui.components
 
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import app.kvity.R
 import androidx.compose.foundation.background
@@ -70,7 +71,7 @@ fun Pill(text: String, background: Color, foreground: Color) {
 fun StatusPill(status: DebtStatus, overdueDays: Long = 0) {
     val c = MaterialTheme.kvity
     when (status) {
-        DebtStatus.OVERDUE -> Pill(stringResource(R.string.comp_overdue_days, overdueDays.toInt()), c.expenseBg, c.expense)
+        DebtStatus.OVERDUE -> Pill(pluralStringResource(R.plurals.comp_overdue_days_plural, overdueDays.toInt(), overdueDays.toInt()), c.expenseBg, c.expense)
         DebtStatus.DUE_SOON -> Pill(stringResource(R.string.comp_due_soon), c.warnBg, c.warn)
         DebtStatus.CLOSED -> Pill(stringResource(R.string.comp_closed), c.incomeBg, c.income)
         DebtStatus.ACTIVE -> Unit

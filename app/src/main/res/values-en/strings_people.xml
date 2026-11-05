@@ -2,7 +2,6 @@
 <resources>
     <string name="people_title">People</string>
     <string name="people_empty">People you have debts or shared recurring payments with will appear here.</string>
-    <string name="people_counts">debts: %1$d · subscriptions: %2$d</string>
     <string name="people_archive_header">Archive (%1$d)</string>
     <string name="people_in_archive">archived</string>
     <string name="people_unarchive">Restore from archive</string>

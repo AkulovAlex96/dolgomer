@@ -31,6 +31,7 @@ import app.kvity.data.AttachmentOwner
 import app.kvity.data.AttachmentRepository
 import app.kvity.data.AttachmentTooLargeException
 import app.kvity.ui.formatFileSize
+import app.kvity.ui.rememberTexts
 import kotlinx.coroutines.launch
 
 /** Список вложений владельца с добавлением фото и файлов. */
@@ -44,6 +45,7 @@ fun AttachmentsCard(
 ) {
     val context = LocalContext.current
     val resources = androidx.compose.ui.platform.LocalResources.current
+    val texts = rememberTexts()
     val scope = rememberCoroutineScope()
     val items by repo.observe(type, ownerId).collectAsStateWithLifecycle(emptyList())
     var confirmDelete by remember { mutableStateOf<AttachmentEntity?>(null) }
@@ -84,7 +86,7 @@ fun AttachmentsCard(
                     Toast.makeText(context, resources.getString(R.string.comp_attach_no_app), Toast.LENGTH_SHORT).show()
                 } },
                 label = att.fileName,
-                subtitle = formatFileSize(att.sizeBytes),
+                subtitle = formatFileSize(att.sizeBytes, texts),
                 trailing = { TextButton(onClick = { confirmDelete = att }) { Text("✕") } },
             )
         }

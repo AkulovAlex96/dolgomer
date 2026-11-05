@@ -52,6 +52,7 @@ import app.kvity.ui.components.swipeHorizontally
 import app.kvity.ui.currencyOf
 import app.kvity.ui.formatDate
 import app.kvity.ui.formatMoney
+import app.kvity.ui.rememberTexts
 import app.kvity.ui.theme.kvity
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -234,6 +235,7 @@ private fun DayCell(
     onClick: () -> Unit,
 ) {
     val c = MaterialTheme.kvity
+    val suffixes = rememberTexts().moneySuffixes
     // просроченное в суммы дня не входит (ТЗ 3.5): о нём говорит красная точка
     val counted = events.filter { !it.overdue }
     val debts = counted.filter { it.kind == EventKind.DEBT }
@@ -243,7 +245,7 @@ private fun DayCell(
         .toSortedMap(compareBy<Pair<String, MoneyFlow>> { it.first != mainCurrency }.thenBy { it.first }.thenBy { it.second })
         .map { (key, list) ->
             val cur = currencyOf(key.first)
-            val text = (if (key.second == MoneyFlow.IN) "+" else "−") + AmountFormatter.compact(list.sumOf { it.amountMinor }, cur.fractionDigits) + cur.symbol
+            val text = (if (key.second == MoneyFlow.IN) "+" else "−") + AmountFormatter.compact(list.sumOf { it.amountMinor }, cur.fractionDigits, suffixes) + cur.symbol
             text to key.second
         }
     val debtShown = if (debtLines.size > 2) listOf(debtLines[0], androidx.compose.ui.platform.LocalResources.current.getString(R.string.cal_more, debtLines.size - 1) to null) else debtLines
@@ -253,7 +255,7 @@ private fun DayCell(
         .map { (code, list) -> code to list.sumOf { if (it.flow == MoneyFlow.IN) it.amountMinor else -it.amountMinor } }
         .map { (code, net) ->
             val cur = currencyOf(code)
-            (if (net < 0) "−" else if (net > 0) "+" else "") + AmountFormatter.compact(kotlin.math.abs(net), cur.fractionDigits) + cur.symbol
+            (if (net < 0) "−" else if (net > 0) "+" else "") + AmountFormatter.compact(kotlin.math.abs(net), cur.fractionDigits, suffixes) + cur.symbol
         }
     // две строки под регулярные; если валют больше, вторая строка сворачивается в «ещё N»
     val regularShown = if (regularLines.size > 2) listOf(regularLines[0], androidx.compose.ui.platform.LocalResources.current.getString(R.string.cal_more, regularLines.size - 1)) else regularLines

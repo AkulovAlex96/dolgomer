@@ -1,6 +1,7 @@
 package app.kvity.ui.settings
 
 import app.kvity.R
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -160,7 +161,7 @@ fun NotificationsSection(settings: Settings, onChange: ((Settings) -> Settings) 
             DropdownField(
                 stringResource(R.string.settings_notify_due),
                 listOf(
-                    listOf(1) to stringResource(R.string.settings_notify_1), listOf(3, 1) to stringResource(R.string.settings_notify_3_1),
+                    listOf(1) to pluralStringResource(R.plurals.settings_before_days, 1, 1), listOf(3, 1) to stringResource(R.string.settings_notify_3_1),
                     listOf(7, 3, 1) to stringResource(R.string.settings_notify_7_3_1), emptyList<Int>() to stringResource(R.string.settings_notify_same_day),
                 ),
                 settings.notifyDaysBefore, { d -> onChange { it.copy(notifyDaysBefore = d) } },
@@ -175,23 +176,23 @@ fun NotificationsSection(settings: Settings, onChange: ((Settings) -> Settings) 
                 stringResource(R.string.settings_overdue_repeat),
                 listOf(
                     0 to stringResource(R.string.settings_repeat_never), 1 to stringResource(R.string.settings_repeat_daily),
-                    3 to stringResource(R.string.settings_repeat_3d), 7 to stringResource(R.string.settings_repeat_weekly),
+                    3 to pluralStringResource(R.plurals.settings_every_days, 3, 3), 7 to stringResource(R.string.settings_repeat_weekly),
                 ),
                 settings.overdueRepeatDays, { d -> onChange { it.copy(overdueRepeatDays = d) } },
             )
             DropdownField(
                 stringResource(R.string.settings_notify_sub),
                 listOf(
-                    0 to stringResource(R.string.settings_sub_same_day), 1 to stringResource(R.string.settings_sub_1),
-                    2 to stringResource(R.string.settings_sub_2), 3 to stringResource(R.string.settings_sub_3),
+                    0 to stringResource(R.string.settings_sub_same_day), 1 to pluralStringResource(R.plurals.settings_before_days, 1, 1),
+                    2 to pluralStringResource(R.plurals.settings_before_days, 2, 2), 3 to pluralStringResource(R.plurals.settings_before_days, 3, 3),
                 ),
                 settings.subscriptionNotifyDays, { d -> onChange { it.copy(subscriptionNotifyDays = d) } },
             )
             DropdownField(
                 stringResource(R.string.settings_stale),
                 listOf(
-                    0 to stringResource(R.string.settings_stale_never), 14 to stringResource(R.string.settings_stale_14),
-                    30 to stringResource(R.string.settings_stale_30), 60 to stringResource(R.string.settings_stale_60),
+                    0 to stringResource(R.string.settings_stale_never), 14 to pluralStringResource(R.plurals.settings_after_days, 14, 14),
+                    30 to pluralStringResource(R.plurals.settings_after_days, 30, 30), 60 to pluralStringResource(R.plurals.settings_after_days, 60, 60),
                 ),
                 settings.staleDebtDays, { d -> onChange { it.copy(staleDebtDays = d) } },
             )

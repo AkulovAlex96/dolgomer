@@ -2,6 +2,7 @@ package app.kvity.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.kvity.domain.AppTexts
 import app.kvity.domain.ArchiveRules
 import app.kvity.data.DebtRepository
 import app.kvity.data.DebtView
@@ -42,9 +43,9 @@ class PeopleViewModel(
     }
 
     /** Отправляет в архив. Возвращает причину отказа или null, если архивация выполнена. */
-    fun archive(personId: String): String? {
+    fun archive(personId: String, texts: AppTexts = AppTexts.default): String? {
         val p = persons.value.firstOrNull { it.person.id == personId } ?: return null
-        val reason = ArchiveRules.archiveBlockReason(p.balance, p.activeShareCount)
+        val reason = ArchiveRules.archiveBlockReason(p.balance, p.activeShareCount, texts)
         if (reason == null) viewModelScope.launch { people.setArchived(personId, true) }
         return reason
     }

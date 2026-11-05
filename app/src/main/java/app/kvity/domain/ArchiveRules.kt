@@ -21,17 +21,8 @@ object ArchiveRules {
     }
 
     /** То же, но готовым текстом на языке приложения (для кода без Context). */
-    fun archiveBlockReason(balance: Map<String, Long>, activeShares: Int): String? = when (archiveBlock(balance, activeShares)) {
-        ArchiveBlock.OPEN_DEBTS -> LocaleText.pick(
-            "Нельзя архивировать: есть неоплаченные долги. Сначала закройте их или отправьте в архив.",
-            "Cannot archive: there are unpaid debts. Close them or archive them first.",
-        )
-        ArchiveBlock.ACTIVE_SHARES -> LocaleText.pick(
-            "Нельзя архивировать: человек участвует в регулярных платежах.",
-            "Cannot archive: this person takes part in recurring payments.",
-        )
-        null -> null
-    }
+    fun archiveBlockReason(balance: Map<String, Long>, activeShares: Int, texts: AppTexts = AppTexts.default): String? =
+        archiveBlock(balance, activeShares)?.let { texts.archiveBlock(it) }
 
     /** Обрезает пробелы и длину; пустое значение превращается в null. */
     fun cleanText(text: String?, limit: Int): String? = text?.trim()?.take(limit)?.ifEmpty { null }
