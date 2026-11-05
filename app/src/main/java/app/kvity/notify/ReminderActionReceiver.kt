@@ -22,6 +22,8 @@ class ReminderActionReceiver : BroadcastReceiver() {
             cancel(context, notificationId)
             return
         }
+        // уведомление снимаем сразу: повторное нажатие, пока идёт запись, иначе дало бы двойной платёж по долгу
+        cancel(context, notificationId)
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -30,7 +32,9 @@ class ReminderActionReceiver : BroadcastReceiver() {
                     is PaidTarget.Charge -> app.subscriptions.markChargePaid(target.subscriptionId, target.period, target.amountMinor)
                     is PaidTarget.Share -> app.subscriptions.markPaid(target.shareId, target.period, target.amountMinor)
                 }
-                cancel(context, notificationId)
+            } catch (e: Exception) {
+                // сбой записи не должен ронять приложение
+                android.util.Log.w("ReminderAction", "mark paid failed", e)
             } finally {
                 pending.finish()
             }
@@ -40,12 +44,9 @@ class ReminderActionReceiver : BroadcastReceiver() {
     /** Снимает уведомление; если в группе осталась только сводка, снимает и её. */
     private fun cancel(context: Context, id: Int) {
         val nm = context.getSystemService(NotificationManager::class.java)
-        val group = nm.activeNotifications.firstOrNull { it.id == id }?.notification?.group
+        val summary = NotifyGroups.summaryToCancel(nm.activeNotifications.map { it.id to it.notification.group }, id)
         nm.cancel(id)
-        if (group != null) {
-            val rest = nm.activeNotifications.filter { it.notification.group == group }
-            if (rest.size == 1 && rest[0].id < 10) nm.cancel(rest[0].id)
-        }
+        if (summary != null) nm.cancel(summary)
     }
 
     companion object {
@@ -67,12 +68,16 @@ class ReminderActionReceiver : BroadcastReceiver() {
             }
         }
 
-        private fun parse(intent: Intent): PaidTarget? {
-            val id = intent.getStringExtra(EXTRA_ID) ?: return null
-            val amount = intent.getLongExtra(EXTRA_AMOUNT, 0)
-            if (amount <= 0) return null
-            val period = intent.getLongExtra(EXTRA_PERIOD, Long.MIN_VALUE).takeIf { it != Long.MIN_VALUE }?.let(LocalDate::ofEpochDay)
-            return when (intent.getStringExtra(EXTRA_TYPE)) {
+        private fun parse(intent: Intent): PaidTarget? = parseTarget(
+            intent.getStringExtra(EXTRA_TYPE), intent.getStringExtra(EXTRA_ID),
+            intent.getLongExtra(EXTRA_PERIOD, Long.MIN_VALUE), intent.getLongExtra(EXTRA_AMOUNT, 0),
+        )
+
+        /** Чистый разбор extras ([periodDay] = Long.MIN_VALUE — не задан); null — действие выполнять нельзя. */
+        internal fun parseTarget(type: String?, id: String?, periodDay: Long, amount: Long): PaidTarget? {
+            if (id.isNullOrEmpty() || amount <= 0) return null
+            val period = periodDay.takeIf { it != Long.MIN_VALUE }?.let(LocalDate::ofEpochDay)
+            return when (type) {
                 "debt" -> PaidTarget.Debt(id, amount)
                 "charge" -> period?.let { PaidTarget.Charge(id, it, amount) }
                 "share" -> period?.let { PaidTarget.Share(id, it, amount) }

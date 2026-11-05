@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="exact_alarm_title">Точные напоминания</string>
+    <string name="exact_alarm_text">Чтобы уведомления приходили вовремя, а не с задержкой в режиме энергосбережения, разрешите приложению точные будильники. Откроются системные настройки.</string>
+    <string name="exact_alarm_allow">Разрешить точные напоминания</string>
+    <string name="exact_alarm_later">Не сейчас</string>
+</resources>

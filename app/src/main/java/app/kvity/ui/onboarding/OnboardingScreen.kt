@@ -39,6 +39,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kvity.R
 import app.kvity.notify.Notifier
 import kotlinx.coroutines.launch
@@ -101,6 +102,7 @@ private fun PageContent(page: OnboardingPage) {
             stringResource(page.text), style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center,
         )
+        if (page.notifications) ExactAlarmOffer()
         if (page.notifications && Build.VERSION.SDK_INT >= 33) {
             Spacer(Modifier.height(24.dp))
             if (allowed) {
@@ -113,6 +115,34 @@ private fun PageContent(page: OnboardingPage) {
                 }) { Text(stringResource(R.string.onboarding_notifications_allow)) }
             }
         }
+    }
+}
+
+/**
+ * Мягкое предложение точных напоминаний на слайде «Напоминания»: только когда уведомления разрешены,
+ * точных будильников нет и ещё не спрашивали. Показ помечается сразу, поэтому повторно не навязывается.
+ */
+@Composable
+private fun ExactAlarmOffer() {
+    val kvityApp = LocalContext.current.applicationContext as app.kvity.KvityApp
+    val settings by kvityApp.settings.settings.collectAsStateWithLifecycle()
+    val offer = app.kvity.ui.rememberShouldOfferExactAlarm(settings)
+    var shown by remember { mutableStateOf(false) }
+    var done by remember { mutableStateOf(false) }
+    if (offer) shown = true
+    if (!shown || done) return
+    app.kvity.ui.MarkExactAlarmAsked()
+    val context = LocalContext.current
+    Spacer(Modifier.height(16.dp))
+    Text(
+        stringResource(R.string.exact_alarm_text), style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center,
+    )
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(onClick = { app.kvity.notify.ReminderAlarm.requestExactPermission(context); done = true }) {
+            Text(stringResource(R.string.exact_alarm_allow))
+        }
+        TextButton(onClick = { done = true }) { Text(stringResource(R.string.exact_alarm_later)) }
     }
 }
 
