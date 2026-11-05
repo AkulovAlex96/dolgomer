@@ -8,6 +8,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import app.kvity.R
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -28,12 +30,6 @@ import app.kvity.ui.components.FormScreen
 import app.kvity.ui.currencyOf
 import app.kvity.ui.minorToInput
 import java.time.LocalDate
-
-private val periods = listOf(
-    Periodicity.WEEK to "Неделя",
-    Periodicity.MONTH to "Месяц",
-    Periodicity.YEAR to "Год",
-)
 
 @Composable
 fun SubscriptionFormScreen(
@@ -66,29 +62,34 @@ fun SubscriptionFormScreen(
     val valid = name.isNotBlank() && amount != null && anchor != null && interval != null &&
         (payer == SubscriptionPayer.ME || payerName.isNotBlank())
 
-    FormScreen(title = if (initial == null) "Новый регулярный платёж" else "Изменить регулярный платёж", onBack = onBack, backLabel = "Отмена", hasChanges = FormChanges.isDirty(initialSnapshot, snapshot)) {
-        OutlinedTextField(name, { name = it.take(Limits.NAME) }, label = { Text("Название (ChatGPT, GitHub…)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+    val periods = listOf(
+        Periodicity.WEEK to stringResource(R.string.sub_week),
+        Periodicity.MONTH to stringResource(R.string.sub_month),
+        Periodicity.YEAR to stringResource(R.string.sub_year),
+    )
+    FormScreen(title = if (initial == null) stringResource(R.string.sub_form_new) else stringResource(R.string.sub_form_edit), onBack = onBack, backLabel = stringResource(R.string.sub_dismiss), hasChanges = FormChanges.isDirty(initialSnapshot, snapshot)) {
+        OutlinedTextField(name, { name = it.take(Limits.NAME) }, label = { Text(stringResource(R.string.sub_form_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 value = amountText, onValueChange = { amountText = it },
-                label = { Text(if (payer == SubscriptionPayer.ME) "Сумма списания" else "Моя доля") },
+                label = { Text(if (payer == SubscriptionPayer.ME) stringResource(R.string.sub_form_amount) else stringResource(R.string.sub_form_my_share)) },
                 singleLine = true, isError = amountText.isNotBlank() && amount == null,
                 modifier = Modifier.weight(1f),
             )
             DropdownField("", currencies.map { it to "${currencyOf(it).symbol} $it" }, currency, { currency = it }, Modifier.weight(0.6f))
         }
 
-        DropdownField("Период", periods, periodicity, { periodicity = it })
+        DropdownField(stringResource(R.string.sub_form_period), periods, periodicity, { periodicity = it })
         OutlinedTextField(
-            intervalText, { intervalText = it.filter(Char::isDigit).take(2) }, label = { Text("Повторять каждые N периодов") },
+            intervalText, { intervalText = it.filter(Char::isDigit).take(2) }, label = { Text(stringResource(R.string.sub_form_interval)) },
             singleLine = true, isError = interval == null, modifier = Modifier.fillMaxWidth(),
         )
-        DatePickerField("Дата списания (любая известная)", anchor, { anchorEpoch = it.toEpochDay() })
+        DatePickerField(stringResource(R.string.sub_form_anchor), anchor, { anchorEpoch = it.toEpochDay() })
 
-        ChipRow(listOf(SubscriptionPayer.ME to "Плачу я", SubscriptionPayer.OTHER to "Платит другой"), payer, { payer = it })
+        ChipRow(listOf(SubscriptionPayer.ME to stringResource(R.string.sub_form_payer_me), SubscriptionPayer.OTHER to stringResource(R.string.sub_form_payer_other)), payer, { payer = it })
         if (payer == SubscriptionPayer.OTHER) {
-            OutlinedTextField(payerName, { payerName = it.take(Limits.NAME) }, label = { Text("Кто платит") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(payerName, { payerName = it.take(Limits.NAME) }, label = { Text(stringResource(R.string.sub_form_payer_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
             val hints = knownNames.filter { it.contains(payerName.trim(), true) && !it.equals(payerName.trim(), true) }.take(4)
             if (payerName.isNotBlank() && hints.isNotEmpty()) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -96,13 +97,13 @@ fun SubscriptionFormScreen(
                 }
             }
         } else {
-            Text("Участников, которые возвращают долю, можно добавить на экране регулярного платежа.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.sub_form_participants_hint), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
-        OutlinedTextField(method, { method = it.take(Limits.NAME) }, label = { Text("Способ оплаты (необязательно)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        DatePickerField("Конец пробного периода (необязательно)", trialEpoch?.let(LocalDate::ofEpochDay), { trialEpoch = it.toEpochDay() })
-        OutlinedTextField(category, { category = it.take(Limits.NAME) }, label = { Text("Категория (необязательно)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(note, { note = it.take(Limits.NOTE) }, label = { Text("Комментарий") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(method, { method = it.take(Limits.NAME) }, label = { Text(stringResource(R.string.sub_form_method)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        DatePickerField(stringResource(R.string.sub_form_trial), trialEpoch?.let(LocalDate::ofEpochDay), { trialEpoch = it.toEpochDay() })
+        OutlinedTextField(category, { category = it.take(Limits.NAME) }, label = { Text(stringResource(R.string.sub_form_category)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(note, { note = it.take(Limits.NOTE) }, label = { Text(stringResource(R.string.sub_form_note)) }, modifier = Modifier.fillMaxWidth())
 
         Button(
             enabled = valid, modifier = Modifier.fillMaxWidth(),
@@ -116,6 +117,6 @@ fun SubscriptionFormScreen(
                     ),
                 )
             },
-        ) { Text("Сохранить") }
+        ) { Text(stringResource(R.string.sub_form_save)) }
     }
 }

@@ -19,6 +19,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import app.kvity.R
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -89,15 +91,15 @@ fun DashboardScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Квиты", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
-                    androidx.compose.material3.TextButton(onClick = onOpenSettings) { Text("Настройки") }
+                    Text(stringResource(R.string.app_name), fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
+                    androidx.compose.material3.TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.dash_settings)) }
                 }
             }
             if (backupHint) {
                 item {
                     SectionCard(modifier = Modifier.clickable(onClick = onOpenBackup)) {
-                        Text("Резервная копия не создавалась больше 30 дней", fontWeight = FontWeight.SemiBold)
-                        Text("Нажмите, чтобы сохранить данные", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.dash_backup_title), fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.dash_backup_hint), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -108,36 +110,36 @@ fun DashboardScreen(
                 if (state.overdueShares.isNotEmpty()) {
                     item { OverdueSharesCard(state.overdueShares, onOpenSubscription, onMarkPaid) }
                 }
-                item { BucketsCard("Мне платят", state.subsIncoming, MaterialTheme.kvity.income) }
-                item { BucketsCard("Я плачу", state.subsOutgoing, MaterialTheme.kvity.expense) }
+                item { BucketsCard(stringResource(R.string.dash_they_pay), state.subsIncoming, MaterialTheme.kvity.income) }
+                item { BucketsCard(stringResource(R.string.dash_i_pay), state.subsOutgoing, MaterialTheme.kvity.expense) }
                 if (state.loaded && state.subs.isEmpty()) {
                     item {
                         SectionCard {
-                            Text("Подписок пока нет. Нажмите «+», чтобы добавить.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.dash_no_subs), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 } else if (state.subs.isNotEmpty()) {
                     item {
-                        Text("Все регулярные платежи", fontWeight = FontWeight.SemiBold,
+                        Text(stringResource(R.string.dash_all_regular), fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
                     }
                     items(state.subs, key = { it.subscription.id }) { SubRow(it, onClick = { onOpenSubscription(it.subscription.id) }) }
                 }
             } else {
                 item { BalanceCard(state) }
-                item { BucketsCard("Мне должны", state.owedToMe, MaterialTheme.kvity.income) }
-                item { BucketsCard("Я должен", state.iOwe, MaterialTheme.kvity.expense) }
+                item { BucketsCard(stringResource(R.string.dash_owed_to_me), state.owedToMe, MaterialTheme.kvity.income) }
+                item { BucketsCard(stringResource(R.string.dash_i_owe), state.iOwe, MaterialTheme.kvity.expense) }
 
                 if (state.loaded && state.debts.isEmpty()) {
                     item {
                         SectionCard {
-                            Text("Долгов пока нет. Нажмите «+», чтобы добавить первый.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.dash_no_debts), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 } else if (state.debts.isNotEmpty()) {
                     item {
                         Text(
-                            "Все долги",
+                            stringResource(R.string.dash_all_debts),
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 6.dp),
@@ -153,7 +155,7 @@ fun DashboardScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                "Архив (${state.archivedDebts.size})",
+                                stringResource(R.string.dash_archive, state.archivedDebts.size),
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -179,7 +181,7 @@ private fun Tabs(selected: Int, onSelect: (Int) -> Unit) {
             .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(999.dp))
             .padding(3.dp),
     ) {
-        listOf("Долги", "Регулярные платежи").forEachIndexed { i, title ->
+        listOf(stringResource(R.string.dash_tab_debts), stringResource(R.string.dash_tab_regular)).forEachIndexed { i, title ->
             val on = i == selected
             Box(
                 modifier = Modifier
@@ -205,8 +207,8 @@ private fun BalanceCard(state: DashboardState) {
     val c = MaterialTheme.kvity
     SectionCard {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            BalanceBox("Мне должны", state.owedToMeTotal, c.incomeBg, c.income, Modifier.weight(1f))
-            BalanceBox("Я должен", state.iOweTotal, c.expenseBg, c.expense, Modifier.weight(1f))
+            BalanceBox(stringResource(R.string.dash_owed_to_me), state.owedToMeTotal, c.incomeBg, c.income, Modifier.weight(1f))
+            BalanceBox(stringResource(R.string.dash_i_owe), state.iOweTotal, c.expenseBg, c.expense, Modifier.weight(1f))
         }
     }
 }
@@ -256,13 +258,13 @@ private fun DebtRow(view: DebtView, onClick: () -> Unit) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(view.counterpartyName, fontWeight = FontWeight.SemiBold)
                 val sub = when {
-                    s.status == DebtStatus.CLOSED -> "закрыт"
-                    s.nextDue != null -> "следующий платёж ${formatDate(s.nextDue.dueDate)}"
-                    s.status == DebtStatus.OVERDUE -> "есть просрочка"
-                    else -> "без срока"
+                    s.status == DebtStatus.CLOSED -> stringResource(R.string.dash_closed)
+                    s.nextDue != null -> stringResource(R.string.dash_next_payment, formatDate(s.nextDue.dueDate))
+                    s.status == DebtStatus.OVERDUE -> stringResource(R.string.dash_has_overdue)
+                    else -> stringResource(R.string.dash_no_due)
                 }
                 Text(
-                    (if (mine) "мне должны · " else "я должен · ") + sub,
+                    stringResource(R.string.dash_line, if (mine) stringResource(R.string.dash_lc_owed_to_me) else stringResource(R.string.dash_lc_i_owe), sub),
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -291,14 +293,14 @@ private fun ArchivedDebtRow(view: DebtView, onClick: () -> Unit, onRestore: () -
             Column(modifier = Modifier.weight(1f)) {
                 Text(view.counterpartyName, fontWeight = FontWeight.SemiBold)
                 Text(
-                    (if (mine) "мне должны · " else "я должен · ") + formatMoney(view.summary.remainingMinor, view.debt.currency),
+                    stringResource(R.string.dash_line, if (mine) stringResource(R.string.dash_lc_owed_to_me) else stringResource(R.string.dash_lc_i_owe), formatMoney(view.summary.remainingMinor, view.debt.currency)),
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
-                app.kvity.ui.components.Pill("архив", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
-                androidx.compose.material3.TextButton(onClick = onRestore) { Text("Вернуть из архива") }
+                app.kvity.ui.components.Pill(stringResource(R.string.dash_archive_pill), MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
+                androidx.compose.material3.TextButton(onClick = onRestore) { Text(stringResource(R.string.dash_restore)) }
             }
         }
     }
@@ -309,8 +311,8 @@ private fun SubsBalanceCard(state: DashboardState) {
     val c = MaterialTheme.kvity
     SectionCard {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            BalanceBox("Выставить счёт / мес", state.subsIncomingMonthly, c.incomeBg, c.income, Modifier.weight(1f))
-            BalanceBox("Мои списания / мес", state.subsOutgoingMonthly, c.expenseBg, c.expense, Modifier.weight(1f))
+            BalanceBox(stringResource(R.string.dash_bill_month), state.subsIncomingMonthly, c.incomeBg, c.income, Modifier.weight(1f))
+            BalanceBox(stringResource(R.string.dash_charges_month), state.subsOutgoingMonthly, c.expenseBg, c.expense, Modifier.weight(1f))
         }
     }
 }
@@ -327,18 +329,18 @@ private fun SubRow(view: app.kvity.data.SubscriptionView, onClick: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text(s.name, fontWeight = FontWeight.SemiBold)
                 val who = if (s.payer == app.kvity.data.SubscriptionPayer.ME) {
-                    if (view.shares.isEmpty()) "личная" else "общая · ${view.shares.size} уч."
-                } else "платит ${view.payerName ?: "другой"}"
+                    if (view.shares.isEmpty()) stringResource(R.string.dash_personal) else stringResource(R.string.dash_shared, view.shares.size)
+                } else stringResource(R.string.dash_pays, view.payerName ?: stringResource(R.string.dash_other))
                 val state = when (s.state) {
-                    app.kvity.data.SubscriptionState.ACTIVE -> next?.let { "след. ${formatDate(it)}" } ?: ""
-                    app.kvity.data.SubscriptionState.PAUSED -> "на паузе"
-                    app.kvity.data.SubscriptionState.CANCELLED -> "отменена"
+                    app.kvity.data.SubscriptionState.ACTIVE -> next?.let { stringResource(R.string.dash_next, formatDate(it)) } ?: ""
+                    app.kvity.data.SubscriptionState.PAUSED -> stringResource(R.string.dash_paused)
+                    app.kvity.data.SubscriptionState.CANCELLED -> stringResource(R.string.dash_cancelled)
                 }
                 Text("$who · $state", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(formatMoney(s.amountMinor, s.currency), fontWeight = FontWeight.Bold)
-                if (unpaid > 0) app.kvity.ui.components.Pill("не оплатили: $unpaid", c.expenseBg, c.expense)
+                if (unpaid > 0) app.kvity.ui.components.Pill(stringResource(R.string.dash_unpaid, unpaid), c.expenseBg, c.expense)
             }
         }
     }
@@ -352,7 +354,7 @@ private fun OverdueSharesCard(
 ) {
     val c = MaterialTheme.kvity
     SectionCard {
-        Text("Просрочено", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = c.expense)
+        Text(stringResource(R.string.dash_overdue), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = c.expense)
         shares.forEach { e ->
             LabelRow(
                 onClick = { e.refId.let(onOpen) },
@@ -362,7 +364,7 @@ private fun OverdueSharesCard(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         val incoming = e.flow == app.kvity.data.MoneyFlow.IN
                         Text((if (incoming) "+" else "−") + formatMoney(e.amountMinor, e.currency), color = if (incoming) c.income else c.expense, fontWeight = FontWeight.Bold)
-                        androidx.compose.material3.TextButton(onClick = { onMarkPaid(e) }) { Text("Оплатил") }
+                        androidx.compose.material3.TextButton(onClick = { onMarkPaid(e) }) { Text(stringResource(R.string.dash_paid)) }
                     }
                 },
             )

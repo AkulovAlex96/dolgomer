@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dash_settings">Settings</string>
+    <string name="dash_backup_title">No backup for more than 30 days</string>
+    <string name="dash_backup_hint">Tap to save your data</string>
+    <string name="dash_they_pay">Paying me</string>
+    <string name="dash_i_pay">I pay</string>
+    <string name="dash_no_subs">No subscriptions yet. Tap “+” to add one.</string>
+    <string name="dash_all_regular">All recurring payments</string>
+    <string name="dash_owed_to_me">Owed to me</string>
+    <string name="dash_i_owe">I owe</string>
+    <string name="dash_no_debts">No debts yet. Tap “+” to add the first one.</string>
+    <string name="dash_all_debts">All debts</string>
+    <string name="dash_archive">Archive (%1$d)</string>
+    <string name="dash_tab_regular">Recurring payments</string>
+    <string name="dash_tab_debts">Debts</string>
+    <string name="dash_closed">closed</string>
+    <string name="dash_next_payment">next payment %1$s</string>
+    <string name="dash_has_overdue">overdue</string>
+    <string name="dash_no_due">no due date</string>
+    <string name="dash_lc_owed_to_me">owed to me</string>
+    <string name="dash_lc_i_owe">I owe</string>
+    <string name="dash_line">%1$s · %2$s</string>
+    <string name="dash_archive_pill">archived</string>
+    <string name="dash_restore">Restore from archive</string>
+    <string name="dash_bill_month">To invoice / mo</string>
+    <string name="dash_charges_month">My charges / mo</string>
+    <string name="dash_personal">personal</string>
+    <string name="dash_shared">shared · %1$d</string>
+    <string name="dash_other">someone else</string>
+    <string name="dash_pays">%1$s pays</string>
+    <string name="dash_next">next %1$s</string>
+    <string name="dash_paused">paused</string>
+    <string name="dash_cancelled">cancelled</string>
+    <string name="dash_unpaid">unpaid: %1$d</string>
+    <string name="dash_overdue">Overdue</string>
+    <string name="dash_paid">Paid</string>
+</resources>

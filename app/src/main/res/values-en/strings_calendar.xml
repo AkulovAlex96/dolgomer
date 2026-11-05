@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cal_all">All</string>
+    <string name="cal_debts">Debts</string>
+    <string name="cal_regular">Recurring payments</string>
+    <string name="cal_incoming_box">Owed to me</string>
+    <string name="cal_outgoing_box">I owe</string>
+    <string name="cal_total">Net</string>
+    <string name="cal_overdue_legend">overdue</string>
+    <string name="cal_undated">No exact date</string>
+    <string name="cal_nothing">Nothing on this day</string>
+    <string name="cal_in">Incoming</string>
+    <string name="cal_out">Outgoing</string>
+    <string name="cal_paid">paid</string>
+    <string name="cal_overdue">overdue</string>
+    <string name="cal_received">Received</string>
+    <string name="cal_paid_btn">Paid</string>
+    <string name="cal_more">%1$d more</string>
+</resources>

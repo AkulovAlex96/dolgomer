@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dash_settings">Настройки</string>
+    <string name="dash_backup_title">Резервная копия не создавалась больше 30 дней</string>
+    <string name="dash_backup_hint">Нажмите, чтобы сохранить данные</string>
+    <string name="dash_they_pay">Мне платят</string>
+    <string name="dash_i_pay">Я плачу</string>
+    <string name="dash_no_subs">Подписок пока нет. Нажмите «+», чтобы добавить.</string>
+    <string name="dash_all_regular">Все регулярные платежи</string>
+    <string name="dash_owed_to_me">Мне должны</string>
+    <string name="dash_i_owe">Я должен</string>
+    <string name="dash_no_debts">Долгов пока нет. Нажмите «+», чтобы добавить первый.</string>
+    <string name="dash_all_debts">Все долги</string>
+    <string name="dash_archive">Архив (%1$d)</string>
+    <string name="dash_tab_regular">Регулярные платежи</string>
+    <string name="dash_tab_debts">Долги</string>
+    <string name="dash_closed">закрыт</string>
+    <string name="dash_next_payment">следующий платёж %1$s</string>
+    <string name="dash_has_overdue">есть просрочка</string>
+    <string name="dash_no_due">без срока</string>
+    <string name="dash_lc_owed_to_me">мне должны</string>
+    <string name="dash_lc_i_owe">я должен</string>
+    <string name="dash_line">%1$s · %2$s</string>
+    <string name="dash_archive_pill">архив</string>
+    <string name="dash_restore">Вернуть из архива</string>
+    <string name="dash_bill_month">Выставить счёт / мес</string>
+    <string name="dash_charges_month">Мои списания / мес</string>
+    <string name="dash_personal">личная</string>
+    <string name="dash_shared">общая · %1$d уч.</string>
+    <string name="dash_other">другой</string>
+    <string name="dash_pays">платит %1$s</string>
+    <string name="dash_next">след. %1$s</string>
+    <string name="dash_paused">на паузе</string>
+    <string name="dash_cancelled">отменена</string>
+    <string name="dash_unpaid">не оплатили: %1$d</string>
+    <string name="dash_overdue">Просрочено</string>
+    <string name="dash_paid">Оплатил</string>
+</resources>
