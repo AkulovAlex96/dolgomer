@@ -1,5 +1,7 @@
 package app.kvity.ui.people
 
+import app.kvity.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -57,10 +59,10 @@ fun PeopleScreen(
             contentPadding = PaddingValues(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            item { Text("Люди", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp)) }
+            item { Text(stringResource(R.string.people_title), fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp)) }
             if (people.isEmpty()) {
                 item {
-                    SectionCard { Text("Здесь появятся люди, с которыми есть долги или общие регулярные платежи.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    SectionCard { Text(stringResource(R.string.people_empty), color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
             }
             items(people, key = { it.person.id }) { p ->
@@ -68,7 +70,7 @@ fun PeopleScreen(
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(p.person.name, fontWeight = FontWeight.SemiBold)
-                            Text("долгов: ${p.debtCount} · подписок: ${p.shareCount}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.people_counts, p.debtCount, p.shareCount), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Column(horizontalAlignment = Alignment.End) {
                             if (p.balance.isEmpty()) Text("—", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -88,7 +90,7 @@ fun PeopleScreen(
                         Modifier.fillMaxWidth().clickable { archiveOpen = !archiveOpen }.padding(top = 6.dp),
                         horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("Архив (${archived.size})", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.people_archive_header, archived.size), fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(if (archiveOpen) "▲" else "▼", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -98,9 +100,9 @@ fun PeopleScreen(
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
                                     Text(p.person.name, fontWeight = FontWeight.SemiBold)
-                                    Text("в архиве", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(stringResource(R.string.people_in_archive), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
-                                TextButton(onClick = { onUnarchive(p.person.id) }) { Text("Вернуть из архива") }
+                                TextButton(onClick = { onUnarchive(p.person.id) }) { Text(stringResource(R.string.people_unarchive)) }
                             }
                         }
                     }
@@ -128,8 +130,8 @@ fun PersonDetailScreen(
     otherNames: Set<String> = emptySet(),
 ) {
     val c = MaterialTheme.kvity
-    FormScreen(title = person?.person?.name ?: "Контрагент", onBack = onBack) {
-        if (person == null) { Text("Загрузка…"); return@FormScreen }
+    FormScreen(title = person?.person?.name ?: stringResource(R.string.people_counterparty), onBack = onBack) {
+        if (person == null) { Text(stringResource(R.string.people_loading)); return@FormScreen }
         var name by rememberSaveable(person.person.id) { mutableStateOf(person.person.name) }
         var phone by rememberSaveable(person.person.id) { mutableStateOf(person.person.phone ?: "") }
         var note by rememberSaveable(person.person.id) { mutableStateOf(person.person.note ?: "") }
@@ -138,8 +140,8 @@ fun PersonDetailScreen(
         var confirmDelete by rememberSaveable { mutableStateOf(false) }
         if (confirmDelete) {
             ConfirmDialog(
-                title = "Удалить контрагента?",
-                text = "«${person.person.name}» будет удалён.",
+                title = stringResource(R.string.people_delete_title),
+                text = stringResource(R.string.people_delete_text, person.person.name),
                 onConfirm = { confirmDelete = false; onDelete { ok -> if (!ok) deleteBlocked = true } },
                 onDismiss = { confirmDelete = false },
             )
@@ -148,22 +150,22 @@ fun PersonDetailScreen(
         SectionCard {
             val duplicate = name.trim().lowercase() in otherNames
             OutlinedTextField(
-                name, { name = it.take(Limits.NAME) }, label = { Text("Имя") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                isError = duplicate, supportingText = if (duplicate) ({ Text("Контрагент с таким именем уже есть") }) else null,
+                name, { name = it.take(Limits.NAME) }, label = { Text(stringResource(R.string.people_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                isError = duplicate, supportingText = if (duplicate) ({ Text(stringResource(R.string.people_duplicate)) }) else null,
             )
-            OutlinedTextField(phone, { phone = it.take(Limits.PHONE) }, label = { Text("Телефон") }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
-            OutlinedTextField(note, { note = it.take(Limits.NOTE) }, label = { Text("Заметка") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+            OutlinedTextField(phone, { phone = it.take(Limits.PHONE) }, label = { Text(stringResource(R.string.people_phone)) }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+            OutlinedTextField(note, { note = it.take(Limits.NOTE) }, label = { Text(stringResource(R.string.people_note)) }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
             Button(
                 enabled = name.isNotBlank() && name.trim().lowercase() !in otherNames, modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 onClick = { onSave(name, phone.ifBlank { null }, note.ifBlank { null }) },
-            ) { Text("Сохранить") }
+            ) { Text(stringResource(R.string.people_save)) }
         }
 
         if (person.balance.isNotEmpty()) {
             SectionCard {
-                Text("Баланс", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.people_balance), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 person.balance.forEach { (code, v) ->
-                    LabelRow(if (v > 0) "мне должен" else "я должен", trailing = {
+                    LabelRow(if (v > 0) stringResource(R.string.people_owes_me) else stringResource(R.string.people_i_owe), trailing = {
                         Text(formatMoney(kotlin.math.abs(v), code), fontWeight = FontWeight.Bold, color = if (v > 0) c.income else c.expense)
                     })
                 }
@@ -172,13 +174,13 @@ fun PersonDetailScreen(
 
         if (debts.isNotEmpty()) {
             SectionCard {
-                Text("Долги", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.people_debts), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 debts.forEach { v ->
                     val mine = v.debt.direction == Direction.OWED_TO_ME
                     LabelRow(
                         onClick = { onOpenDebt(v.debt.id) },
-                        label = if (mine) "мне должен" else "я должен",
-                        subtitle = if (v.summary.status == DebtStatus.CLOSED) "закрыт" else null,
+                        label = if (mine) stringResource(R.string.people_owes_me) else stringResource(R.string.people_i_owe),
+                        subtitle = if (v.summary.status == DebtStatus.CLOSED) stringResource(R.string.people_closed) else null,
                         trailing = {
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(formatMoney(v.summary.remainingMinor, v.debt.currency), fontWeight = FontWeight.Bold, color = if (mine) c.income else c.expense)
@@ -192,13 +194,13 @@ fun PersonDetailScreen(
 
         if (subs.isNotEmpty()) {
             SectionCard {
-                Text("Регулярные платежи", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.people_subscriptions), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 subs.forEach { v ->
                     val unpaid = v.shares.filter { it.share.counterpartyId == person.person.id }
                         .sumOf { sh -> sh.dues.count { !it.paid && it.periodDate.isBefore(java.time.LocalDate.now().plusDays(1)) } }
                     LabelRow(
                         onClick = { onOpenSubscription(v.subscription.id) }, label = v.subscription.name,
-                        subtitle = if (unpaid > 0) "не оплачено периодов: $unpaid" else null,
+                        subtitle = if (unpaid > 0) stringResource(R.string.people_unpaid_periods, unpaid) else null,
                         trailing = { Text(formatMoney(v.subscription.amountMinor, v.subscription.currency)) },
                     )
                 }
@@ -206,21 +208,20 @@ fun PersonDetailScreen(
         }
 
         if (person.archived) {
-            Text("Контрагент в архиве: не показывается в списке людей и подсказках имён.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Button(onClick = onUnarchive, modifier = Modifier.fillMaxWidth()) { Text("Вернуть из архива") }
+            Text(stringResource(R.string.people_archived_note), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Button(onClick = onUnarchive, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.people_unarchive)) }
         } else {
-            OutlinedButton(onClick = { archiveError = onArchive() }, modifier = Modifier.fillMaxWidth()) { Text("В архив") }
+            OutlinedButton(onClick = { archiveError = onArchive() }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.people_to_archive)) }
         }
         archiveError?.let { Text(it, color = c.expense) }
-        TextButton(onClick = { confirmDelete = true }) { Text("Удалить контрагента") }
+        TextButton(onClick = { confirmDelete = true }) { Text(stringResource(R.string.people_delete)) }
         if (deleteBlocked) {
             Text(
-                "Нельзя удалить: у контрагента есть долги (в том числе закрытые) или регулярные платежи. " +
-                    "Вместо удаления отправьте его в архив: история сохранится.",
+                stringResource(R.string.people_delete_blocked),
                 color = c.expense,
             )
             if (!person.archived) {
-                OutlinedButton(onClick = { deleteBlocked = false; archiveError = onArchive() }, modifier = Modifier.fillMaxWidth()) { Text("В архив") }
+                OutlinedButton(onClick = { deleteBlocked = false; archiveError = onArchive() }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.people_to_archive)) }
             }
         }
     }

@@ -1,5 +1,7 @@
 package app.kvity.ui.more
 
+import app.kvity.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,7 +28,7 @@ fun MoreScreen(items: List<MoreItem>) {
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text("Ещё", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
+            Text(stringResource(R.string.more_title), fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
             items.forEach { item ->
                 SectionCard(modifier = Modifier.clickable(onClick = item.onClick)) {
                     Text(item.title, fontWeight = FontWeight.SemiBold)

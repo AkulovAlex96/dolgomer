@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="export_file_saved">File saved</string>
+    <string name="export_save_failed">Could not save</string>
+    <string name="export_title">Export</string>
+    <string name="export_format">Format</string>
+    <string name="export_xlsx_note">One workbook, each table on its own sheet.</string>
+    <string name="export_csv_note">Several tables produce a .zip archive with a separate file for each. Separator “;”, UTF-8 encoding: opens in Excel.</string>
+    <string name="export_what">What to export</string>
+    <string name="export_table_debts">Debts</string>
+    <string name="export_table_payments">Payments</string>
+    <string name="export_table_subscriptions">Recurring payments</string>
+    <string name="export_table_shares">Shares in recurring payments</string>
+    <string name="export_table_people">Counterparties</string>
+    <string name="export_debts_and_payments">Debts and payments</string>
+    <string name="export_all">All</string>
+    <string name="export_owed_to_me">Owed to me</string>
+    <string name="export_i_owe">I owe</string>
+    <string name="export_save_file">Save to file</string>
+    <string name="export_share">Share</string>
+    <string name="export_send_file">Send file</string>
+</resources>

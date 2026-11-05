@@ -1,5 +1,7 @@
 package app.kvity.ui.settings
 
+import app.kvity.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,28 +42,32 @@ fun SecuritySection(
     val pinOn = settings.pinEnabled && pinStore.isSet
 
     SectionCard {
-        GroupTitle("Безопасность")
+        GroupTitle(stringResource(R.string.settings_security))
         SettingSwitch(
-            "PIN-код", if (pinOn) "Вход по ${pinStore.length}-значному коду" else "Защитить вход в приложение",
+            stringResource(R.string.settings_pin),
+            if (pinOn) stringResource(R.string.settings_pin_on, pinStore.length) else stringResource(R.string.settings_pin_off),
             pinOn,
         ) { on -> action = if (on) PinAction.SET else PinAction.DISABLE }
 
         if (!pinOn) {
-            DropdownField("Длина PIN", listOf(4 to "4 цифры", 6 to "6 цифр"), pinLength, { pinLength = it })
+            DropdownField(stringResource(R.string.settings_pin_length), listOf(4 to stringResource(R.string.settings_pin_4), 6 to stringResource(R.string.settings_pin_6)), pinLength, { pinLength = it })
         } else {
             SettingSwitch(
-                "Отпечаток пальца", if (biometricAvailable) null else "Не настроен на устройстве",
+                stringResource(R.string.settings_fingerprint), if (biometricAvailable) null else stringResource(R.string.settings_fingerprint_unavailable),
                 settings.biometricEnabled && biometricAvailable,
             ) { v -> if (biometricAvailable) onChange { it.copy(biometricEnabled = v) } }
             DropdownField(
-                "Блокировать через",
-                listOf(0 to "сразу", 30 to "30 секунд", 60 to "1 минуту", 300 to "5 минут"),
+                stringResource(R.string.settings_lock_after),
+                listOf(
+                    0 to stringResource(R.string.settings_lock_now), 30 to stringResource(R.string.settings_lock_30s),
+                    60 to stringResource(R.string.settings_lock_1m), 300 to stringResource(R.string.settings_lock_5m),
+                ),
                 settings.lockTimeoutSeconds, { s -> onChange { it.copy(lockTimeoutSeconds = s) } },
                 Modifier.padding(top = 4.dp),
             )
         }
         SettingSwitch(
-            "Скрывать экран", "Запрет скриншотов и скрытие в списке недавних приложений",
+            stringResource(R.string.settings_secure_screen), stringResource(R.string.settings_secure_screen_sub),
             settings.secureScreen, { v -> onChange { it.copy(secureScreen = v) } },
         )
     }
@@ -95,7 +101,7 @@ private fun PinDialogFrame(onDismiss: () -> Unit, content: @Composable () -> Uni
         Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surface) {
             Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 content()
-                TextButton(onClick = onDismiss) { Text("Отмена") }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) }
             }
         }
     }
@@ -106,18 +112,19 @@ private fun SetPinDialog(length: Int, onDone: (String) -> Unit, onDismiss: () ->
     var first by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var round by remember { mutableStateOf(0) }
+    val mismatchText = stringResource(R.string.settings_pin_mismatch)
 
     PinDialogFrame(onDismiss) {
         PinPad(
             length = length,
-            title = if (first == null) "Придумайте PIN-код" else "Повторите PIN-код",
+            title = if (first == null) stringResource(R.string.settings_pin_set_title) else stringResource(R.string.settings_pin_repeat_title),
             message = error, resetKey = round,
             onComplete = { pin ->
                 val f = first
                 when {
                     f == null -> { first = pin; error = null; round++ }
                     f == pin -> onDone(pin)
-                    else -> { first = null; error = "PIN-коды не совпали, начните заново"; round++ }
+                    else -> { first = null; error = mismatchText; round++ }
                 }
             },
         )
@@ -128,14 +135,16 @@ private fun SetPinDialog(length: Int, onDone: (String) -> Unit, onDismiss: () ->
 private fun VerifyPinDialog(pinStore: PinStore, onVerified: () -> Unit, onDismiss: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     var round by remember { mutableStateOf(0) }
+    val wrongText = stringResource(R.string.settings_pin_wrong)
+    val lockedText = stringResource(R.string.settings_pin_locked)
     PinDialogFrame(onDismiss) {
         PinPad(
-            length = pinStore.length, title = "Введите текущий PIN-код", message = error, resetKey = round,
+            length = pinStore.length, title = stringResource(R.string.settings_pin_current), message = error, resetKey = round,
             onComplete = { pin ->
                 when (val r = pinStore.verify(pin)) {
                     PinResult.Ok -> onVerified()
-                    is PinResult.Wrong -> { error = "Неверный PIN"; round++ }
-                    is PinResult.Locked -> { error = "Слишком много попыток, подождите"; round++ }
+                    is PinResult.Wrong -> { error = wrongText; round++ }
+                    is PinResult.Locked -> { error = lockedText; round++ }
                 }
             },
         )
@@ -145,51 +154,60 @@ private fun VerifyPinDialog(pinStore: PinStore, onVerified: () -> Unit, onDismis
 @Composable
 fun NotificationsSection(settings: Settings, onChange: ((Settings) -> Settings) -> Unit) {
     SectionCard {
-        GroupTitle("Уведомления")
-        SettingSwitch("Напоминания о платежах", null, settings.notificationsEnabled) { v -> onChange { it.copy(notificationsEnabled = v) } }
+        GroupTitle(stringResource(R.string.settings_notifications))
+        SettingSwitch(stringResource(R.string.settings_notify_payments), null, settings.notificationsEnabled) { v -> onChange { it.copy(notificationsEnabled = v) } }
         if (settings.notificationsEnabled) {
             DropdownField(
-                "О сроке долга",
+                stringResource(R.string.settings_notify_due),
                 listOf(
-                    listOf(1) to "за 1 день", listOf(3, 1) to "за 3 и 1 день",
-                    listOf(7, 3, 1) to "за 7, 3 и 1 день", emptyList<Int>() to "только в день срока",
+                    listOf(1) to stringResource(R.string.settings_notify_1), listOf(3, 1) to stringResource(R.string.settings_notify_3_1),
+                    listOf(7, 3, 1) to stringResource(R.string.settings_notify_7_3_1), emptyList<Int>() to stringResource(R.string.settings_notify_same_day),
                 ),
                 settings.notifyDaysBefore, { d -> onChange { it.copy(notifyDaysBefore = d) } },
                 Modifier.padding(top = 4.dp),
             )
             DropdownField(
-                "Время",
+                stringResource(R.string.settings_notify_time),
                 (7..22).map { it to "%02d:00".format(it) },
                 settings.notifyHour, { h -> onChange { it.copy(notifyHour = h, notifyMinute = 0) } },
             )
             DropdownField(
-                "При просрочке повторять",
-                listOf(0 to "не повторять", 1 to "каждый день", 3 to "каждые 3 дня", 7 to "раз в неделю"),
+                stringResource(R.string.settings_overdue_repeat),
+                listOf(
+                    0 to stringResource(R.string.settings_repeat_never), 1 to stringResource(R.string.settings_repeat_daily),
+                    3 to stringResource(R.string.settings_repeat_3d), 7 to stringResource(R.string.settings_repeat_weekly),
+                ),
                 settings.overdueRepeatDays, { d -> onChange { it.copy(overdueRepeatDays = d) } },
             )
             DropdownField(
-                "О списании регулярного платежа",
-                listOf(0 to "в день списания", 1 to "за 1 день", 2 to "за 2 дня", 3 to "за 3 дня"),
+                stringResource(R.string.settings_notify_sub),
+                listOf(
+                    0 to stringResource(R.string.settings_sub_same_day), 1 to stringResource(R.string.settings_sub_1),
+                    2 to stringResource(R.string.settings_sub_2), 3 to stringResource(R.string.settings_sub_3),
+                ),
                 settings.subscriptionNotifyDays, { d -> onChange { it.copy(subscriptionNotifyDays = d) } },
             )
             DropdownField(
-                "Долг без срока: давно не было платежа",
-                listOf(0 to "не напоминать", 14 to "через 14 дней", 30 to "через 30 дней", 60 to "через 60 дней"),
+                stringResource(R.string.settings_stale),
+                listOf(
+                    0 to stringResource(R.string.settings_stale_never), 14 to stringResource(R.string.settings_stale_14),
+                    30 to stringResource(R.string.settings_stale_30), 60 to stringResource(R.string.settings_stale_60),
+                ),
                 settings.staleDebtDays, { d -> onChange { it.copy(staleDebtDays = d) } },
             )
             SettingSwitch(
-                "Скрывать суммы и имена", "В тексте уведомлений, чтобы не было видно на экране блокировки",
+                stringResource(R.string.settings_hide_amounts), stringResource(R.string.settings_hide_amounts_sub),
                 settings.hideAmountsInNotifications, { v -> onChange { it.copy(hideAmountsInNotifications = v) } },
             )
             val context = androidx.compose.ui.platform.LocalContext.current
             if (!app.kvity.notify.ReminderAlarm.canScheduleExact(context)) {
                 Text(
-                    "Без разрешения на точные будильники уведомления могут приходить с задержкой в режиме энергосбережения.",
+                    stringResource(R.string.settings_exact_alarm_note),
                     style = MaterialTheme.typography.bodySmall,
                 )
-                TextButton(onClick = { app.kvity.notify.ReminderAlarm.requestExactPermission(context) }) { Text("Разрешить точные напоминания") }
+                TextButton(onClick = { app.kvity.notify.ReminderAlarm.requestExactPermission(context) }) { Text(stringResource(R.string.settings_exact_alarm_allow)) }
             }
-            TextButton(onClick = { app.kvity.notify.ReminderWorker.runNow(context) }) { Text("Проверить сейчас") }
+            TextButton(onClick = { app.kvity.notify.ReminderWorker.runNow(context) }) { Text(stringResource(R.string.settings_check_now)) }
         }
     }
 }

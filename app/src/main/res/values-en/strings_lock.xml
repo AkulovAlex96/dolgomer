@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lock_too_many">Too many attempts. Wait %1$d s.</string>
+    <string name="lock_wrong_pin">Wrong PIN</string>
+    <string name="lock_biometric_button">Sign in with fingerprint</string>
+    <string name="lock_biometric_subtitle">Confirm sign-in</string>
+    <string name="lock_biometric_negative">Enter PIN</string>
+</resources>

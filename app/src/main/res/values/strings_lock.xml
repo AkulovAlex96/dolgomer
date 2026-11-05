@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lock_too_many">Слишком много попыток. Подождите %1$d с.</string>
+    <string name="lock_wrong_pin">Неверный PIN</string>
+    <string name="lock_biometric_button">Войти по отпечатку</string>
+    <string name="lock_biometric_subtitle">Подтвердите вход</string>
+    <string name="lock_biometric_negative">Ввести PIN</string>
+</resources>

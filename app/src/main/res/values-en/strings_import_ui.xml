@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="import_ui_template_saved">Template saved</string>
+    <string name="import_ui_save_failed">Could not save</string>
+    <string name="import_ui_read_failed">Could not read the file or it is larger than 10 MB</string>
+    <string name="import_ui_title">Import</string>
+    <string name="import_ui_intro">Upload an Excel (.xlsx) file, CSV or a .zip archive with CSV. A file exported from this app works too: debts, payments, recurring payments, their participants and counterparties are imported. Tables are detected by their column headers.</string>
+    <string name="import_ui_columns">Debts require the columns Counterparty, Direction (“owed to me” or “I owe”), Currency (RUB, KZT, USD…) and Amount (“50k” is allowed). Duplicates are skipped.</string>
+    <string name="import_ui_download_template">Download debts template</string>
+    <string name="import_ui_pick">Choose file</string>
+    <string name="import_ui_done">Done: %1$d added</string>
+    <string name="import_ui_nothing_new">nothing new</string>
+    <string name="import_ui_skipped_duplicates">Duplicates skipped: %1$d</string>
+    <string name="import_ui_file">File</string>
+    <string name="import_ui_nothing_found">nothing found</string>
+    <string name="import_ui_already_have">Already in the app: %1$d (will be skipped)</string>
+    <string name="import_ui_error_rows">Rows with errors: %1$d</string>
+    <string name="import_ui_ignored_sheets">Skipped sheets without known headers: %1$s</string>
+    <string name="import_ui_errors_title">Errors (these rows will not be added)</string>
+    <string name="import_ui_line">line %1$d</string>
+    <string name="import_ui_and_more">…and %1$d more</string>
+    <string name="import_ui_preview">Debts (preview)</string>
+    <string name="import_ui_owed_to_me">owed to me</string>
+    <string name="import_ui_i_owe">I owe</string>
+    <string name="import_ui_until">until %1$s</string>
+    <string name="import_ui_all_present">Everything in the file is already in the app, nothing to import.</string>
+    <string name="import_ui_failed">Could not import: %1$s</string>
+    <string name="import_ui_import_n">Import %1$d</string>
+    <string name="import_ui_l_debts">debts</string>
+    <string name="import_ui_l_payments">payments</string>
+    <string name="import_ui_l_subs">recurring payments</string>
+    <string name="import_ui_l_shares">participants</string>
+    <string name="import_ui_l_people">counterparties</string>
+</resources>

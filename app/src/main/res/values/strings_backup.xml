@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="backup_saved">Копия сохранена</string>
+    <string name="backup_save_failed">Не удалось сохранить копию: %1$s</string>
+    <string name="backup_read_failed_detail">Не удалось прочитать файл: %1$s</string>
+    <string name="backup_read_failed">Не удалось прочитать файл</string>
+    <string name="backup_restored">Данные восстановлены</string>
+    <string name="backup_restore_failed">Не удалось восстановить: %1$s</string>
+    <string name="backup_title">Резервная копия</string>
+    <string name="backup_none_yet">Копия ещё не создавалась</string>
+    <string name="backup_last">Последняя копия: %1$s</string>
+    <string name="backup_description">Копия содержит все долги, платежи, регулярные платежи, настройки справочников и вложения. Её можно сохранить в файл или в Google Drive через системный выбор места.</string>
+    <string name="backup_create">Создать копию</string>
+    <string name="backup_restore">Восстановить из копии</string>
+    <string name="backup_wait">Подождите…</string>
+    <string name="backup_password_title">Пароль для копии</string>
+    <string name="backup_password_hint">Оставьте пустым, чтобы сохранить без шифрования. Забытый пароль восстановить нельзя.</string>
+    <string name="backup_next">Далее</string>
+    <string name="backup_protected">Копия защищена паролем</string>
+    <string name="backup_replace_title">Заменить все данные?</string>
+    <string name="backup_replace_text">Копия от %1$s: долгов %2$d, платежей %3$d, регулярных платежей %4$d, контрагентов %5$d.\n\nТекущие данные будут заменены данными из копии. Перед заменой приложение сохранит их во внутреннюю страховочную копию.</string>
+    <string name="backup_do_restore">Восстановить</string>
+    <string name="backup_cancel">Отмена</string>
+    <string name="backup_password">Пароль</string>
+    <string name="backup_wrong_password">Неверный пароль или файл повреждён</string>
+    <string name="backup_repeat_password">Повторите пароль</string>
+    <string name="backup_passwords_differ">Пароли не совпадают</string>
+</resources>

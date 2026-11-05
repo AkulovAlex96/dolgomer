@@ -1,5 +1,7 @@
 package app.kvity.ui
 
+import app.kvity.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.NavigationBar
@@ -88,10 +90,10 @@ object Routes {
 }
 
 private val tabs = listOf(
-    Routes.DASHBOARD to "Главная",
-    Routes.CALENDAR to "Календарь",
-    Routes.PEOPLE to "Люди",
-    Routes.MORE to "Ещё",
+    Routes.DASHBOARD to R.string.nav_tab_home,
+    Routes.CALENDAR to R.string.nav_tab_calendar,
+    Routes.PEOPLE to R.string.nav_tab_people,
+    Routes.MORE to R.string.nav_tab_more,
 )
 
 @Composable
@@ -138,7 +140,7 @@ fun AppNavigation() {
                                 }
                             },
                             icon = { Text(tabIcon(r)) },
-                            label = { Text(title) },
+                            label = { Text(stringResource(title)) },
                         )
                     }
                 }
@@ -252,9 +254,9 @@ fun AppNavigation() {
                     onDeletePayment = vm::deletePayment,
                     onDeleteDebt = { vm.deleteDebt(); nav.popBackStack() },
                     onEdit = { nav.navigate(Routes.editDebt(id)) },
-                    onRemind = { view?.let { reminder = debtReminder(it) } },
-                    extra = { AttachmentsCard(app.attachments, AttachmentOwner.DEBT, id, title = "Вложения (расписка, документы)") },
-                    paymentAttachments = { pid -> AttachmentsCard(app.attachments, AttachmentOwner.PAYMENT, pid, title = "Чеки", framed = false) },
+                    onRemind = { view?.let { reminder = debtReminder(it, context.getString(R.string.nav_due_not_set)) } },
+                    extra = { AttachmentsCard(app.attachments, AttachmentOwner.DEBT, id, title = stringResource(R.string.nav_attachments_debt)) },
+                    paymentAttachments = { pid -> AttachmentsCard(app.attachments, AttachmentOwner.PAYMENT, pid, title = stringResource(R.string.nav_attachments_receipts), framed = false) },
                 )
             }
 
@@ -400,23 +402,24 @@ private fun tabIcon(route: String) = when (route) {
     else -> "⋯"
 }
 
+@Composable
 private fun moreItems(nav: NavHostController) = listOf(
-    MoreItem("Настройки", "Тема, валюты, уведомления, безопасность") { nav.navigate(Routes.SETTINGS) },
-    MoreItem("Резервная копия", "Сохранить данные в файл или Google Drive, восстановить") { nav.navigate(Routes.BACKUP) },
-    MoreItem("Экспорт", "Долги, платежи и регулярные платежи в Excel или CSV") { nav.navigate(Routes.EXPORT) },
-    MoreItem("Импорт", "Загрузить данные из Excel, CSV или zip") { nav.navigate(Routes.IMPORT) },
-    MoreItem("Курсы валют", "Для необязательного пересчёта итогов") { nav.navigate(Routes.RATES) },
-    MoreItem("Шаблоны сообщений", "Напоминания должникам") { nav.navigate(Routes.TEMPLATES) },
+    MoreItem(stringResource(R.string.nav_more_settings), stringResource(R.string.nav_more_settings_sub)) { nav.navigate(Routes.SETTINGS) },
+    MoreItem(stringResource(R.string.nav_more_backup), stringResource(R.string.nav_more_backup_sub)) { nav.navigate(Routes.BACKUP) },
+    MoreItem(stringResource(R.string.nav_more_export), stringResource(R.string.nav_more_export_sub)) { nav.navigate(Routes.EXPORT) },
+    MoreItem(stringResource(R.string.nav_more_import), stringResource(R.string.nav_more_import_sub)) { nav.navigate(Routes.IMPORT) },
+    MoreItem(stringResource(R.string.nav_more_rates), stringResource(R.string.nav_more_rates_sub)) { nav.navigate(Routes.RATES) },
+    MoreItem(stringResource(R.string.nav_more_templates), stringResource(R.string.nav_more_templates_sub)) { nav.navigate(Routes.TEMPLATES) },
 )
 
-private fun debtReminder(v: DebtView): ReminderContext {
+private fun debtReminder(v: DebtView, notSet: String): ReminderContext {
     val s = v.summary
     val firstUnpaid = s.plan.firstOrNull { it.state != InstallmentState.PAID }
     return ReminderContext(
         name = v.counterpartyName, phone = v.counterpartyPhone,
         amount = formatMoney(s.principalMinor, v.debt.currency),
         remaining = formatMoney(s.remainingMinor, v.debt.currency),
-        due = firstUnpaid?.let { formatDate(it.dueDate) } ?: "не задан",
+        due = firstUnpaid?.let { formatDate(it.dueDate) } ?: notSet,
         overdueDays = s.overdueDays, debtId = v.debt.id, counterpartyId = v.debt.counterpartyId,
     )
 }

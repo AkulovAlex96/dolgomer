@@ -49,7 +49,7 @@ class KvityApp : Application() {
         subscriptions = SubscriptionRepository(db, attachments)
         people = PeopleRepository(db)
         importer = ImportApplier(db, debts, subscriptions)
-        reference = ReferenceRepository(db)
+        reference = ReferenceRepository(db, this)
         backup = BackupManager(this, db, settings)
         if (settings.current.installedAtMillis == 0L) settings.update { it.copy(installedAtMillis = System.currentTimeMillis()) }
         pin = PinStore(this)

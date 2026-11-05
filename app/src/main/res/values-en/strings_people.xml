@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="people_title">People</string>
+    <string name="people_empty">People you have debts or shared recurring payments with will appear here.</string>
+    <string name="people_counts">debts: %1$d · subscriptions: %2$d</string>
+    <string name="people_archive_header">Archive (%1$d)</string>
+    <string name="people_in_archive">archived</string>
+    <string name="people_unarchive">Restore from archive</string>
+    <string name="people_counterparty">Counterparty</string>
+    <string name="people_loading">Loading…</string>
+    <string name="people_delete_title">Delete counterparty?</string>
+    <string name="people_delete_text">“%1$s” will be deleted.</string>
+    <string name="people_name">Name</string>
+    <string name="people_duplicate">A counterparty with this name already exists</string>
+    <string name="people_phone">Phone</string>
+    <string name="people_note">Note</string>
+    <string name="people_save">Save</string>
+    <string name="people_balance">Balance</string>
+    <string name="people_owes_me">owes me</string>
+    <string name="people_i_owe">I owe</string>
+    <string name="people_debts">Debts</string>
+    <string name="people_closed">closed</string>
+    <string name="people_subscriptions">Recurring payments</string>
+    <string name="people_unpaid_periods">unpaid periods: %1$d</string>
+    <string name="people_archived_note">This counterparty is archived: hidden from the people list and name suggestions.</string>
+    <string name="people_to_archive">Archive</string>
+    <string name="people_delete">Delete counterparty</string>
+    <string name="people_delete_blocked">Cannot delete: this counterparty has debts (including closed ones) or recurring payments. Archive them instead: the history is kept.</string>
+</resources>

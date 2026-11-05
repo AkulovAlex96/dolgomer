@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="export_file_saved">Файл сохранён</string>
+    <string name="export_save_failed">Не удалось сохранить</string>
+    <string name="export_title">Экспорт</string>
+    <string name="export_format">Формат</string>
+    <string name="export_xlsx_note">Одна книга, каждая таблица на своём листе.</string>
+    <string name="export_csv_note">Для нескольких таблиц получится архив .zip с отдельным файлом на каждую. Разделитель «;», кодировка UTF-8: открывается в Excel.</string>
+    <string name="export_what">Что выгрузить</string>
+    <string name="export_table_debts">Долги</string>
+    <string name="export_table_payments">Платежи</string>
+    <string name="export_table_subscriptions">Регулярные платежи</string>
+    <string name="export_table_shares">Доли в регулярных платежах</string>
+    <string name="export_table_people">Контрагенты</string>
+    <string name="export_debts_and_payments">Долги и платежи</string>
+    <string name="export_all">Все</string>
+    <string name="export_owed_to_me">Мне должны</string>
+    <string name="export_i_owe">Я должен</string>
+    <string name="export_save_file">Сохранить в файл</string>
+    <string name="export_share">Поделиться</string>
+    <string name="export_send_file">Отправить файл</string>
+</resources>
