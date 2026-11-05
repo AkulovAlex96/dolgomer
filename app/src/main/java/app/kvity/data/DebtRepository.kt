@@ -182,6 +182,12 @@ class DebtRepository(
 
     suspend fun setArchived(id: String, archived: Boolean) = db.debts().setArchived(id, archived)
 
+    /** Свои уведомления долга: режим и (для CUSTOM) дни напоминания, например «3,1». */
+    suspend fun setNotify(id: String, mode: NotifyMode, days: String?) {
+        val old = db.debts().all().firstOrNull { it.id == id } ?: return
+        db.debts().update(old.copy(notifyMode = mode, notifyDays = if (mode == NotifyMode.CUSTOM) days else null))
+    }
+
     /**
      * Добавляет платёж. [plannedId] привязывает его к плановому платежу, [monthOnly] означает «известен только месяц»
      * (в [date] тогда хранится первое число месяца). Возвращает true, если стоит предложить пересчитать график.

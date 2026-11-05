@@ -50,6 +50,7 @@ fun SubscriptionDetailScreen(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onSetState: (SubscriptionState) -> Unit,
+    onSetNotify: (app.kvity.data.NotifyMode, String?) -> Unit = { _, _ -> },
     onAddShare: (name: String, amountMinor: Long, activeFrom: LocalDate) -> Unit,
     onDeleteShare: (String) -> Unit,
     onMarkPaid: (ShareView, LocalDate) -> Unit,
@@ -152,6 +153,8 @@ fun SubscriptionDetailScreen(
                 ShareCard(sh, today, onMarkPaid, onMarkUnpaid, onRemind, onDelete = { onDeleteShare(sh.share.id) })
             }
         }
+
+        app.kvity.ui.components.NotifyRulesButton(s.notifyMode, s.notifyDays, onSetNotify)
 
         attachments(s.id)
 

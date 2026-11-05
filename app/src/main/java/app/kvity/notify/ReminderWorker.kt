@@ -29,7 +29,7 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
         val today = LocalDate.now()
         val debts = app.debts.observeDebts().first()
         val subs = app.subscriptions.observeAll().first()
-        val items = ReminderPlanner.plan(Events.build(debts, subs, today), today, settings)
+        val items = ReminderPlanner.plan(Events.build(debts, subs, today), today, settings, ReminderPlanner.overridesOf(debts, subs))
         Notifier.post(applicationContext, items, settings.hideAmountsInNotifications)
         for (stale in ReminderPlanner.planStale(debts, today, settings)) {
             Notifier.postStale(applicationContext, stale, settings.hideAmountsInNotifications)

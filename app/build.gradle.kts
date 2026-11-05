@@ -36,6 +36,14 @@ android {
     buildFeatures {
         compose = true
     }
+
+    // схемы Room в assets только debug-сборки: Robolectric берёт их оттуда для тестов миграций (в release их нет)
+    sourceSets.getByName("debug").assets.srcDir("$projectDir/schemas")
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
 }
 
 kotlin {
@@ -73,4 +81,8 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.test.ext.junit)
+    testImplementation(libs.androidx.room.testing)
 }

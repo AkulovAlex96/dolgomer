@@ -14,6 +14,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
 
@@ -132,7 +134,7 @@ interface ShareDao {
 
 @Dao
 interface SharePaymentDao {
-    @Insert suspend fun insert(item: SharePaymentEntity)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insert(item: SharePaymentEntity)
     @Query("DELETE FROM share_payments WHERE id = :id") suspend fun delete(id: String)
     @Query("DELETE FROM share_payments WHERE shareId = :shareId AND periodDate = :periodDate")
     suspend fun deleteFor(shareId: String, periodDate: LocalDate)
@@ -170,7 +172,7 @@ interface ShareAmountDao {
 
 @Dao
 interface ChargePaymentDao {
-    @Insert suspend fun insert(item: ChargePaymentEntity)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insert(item: ChargePaymentEntity)
     @Query("DELETE FROM subscription_payments WHERE subscriptionId = :subscriptionId AND periodDate = :periodDate")
     suspend fun deleteFor(subscriptionId: String, periodDate: LocalDate)
     @Query("SELECT * FROM subscription_payments") fun observeAll(): Flow<List<ChargePaymentEntity>>
@@ -221,6 +223,33 @@ interface RateDao {
     @Query("DELETE FROM exchange_rates") suspend fun deleteAll()
 }
 
+/**
+ * 7 -> 8: уникальные отметки оплаты (по паре «доля/подписка + период») и настройки уведомлений долга и подписки.
+ * Дубли удаляются вручную (AutoMigration так не умеет): остаётся запись с самой поздней paidDate.
+ */
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        dedupe(db, "share_payments", "shareId")
+        dedupe(db, "subscription_payments", "subscriptionId")
+        db.execSQL("DROP INDEX IF EXISTS `index_share_payments_shareId`")
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_share_payments_shareId_periodDate` ON `share_payments` (`shareId`, `periodDate`)")
+        db.execSQL("DROP INDEX IF EXISTS `index_subscription_payments_subscriptionId`")
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_subscription_payments_subscriptionId_periodDate` ON `subscription_payments` (`subscriptionId`, `periodDate`)")
+        for (table in listOf("debts", "subscriptions")) {
+            db.execSQL("ALTER TABLE `$table` ADD COLUMN `notifyMode` TEXT NOT NULL DEFAULT 'DEFAULT'")
+            db.execSQL("ALTER TABLE `$table` ADD COLUMN `notifyDays` TEXT")
+        }
+    }
+
+    private fun dedupe(db: SupportSQLiteDatabase, table: String, owner: String) {
+        db.execSQL(
+            "DELETE FROM `$table` WHERE EXISTS (SELECT 1 FROM `$table` o WHERE o.`$owner` = `$table`.`$owner` " +
+                "AND o.periodDate = `$table`.periodDate AND (o.paidDate > `$table`.paidDate " +
+                "OR (o.paidDate = `$table`.paidDate AND o.id > `$table`.id)))",
+        )
+    }
+}
+
 @Database(
     entities = [
         CounterpartyEntity::class, DebtEntity::class, PaymentEntity::class,
@@ -229,7 +258,7 @@ interface RateDao {
         ExchangeRateEntity::class, ChargePaymentEntity::class,
         SubscriptionPauseEntity::class, ShareAmountEntity::class, PlannedPaymentEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
     autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4),
         AutoMigration(from = 4, to = 5, spec = Migration4To5::class), AutoMigration(from = 5, to = 6), AutoMigration(from = 6, to = 7)],
@@ -261,6 +290,7 @@ abstract class KvityDatabase : RoomDatabase() {
             migratePlainIfNeeded(context, pass)
             return Room.databaseBuilder(context, KvityDatabase::class.java, NAME)
                 .openHelperFactory(net.zetetic.database.sqlcipher.SupportOpenHelperFactory(pass.toByteArray()))
+                .addMigrations(MIGRATION_7_8)
                 .build()
         }
 

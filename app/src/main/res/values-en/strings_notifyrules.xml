@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nr_title">Notifications</string>
+    <string name="nr_mode_default">Same as general settings</string>
+    <string name="nr_mode_off">Do not remind</string>
+    <string name="nr_mode_custom">Custom days</string>
+    <string name="nr_summary_custom">%1$s days before</string>
+    <string name="nr_days_label">Days before to remind (comma separated)</string>
+    <string name="nr_days_hint">For example: 3, 1</string>
+    <string name="nr_save">Save</string>
+    <string name="nr_cancel">Cancel</string>
+</resources>

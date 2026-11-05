@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nr_title">Уведомления</string>
+    <string name="nr_mode_default">Как в общих настройках</string>
+    <string name="nr_mode_off">Не напоминать</string>
+    <string name="nr_mode_custom">Свои дни</string>
+    <string name="nr_summary_custom">за %1$s дн.</string>
+    <string name="nr_days_label">За сколько дней напомнить (через запятую)</string>
+    <string name="nr_days_hint">Например: 3, 1</string>
+    <string name="nr_save">Сохранить</string>
+    <string name="nr_cancel">Отмена</string>
+</resources>

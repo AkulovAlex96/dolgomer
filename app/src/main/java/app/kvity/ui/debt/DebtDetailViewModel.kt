@@ -52,6 +52,10 @@ class DebtDetailViewModel(
         viewModelScope.launch { repository.setArchived(debtId, archived) }
     }
 
+    fun setNotify(mode: app.kvity.data.NotifyMode, days: String?) {
+        viewModelScope.launch { repository.setNotify(debtId, mode, days) }
+    }
+
     fun recalc() {
         _recalcOffer.value = false
         viewModelScope.launch { repository.recalcReducePayment(debtId) }

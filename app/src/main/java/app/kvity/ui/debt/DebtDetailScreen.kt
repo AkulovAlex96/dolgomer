@@ -72,6 +72,7 @@ fun DebtDetailScreen(
         paymentMethod: String?, note: String?,
     ) -> Unit = { _, _, _, _, _, _, _ -> },
     onSetArchived: (Boolean) -> Unit = {},
+    onSetNotify: (app.kvity.data.NotifyMode, String?) -> Unit = { _, _ -> },
     onDeleteDebt: () -> Unit,
     onUpdatePlanned: (id: String, date: LocalDate, amountMinor: Long) -> Unit = { _, _, _ -> },
     onSkipPlanned: (id: String, skipped: Boolean) -> Unit = { _, _ -> },
@@ -118,6 +119,7 @@ fun DebtDetailScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Hero(view, onAddPayment = { paymentDialog = true }, onRemind = onRemind, onSetArchived = onSetArchived)
+            app.kvity.ui.components.NotifyRulesButton(view.debt.notifyMode, view.debt.notifyDays, onSetNotify)
             ScheduleCard(view, onEdit = { editedPlanned = it }, onRestore = { onSkipPlanned(it, false) })
             PaymentsCard(view, onDeletePayment, onOpen = { openedPayment = it })
             extra()

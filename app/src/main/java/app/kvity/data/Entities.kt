@@ -68,6 +68,10 @@ data class DebtEntity(
     val paymentCount: Int? = null,
     /** true: плановые платежи хранятся в таблице planned_payments (их можно править), иначе строятся из условий. */
     @ColumnInfo(defaultValue = "0") val planMaterialized: Boolean = false,
+    /** Уведомления по этому долгу: по умолчанию как в общих настройках. */
+    @ColumnInfo(defaultValue = "'DEFAULT'") val notifyMode: NotifyMode = NotifyMode.DEFAULT,
+    /** Свои дни напоминания за N дней («3,1»), используются при [NotifyMode.CUSTOM]. */
+    val notifyDays: String? = null,
 ) {
     /** Плановые платежи строятся из условий возврата. */
     fun plannedPayments(): List<PlannedPayment> = when (termType) {
@@ -140,6 +144,9 @@ data class PlannedPaymentEntity(
 
 enum class SubscriptionPayer { ME, OTHER }
 enum class SubscriptionState { ACTIVE, PAUSED, CANCELLED }
+
+/** Уведомления по отдельному долгу или подписке (ТЗ 3.6): как в общих настройках, выключены или свои дни. */
+enum class NotifyMode { DEFAULT, OFF, CUSTOM }
 enum class AttachmentOwner { DEBT, PAYMENT, SUBSCRIPTION }
 
 /**
@@ -165,6 +172,10 @@ data class SubscriptionEntity(
     val trialEndsOn: LocalDate? = null,
     val note: String? = null,
     val createdAt: Long,
+    /** Уведомления по этой подписке: по умолчанию как в общих настройках. */
+    @ColumnInfo(defaultValue = "'DEFAULT'") val notifyMode: NotifyMode = NotifyMode.DEFAULT,
+    /** Свои дни напоминания за N дней («3,1»), используются при [NotifyMode.CUSTOM]. */
+    val notifyDays: String? = null,
 )
 
 /** Доля участника общей подписки: сколько он возвращает мне за каждый период. */
@@ -221,7 +232,7 @@ data class ShareAmountEntity(
 @Entity(
     tableName = "share_payments",
     foreignKeys = [ForeignKey(SubscriptionShareEntity::class, ["id"], ["shareId"], onDelete = ForeignKey.CASCADE)],
-    indices = [Index("shareId")],
+    indices = [Index(value = ["shareId", "periodDate"], unique = true)],
 )
 data class SharePaymentEntity(
     @PrimaryKey val id: String,
@@ -236,7 +247,7 @@ data class SharePaymentEntity(
 @Entity(
     tableName = "subscription_payments",
     foreignKeys = [ForeignKey(SubscriptionEntity::class, ["id"], ["subscriptionId"], onDelete = ForeignKey.CASCADE)],
-    indices = [Index("subscriptionId")],
+    indices = [Index(value = ["subscriptionId", "periodDate"], unique = true)],
 )
 data class ChargePaymentEntity(
     @PrimaryKey val id: String,

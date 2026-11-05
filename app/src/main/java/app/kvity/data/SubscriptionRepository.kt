@@ -133,7 +133,7 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
 
     suspend fun update(id: String, input: SubscriptionInput) {
         val old = db.subscriptions().all().first { it.id == id }
-        val updated = toEntity(id, input, old.createdAt).copy(state = old.state)
+        val updated = toEntity(id, input, old.createdAt).copy(state = old.state, notifyMode = old.notifyMode, notifyDays = old.notifyDays)
         db.subscriptions().update(updated)
         if (old.anchorDate != updated.anchorDate || old.periodicity != updated.periodicity || old.interval != updated.interval) remapMarks(old, updated)
     }
@@ -240,6 +240,12 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
             db.chargePayments().deleteFor(subscriptionId, period)
             db.chargePayments().insert(ChargePaymentEntity(UUID.randomUUID().toString(), subscriptionId, period, paidDate, amountMinor))
         }
+    }
+
+    /** Свои уведомления подписки: режим и (для CUSTOM) дни напоминания, например «3,1». */
+    suspend fun setNotify(id: String, mode: NotifyMode, days: String?) {
+        val old = db.subscriptions().all().firstOrNull { it.id == id } ?: return
+        db.subscriptions().update(old.copy(notifyMode = mode, notifyDays = if (mode == NotifyMode.CUSTOM) days else null))
     }
 
     suspend fun markChargeUnpaid(subscriptionId: String, period: LocalDate) = db.chargePayments().deleteFor(subscriptionId, period)

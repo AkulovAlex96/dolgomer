@@ -20,19 +20,43 @@ data class StaleDebtReminder(
     val remainingMinor: Long, val currency: String, val days: Long,
 )
 
+/** Свои правила уведомлений одного долга или подписки (режим не DEFAULT). */
+data class NotifyOverride(val mode: NotifyMode, val days: List<Int>)
+
 /** Правила уведомлений. Чистая функция: решает, о каких событиях сообщить [today]. */
 object ReminderPlanner {
 
-    fun plan(events: List<CalendarEvent>, today: LocalDate, settings: Settings): List<ReminderItem> {
+    /** «3, 1» -> [3, 1]; мусор и неположительные числа отбрасываются, повторы убираются. */
+    fun parseDays(text: String?): List<Int> =
+        text?.split(',', ';', ' ')?.mapNotNull { it.trim().toIntOrNull() }?.filter { it > 0 }?.distinct()?.sortedDescending().orEmpty()
+
+    /** Переопределения по refId события (id долга или подписки); записи с режимом «как в общих настройках» не попадают. */
+    fun overridesOf(debts: List<DebtView>, subs: List<SubscriptionView>): Map<String, NotifyOverride> {
+        val result = mutableMapOf<String, NotifyOverride>()
+        for (d in debts) if (d.debt.notifyMode != NotifyMode.DEFAULT) result[d.debt.id] = NotifyOverride(d.debt.notifyMode, parseDays(d.debt.notifyDays))
+        for (s in subs) {
+            val e = s.subscription
+            if (e.notifyMode != NotifyMode.DEFAULT) result[e.id] = NotifyOverride(e.notifyMode, parseDays(e.notifyDays))
+        }
+        return result
+    }
+
+    fun plan(
+        events: List<CalendarEvent>, today: LocalDate, settings: Settings,
+        overrides: Map<String, NotifyOverride> = emptyMap(),
+    ): List<ReminderItem> {
         if (!settings.notificationsEnabled) return emptyList()
         val result = mutableListOf<ReminderItem>()
         for (e in events) {
             if (e.paid) continue
+            val own = overrides[e.refId]
+            if (own?.mode == NotifyMode.OFF) continue
             val days = ChronoUnit.DAYS.between(today, e.date)
             when {
                 days == 0L -> result += ReminderItem(e, ReminderType.TODAY, 0)
                 days > 0 -> {
-                    val before = if (e.kind == EventKind.SUBSCRIPTION && e.flow == MoneyFlow.OUT) {
+                    val before = if (own?.mode == NotifyMode.CUSTOM) own.days
+                    else if (e.kind == EventKind.SUBSCRIPTION && e.flow == MoneyFlow.OUT) {
                         listOf(settings.subscriptionNotifyDays).filter { it > 0 }
                     } else {
                         settings.notifyDaysBefore
@@ -64,7 +88,7 @@ object ReminderPlanner {
         if (!settings.notificationsEnabled) return emptyList()
         return subs.mapNotNull { s ->
             val ends = s.trialEndsOn ?: return@mapNotNull null
-            if (s.state != SubscriptionState.ACTIVE || lastNotified[s.id] == today) return@mapNotNull null
+            if (s.state != SubscriptionState.ACTIVE || s.notifyMode == NotifyMode.OFF || lastNotified[s.id] == today) return@mapNotNull null
             val days = ChronoUnit.DAYS.between(today, ends)
             val lead = settings.subscriptionNotifyDays
             if (days == 0L || (lead > 0 && days == lead.toLong())) TrialReminder(s.id, s.name, ends, days) else null
@@ -80,7 +104,7 @@ object ReminderPlanner {
         if (!settings.notificationsEnabled || every <= 0) return emptyList()
         return debts.mapNotNull { v ->
             val d = v.debt
-            if (d.termType != TermType.NONE || d.archived || v.summary.status == DebtStatus.CLOSED) return@mapNotNull null
+            if (d.termType != TermType.NONE || d.archived || d.notifyMode == NotifyMode.OFF || v.summary.status == DebtStatus.CLOSED) return@mapNotNull null
             val last = maxOf(d.startDate, v.payments.maxOfOrNull { it.date } ?: d.startDate)
             val days = ChronoUnit.DAYS.between(last, today)
             if (days > 0 && days % every == 0L) {

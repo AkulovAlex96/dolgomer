@@ -78,4 +78,5 @@ class SubscriptionDetailViewModel(
     fun markChargeUnpaid(period: LocalDate) { viewModelScope.launch { repo.markChargeUnpaid(id, period) } }
     fun markUnpaid(sh: ShareView, period: LocalDate) { viewModelScope.launch { repo.markUnpaid(sh.share.id, period) } }
     fun update(input: SubscriptionInput) { viewModelScope.launch { repo.update(id, input) } }
+    fun setNotify(mode: app.kvity.data.NotifyMode, days: String?) { viewModelScope.launch { repo.setNotify(id, mode, days) } }
 }
