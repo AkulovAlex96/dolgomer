@@ -26,6 +26,10 @@ data class SubscriptionView(
     val paidCharges: Set<LocalDate> = emptySet(),
     /** Интервалы пауз и отмены: [from, to), to = null — продолжается. */
     val pauses: List<Pair<LocalDate, LocalDate?>> = emptyList(),
+    /** Оплаченные доли участников с датой оплаты. */
+    val paidShares: List<PaidRecord> = emptyList(),
+    /** Отмеченные оплаченными мои списания с датой оплаты. */
+    val paidChargeRecords: List<PaidRecord> = emptyList(),
 )
 
 class NewShare(val counterpartyName: String, val amountMinor: Long, val currency: String, val activeFrom: LocalDate)
@@ -78,6 +82,10 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
         ) { core, pauses, amounts ->
             val paidCharges = core.charges.groupBy { it.subscriptionId }.mapValues { (_, v) -> v.map { it.periodDate }.toSet() }
             val names = core.people.associateBy { it.id }
+            val chargeRecords = core.charges.groupBy { it.subscriptionId }
+            val shareById = core.shares.associateBy { it.id }
+            val paidSharesBySub = core.payments.mapNotNull { p -> shareById[p.shareId]?.let { it.subscriptionId to PaidRecord(p.paidDate, p.amountMinor, it.currency) } }
+                .groupBy({ it.first }, { it.second })
             val paidByShare = core.payments.groupBy { it.shareId }.mapValues { (_, v) -> v.associate { it.periodDate to it.amountMinor } }
             val pausesBySub = pauses.groupBy { it.subscriptionId }
             val amountsByShare = amounts.groupBy { it.shareId }
@@ -86,6 +94,7 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
                 buildView(
                     s, core.shares.filter { it.subscriptionId == s.id }, paidByShare, names, horizon, now,
                     paidCharges[s.id].orEmpty(), pausesBySub[s.id].orEmpty(), amountsByShare,
+                    paidSharesBySub[s.id].orEmpty(), chargeRecords[s.id].orEmpty().map { PaidRecord(it.paidDate, it.amountMinor, s.currency) },
                 )
             }.sortedBy { it.subscription.name.lowercase() }
         }
@@ -103,6 +112,8 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
         paidCharges: Set<LocalDate>,
         pauseRows: List<SubscriptionPauseEntity>,
         amountsByShare: Map<String, List<ShareAmountEntity>>,
+        paidShares: List<PaidRecord> = emptyList(),
+        paidChargeRecords: List<PaidRecord> = emptyList(),
     ): SubscriptionView {
         val pauses = pauseRows.map { it.fromDate to it.toDate }
         // подписка со старым состоянием без записанной паузы (данные до появления истории): доли идут до сегодняшнего дня
@@ -115,7 +126,7 @@ class SubscriptionRepository(private val db: KvityDatabase, private val attachme
             )
             ShareView(sh, names[sh.counterpartyId]?.name.orEmpty(), names[sh.counterpartyId]?.phone, dues)
         }
-        return SubscriptionView(s, s.payerCounterpartyId?.let { names[it]?.name }, views, paidCharges, pauses)
+        return SubscriptionView(s, s.payerCounterpartyId?.let { names[it]?.name }, views, paidCharges, pauses, paidShares, paidChargeRecords)
     }
 
     private suspend fun person(name: String): CounterpartyEntity {

@@ -24,6 +24,18 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <receiver
+            android:name=".widget.KvityWidget"
+            android:exported="false"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info" />
+        </receiver>
+
         <receiver android:name=".notify.ReminderAlarmReceiver" android:exported="false" />
         <receiver android:name=".notify.ReminderActionReceiver" android:exported="false" />
         <receiver android:name=".notify.ReminderRescheduleReceiver" android:exported="true">

@@ -12,6 +12,7 @@ import app.kvity.data.SettingsStore
 import app.kvity.data.SubscriptionRepository
 import app.kvity.security.LockManager
 import app.kvity.security.PinStore
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -58,6 +59,15 @@ class KvityApp : Application() {
         scope.launch { reference.seedDefaults() }
         scope.launch { subscriptions.repairLegacyPauses() }
         app.kvity.notify.Notifier.createChannel(this)
+        scope.launch {
+            // Виджет обновляется при изменении данных или настроек (с дебаунсом), в том числе после действий из уведомлений
+            @OptIn(kotlinx.coroutines.FlowPreview::class)
+            kotlinx.coroutines.flow.combine(
+                debts.observeDebts(), subscriptions.observeAll(), settings.settings.map { it.pinEnabled to it.hideAmountsInNotifications }.distinctUntilChanged(),
+            ) { d, s, _ -> d to s }
+                .debounce(2_000)
+                .collect { (d, s) -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { app.kvity.widget.KvityWidget.update(this@KvityApp, d, s) } }
+        }
         scope.launch {
             // Расписание уведомлений следует за настройками (включение и время)
             var first = true

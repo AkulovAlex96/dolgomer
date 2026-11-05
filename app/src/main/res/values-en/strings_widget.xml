@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_label">Upcoming payments</string>
+    <string name="widget_description">Upcoming and overdue payments</string>
+    <string name="widget_title">Upcoming payments</string>
+    <string name="widget_locked">Locked by PIN</string>
+    <string name="widget_empty">No upcoming payments</string>
+    <string name="widget_hidden_item">Payment</string>
+    <string name="widget_overdue_mark">Overdue</string>
+    <string name="widget_amount_hidden">•••</string>
+    <string name="dash_month_title">This month</string>
+    <string name="dash_month_received">Received back</string>
+    <string name="dash_month_paid">I repaid and paid</string>
+    <string name="dash_month_expect_in">Expecting to receive</string>
+    <string name="dash_month_expect_out">Still to pay</string>
+</resources>

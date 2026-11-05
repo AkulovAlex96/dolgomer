@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingTop="3dp"
+    android:paddingBottom="3dp">
+
+    <TextView
+        android:id="@+id/item_date"
+        android:layout_width="52dp"
+        android:layout_height="wrap_content"
+        android:maxLines="1"
+        android:textColor="@color/widget_text_secondary"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/item_overdue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:contentDescription="@string/widget_overdue_mark"
+        android:text="●"
+        android:textColor="@color/widget_overdue"
+        android:textSize="10sp"
+        android:visibility="invisible" />
+
+    <TextView
+        android:id="@+id/item_name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="@color/widget_text"
+        android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/item_amount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="6dp"
+        android:maxLines="1"
+        android:textColor="@color/widget_text"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+</LinearLayout>
