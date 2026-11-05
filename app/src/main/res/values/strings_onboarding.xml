@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onboarding_next">Далее</string>
+    <string name="onboarding_skip">Пропустить</string>
+    <string name="onboarding_start">Начать</string>
+    <string name="onboarding_step_description">Шаг %1$d из %2$d</string>
+
+    <string name="onboarding_debts_title">Учитывайте долги</string>
+    <string name="onboarding_debts_text">Записывайте, кому должны вы и кто должен вам. Для каждого долга можно составить график платежей и видеть, сколько осталось выплатить.</string>
+
+    <string name="onboarding_recurring_title">Регулярные платежи</string>
+    <string name="onboarding_recurring_text">Ведите подписки и повторяющиеся платежи, разделяйте их стоимость между участниками и следите за долями.</string>
+
+    <string name="onboarding_notifications_title">Напоминания</string>
+    <string name="onboarding_notifications_text">Квиты напомнит о приближающихся и просроченных платежах. Время и частоту уведомлений можно настроить.</string>
+    <string name="onboarding_notifications_allow">Разрешить уведомления</string>
+    <string name="onboarding_notifications_allowed">Уведомления разрешены</string>
+
+    <string name="onboarding_data_title">Данные на вашем устройстве</string>
+    <string name="onboarding_data_text">Всё хранится только у вас: база шифруется, доступна резервная копия, а вход можно защитить PIN-кодом или биометрией.</string>
+
+    <string name="onboarding_settings_title">Вводное</string>
+    <string name="onboarding_settings_show_again">Показать вводное снова</string>
+</resources>

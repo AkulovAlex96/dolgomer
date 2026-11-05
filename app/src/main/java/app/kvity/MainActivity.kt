@@ -20,6 +20,7 @@ import app.kvity.notify.Notifier
 import app.kvity.security.Biometrics
 import app.kvity.security.LockScreen
 import app.kvity.ui.AppNavigation
+import app.kvity.ui.onboarding.OnboardingScreen
 import app.kvity.ui.theme.KvityTheme
 
 class MainActivity : FragmentActivity() {
@@ -28,7 +29,8 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        if (android.os.Build.VERSION.SDK_INT >= 33 && !Notifier.canPost(this)) {
+        // новым установкам разрешение предлагает онбординг; существующим — как раньше, при запуске
+        if (android.os.Build.VERSION.SDK_INT >= 33 && app.settings.current.onboardingDone && !Notifier.canPost(this)) {
             // Классический запрос: через ActivityResult он падает в FragmentActivity (код запроса шире 16 бит)
             androidx.core.app.ActivityCompat.requestPermissions(
                 this, arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1001,
@@ -64,7 +66,8 @@ class MainActivity : FragmentActivity() {
                 val showLock = locked && settings.pinEnabled && app.pin.isSet
                 // навигация остаётся в композиции под экраном блокировки: после ввода PIN открытая форма и экран не теряются
                 if (!showLock || hasShownContent) {
-                    AppNavigation()
+                    if (settings.onboardingDone) AppNavigation()
+                    else OnboardingScreen(onFinish = { app.settings.update { it.copy(onboardingDone = true) } })
                     hasShownContent = true
                 }
                 if (showLock) {

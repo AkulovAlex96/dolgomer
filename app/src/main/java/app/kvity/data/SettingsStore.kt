@@ -33,6 +33,8 @@ data class Settings(
     val lastBackupMillis: Long = 0,
     val installedAtMillis: Long = 0,
     val dueSoonDays: Int = 3,
+    /** Вводные слайды пройдены (или пропущены). */
+    val onboardingDone: Boolean = false,
 )
 
 /** Настройки в SharedPreferences. Хэш PIN-кода хранится отдельно в [PinStore]. */
@@ -72,6 +74,10 @@ class SettingsStore(context: Context) {
             lastBackupMillis = prefs.getLong("lastBackup", d.lastBackupMillis),
             installedAtMillis = prefs.getLong("installedAt", d.installedAtMillis),
             dueSoonDays = prefs.getInt("dueSoon", d.dueSoonDays),
+            onboardingDone = OnboardingPolicy.initialDone(
+                storedFlag = if (prefs.contains("onboardingDone")) prefs.getBoolean("onboardingDone", false) else null,
+                installedAtMillis = prefs.getLong("installedAt", 0L),
+            ),
         )
     }
 
@@ -97,6 +103,7 @@ class SettingsStore(context: Context) {
             .putLong("lastBackup", s.lastBackupMillis)
             .putLong("installedAt", s.installedAtMillis)
             .putInt("dueSoon", s.dueSoonDays)
+            .putBoolean("onboardingDone", s.onboardingDone)
             .apply()
     }
 }
