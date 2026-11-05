@@ -1,6 +1,7 @@
 package app.kvity.data
 
 import app.kvity.exchange.ImportBatch
+import app.kvity.exchange.Lang
 import app.kvity.exchange.ImportSubState
 import androidx.room.withTransaction
 import java.time.LocalDate
@@ -60,7 +61,7 @@ class ImportApplier(
                     (p.direction == null || it.direction == p.direction) && (p.currency == null || it.currency == p.currency)
             }
             val target = candidates.maxByOrNull { it.startDate }
-            if (target == null) { problems += "Платёж, строка ${p.line}: нет долга для «${p.counterparty}»"; continue }
+            if (target == null) { problems += Lang.system().t("Платёж, строка ${p.line}: нет долга для «${p.counterparty}»", "Payment, row ${p.line}: no debt for \"${p.counterparty}\""); continue }
             val k = Triple(target.id, p.date, p.amountMinor)
             val n = (seen[k] ?: 0) + 1
             seen[k] = n
@@ -100,7 +101,7 @@ class ImportApplier(
         val groups = batch.shares.groupBy { it.subscription.trim().lowercase() to it.participant.trim().lowercase() }
         for ((key, rows) in groups) {
             val sub = allSubs.firstOrNull { it.name.trim().lowercase() == key.first }
-            if (sub == null) { problems += "Доля, строка ${rows.first().line}: нет регулярного платежа «${rows.first().subscription}»"; continue }
+            if (sub == null) { problems += Lang.system().t("Доля, строка ${rows.first().line}: нет регулярного платежа «${rows.first().subscription}»", "Share, row ${rows.first().line}: no subscription \"${rows.first().subscription}\""); continue }
             val person = allPeople.firstOrNull { it.name.trim().lowercase() == key.second }
             val existing = person?.let { p -> allShares.firstOrNull { it.subscriptionId == sub.id && it.counterpartyId == p.id } }
             val shareId = existing?.id ?: run {

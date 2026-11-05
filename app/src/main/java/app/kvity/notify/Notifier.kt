@@ -12,6 +12,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import app.kvity.MainActivity
+import app.kvity.R
 import app.kvity.data.EventKind
 import app.kvity.data.MoneyFlow
 import app.kvity.data.ReminderItem
@@ -27,8 +28,8 @@ object Notifier {
 
     fun createChannel(context: Context) {
         if (Build.VERSION.SDK_INT < 26) return
-        val channel = NotificationChannel(CHANNEL, "Платежи", NotificationManager.IMPORTANCE_DEFAULT)
-            .apply { description = "Сроки платежей по долгам и списания подписок" }
+        val channel = NotificationChannel(CHANNEL, context.getString(R.string.notify_channel_name), NotificationManager.IMPORTANCE_DEFAULT)
+            .apply { description = context.getString(R.string.notify_channel_desc) }
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
@@ -64,9 +65,9 @@ object Notifier {
         if (items.isEmpty() || !canPost(context)) return
         createChannel(context)
         val groups = listOf(
-            Triple(1, "Мне должны", items.filter { it.event.kind == EventKind.DEBT && it.event.flow == MoneyFlow.IN }),
-            Triple(2, "Я должен", items.filter { it.event.kind == EventKind.DEBT && it.event.flow == MoneyFlow.OUT }),
-            Triple(3, "Регулярные платежи", items.filter { it.event.kind == EventKind.SUBSCRIPTION }),
+            Triple(1, context.getString(R.string.notify_group_owed_to_me), items.filter { it.event.kind == EventKind.DEBT && it.event.flow == MoneyFlow.IN }),
+            Triple(2, context.getString(R.string.notify_group_i_owe), items.filter { it.event.kind == EventKind.DEBT && it.event.flow == MoneyFlow.OUT }),
+            Triple(3, context.getString(R.string.notify_group_subscriptions), items.filter { it.event.kind == EventKind.SUBSCRIPTION }),
         )
         for ((groupId, title, list) in groups) {
             if (list.isEmpty()) continue
@@ -74,11 +75,11 @@ object Notifier {
             for (item in list) postItem(context, item, title, group, hideDetails)
             if (list.size > 1) {
                 // сводка группы: свёрнутое уведомление с количеством и общей суммой
-                val collapsed = if (hideDetails) "Платежей: ${list.size}" else summary(list)
+                val collapsed = if (hideDetails) context.getString(R.string.notify_count_hidden, list.size) else summary(list, ContextNotifyStrings(context))
                 val summary = builder(context, group, hideDetails)
                     .setContentTitle(title)
                     .setContentText(collapsed)
-                    .setStyle(NotificationCompat.InboxStyle().also { s -> if (!hideDetails) list.forEach { s.addLine(line(it)) } })
+                    .setStyle(NotificationCompat.InboxStyle().also { s -> if (!hideDetails) list.forEach { s.addLine(line(context, it)) } })
                     .setGroupSummary(true)
                     .setContentIntent(openIntent(context, groupId, null))
                 notify(context, groupId, summary)
@@ -89,7 +90,7 @@ object Notifier {
     private fun postItem(context: Context, item: ReminderItem, title: String, group: String, hideDetails: Boolean) {
         val e = item.event
         val id = NotifyActions.notificationId(e)
-        val text = if (hideDetails) "Платёж: ${whenText(item)}" else line(item)
+        val text = if (hideDetails) context.getString(R.string.notify_payment_hidden, whenText(context, item)) else line(context, item)
         val b = builder(context, group, hideDetails)
             .setContentTitle(title)
             .setContentText(text)
@@ -101,11 +102,11 @@ object Notifier {
                 .putExtra(ReminderActionReceiver.EXTRA_NOTIFICATION_ID, id)
             ReminderActionReceiver.fill(intent, target)
             val paid = PendingIntent.getBroadcast(context, id, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-            b.addAction(0, "Отметить оплаченным", paid)
+            b.addAction(0, context.getString(R.string.notify_action_paid), paid)
         }
         if (NotifyActions.canRemind(e)) {
             // открывает экран долга/подписки, где есть кнопка «Напомнить» с выбором канала и шаблона
-            b.addAction(0, "Напомнить", openIntent(context, id + 1, NotifyActions.route(e)))
+            b.addAction(0, context.getString(R.string.notify_action_remind),openIntent(context, id + 1, NotifyActions.route(e)))
         }
         notify(context, id, b)
     }
@@ -115,14 +116,14 @@ object Notifier {
         if (!canPost(context)) return false
         createChannel(context)
         val id = NotifyActions.notificationId("trial|${trial.subscriptionId}")
-        val text = if (hideDetails) "Пробный период заканчивается" else trialText(trial)
+        val text = if (hideDetails) context.getString(R.string.notify_trial_hidden) else trialText(context, trial)
         val route = "sub/${trial.subscriptionId}"
         val b = builder(context, "payments_3", hideDetails)
-            .setContentTitle("Пробный период")
+            .setContentTitle(context.getString(R.string.notify_trial_title))
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(openIntent(context, id, route))
-            .addAction(0, "Открыть", openIntent(context, id + 1, route))
+            .addAction(0, context.getString(R.string.notify_action_open), openIntent(context, id + 1, route))
         notify(context, id, b)
         return true
     }
@@ -132,31 +133,42 @@ object Notifier {
         if (!canPost(context)) return
         createChannel(context)
         val id = NotifyActions.notificationId("stale|${stale.debtId}")
-        val text = if (hideDetails) "Давно не было платежа" else staleText(stale)
+        val text = if (hideDetails) context.getString(R.string.notify_stale_hidden) else staleText(context, stale)
         val route = "debt/${stale.debtId}"
         val b = builder(context, if (stale.owedToMe) "payments_1" else "payments_2", hideDetails)
-            .setContentTitle(if (stale.owedToMe) "Мне должны" else "Я должен")
+            .setContentTitle(context.getString(if (stale.owedToMe) R.string.notify_group_owed_to_me else R.string.notify_group_i_owe))
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(openIntent(context, id, route))
-            .addAction(0, "Открыть", openIntent(context, id + 1, route))
+            .addAction(0, context.getString(R.string.notify_action_open), openIntent(context, id + 1, route))
         notify(context, id, b)
     }
 
-    internal fun trialText(t: TrialReminder): String = when (t.days) {
-        0L -> "${t.name}: пробный период заканчивается сегодня"
-        else -> "${t.name}: пробный период заканчивается через ${t.days} дн. (${formatDate(t.endsOn)})"
+    internal fun trialText(context: Context, t: TrialReminder): String = when (t.days) {
+        0L -> context.getString(R.string.notify_trial_today, t.name)
+        else -> context.getString(R.string.notify_trial_days, t.name, t.days.toInt(), formatDate(t.endsOn))
     }
 
-    internal fun staleText(s: StaleDebtReminder): String =
-        "${s.name}: ${formatMoney(s.remainingMinor, s.currency)}, давно не было платежа (${s.days} дн.)"
+    internal fun staleText(context: Context, s: StaleDebtReminder): String =
+        context.getString(R.string.notify_stale_text, s.name, formatMoney(s.remainingMinor, s.currency), s.days)
+
+    /** Подпись количества платежей в сводке: из ресурсов (plurals) или, в тестах без Context, русская. */
+    internal interface NotifyStrings { fun paymentsCount(n: Int): String }
+
+    internal object RuNotifyStrings : NotifyStrings {
+        override fun paymentsCount(n: Int) = "$n ${plural(n)}"
+    }
+
+    internal class ContextNotifyStrings(private val context: Context) : NotifyStrings {
+        override fun paymentsCount(n: Int) = context.resources.getQuantityString(R.plurals.notify_payments_count, n, n)
+    }
 
     /** «3 платежа: 4 777 ₽ + 50 $»: количество и итог по каждой валюте. */
-    internal fun summary(items: List<ReminderItem>): String {
+    internal fun summary(items: List<ReminderItem>, strings: NotifyStrings = RuNotifyStrings): String {
         val totals = items.groupBy { it.event.currency }
             .map { (code, list) -> code to list.sumOf { it.event.amountMinor } }
             .sortedByDescending { it.second }
-        return "${items.size} ${plural(items.size)}: " + totals.joinToString(" + ") { (code, minor) -> formatMoney(minor, code) }
+        return strings.paymentsCount(items.size) + ": " + totals.joinToString(" + ") { (code, minor) -> formatMoney(minor, code) }
     }
 
     internal fun plural(n: Int): String = when {
@@ -166,14 +178,14 @@ object Notifier {
         else -> "платежей"
     }
 
-    private fun whenText(item: ReminderItem): String = when (item.type) {
-        ReminderType.TODAY -> "сегодня"
-        ReminderType.UPCOMING -> "через ${item.days} дн. (${formatDate(item.event.date)})"
-        ReminderType.OVERDUE -> "просрочено на ${item.days} дн."
+    private fun whenText(context: Context, item: ReminderItem): String = when (item.type) {
+        ReminderType.TODAY -> context.getString(R.string.notify_when_today)
+        ReminderType.UPCOMING -> context.getString(R.string.notify_when_upcoming, item.days, formatDate(item.event.date))
+        ReminderType.OVERDUE -> context.getString(R.string.notify_when_overdue, item.days)
     }
 
-    private fun line(item: ReminderItem): String {
+    private fun line(context: Context, item: ReminderItem): String {
         val e = item.event
-        return "${e.title}: ${formatMoney(e.amountMinor, e.currency)}, ${whenText(item)}"
+        return context.getString(R.string.notify_line, e.title, formatMoney(e.amountMinor, e.currency), whenText(context, item))
     }
 }

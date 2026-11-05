@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notify_channel_name">Платежи</string>
+    <string name="notify_channel_desc">Сроки платежей по долгам и списания подписок</string>
+    <string name="notify_group_owed_to_me">Мне должны</string>
+    <string name="notify_group_i_owe">Я должен</string>
+    <string name="notify_group_subscriptions">Регулярные платежи</string>
+    <string name="notify_count_hidden">Платежей: %1$d</string>
+    <string name="notify_payment_hidden">Платёж: %1$s</string>
+    <string name="notify_action_paid">Отметить оплаченным</string>
+    <string name="notify_action_remind">Напомнить</string>
+    <string name="notify_action_open">Открыть</string>
+    <string name="notify_trial_title">Пробный период</string>
+    <string name="notify_trial_hidden">Пробный период заканчивается</string>
+    <string name="notify_trial_today">%1$s: пробный период заканчивается сегодня</string>
+    <string name="notify_trial_days">%1$s: пробный период заканчивается через %2$d дн. (%3$s)</string>
+    <string name="notify_stale_hidden">Давно не было платежа</string>
+    <string name="notify_stale_text">%1$s: %2$s, давно не было платежа (%3$d дн.)</string>
+    <string name="notify_when_today">сегодня</string>
+    <string name="notify_when_upcoming">через %1$d дн. (%2$s)</string>
+    <string name="notify_when_overdue">просрочено на %1$d дн.</string>
+    <string name="notify_line">%1$s: %2$s, %3$s</string>
+    <plurals name="notify_payments_count">
+        <item quantity="one">%d платёж</item>
+        <item quantity="few">%d платежа</item>
+        <item quantity="many">%d платежей</item>
+        <item quantity="other">%d платежа</item>
+    </plurals>
+</resources>

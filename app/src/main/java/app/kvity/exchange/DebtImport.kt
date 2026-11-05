@@ -34,24 +34,30 @@ object DebtImport {
     )
 
     /** Образец файла для заполнения. Имена вымышленные. */
-    fun template(): Table = Table(
-        "Долги", DebtColumns.IMPORTABLE,
+    fun template(lang: Lang = Lang.RU): Table = Table(
+        lang.t("Долги", "Debts"), DebtColumns.importable(lang),
         listOf(
-            listOf(cell("Иван П"), cell("мне должны"), cell("RUB"), cell("50к"), cell("10к"), cell("01.09.2026"), cell("01.12.2026"), cell("Пример: разовый долг со сроком")),
-            listOf(cell("Мария К"), cell("я должен"), cell("KZT"), cell("120000"), Cell.Empty, cell("15.10.2026"), Cell.Empty, cell("Пример: без срока")),
+            listOf(
+                cell(lang.t("Иван П", "John P")), cell(ExportBuilder.directionLabel(Direction.OWED_TO_ME, lang)), cell("RUB"), cell("50к"), cell("10к"),
+                cell("01.09.2026"), cell("01.12.2026"), cell(lang.t("Пример: разовый долг со сроком", "Example: one-off debt with a due date")),
+            ),
+            listOf(
+                cell(lang.t("Мария К", "Mary K")), cell(ExportBuilder.directionLabel(Direction.I_OWE, lang)), cell("KZT"), cell("120000"), Cell.Empty,
+                cell("15.10.2026"), Cell.Empty, cell(lang.t("Пример: без срока", "Example: no due date")),
+            ),
         ),
     )
 
-    fun parse(text: String, today: LocalDate = LocalDate.now()): ImportParseResult =
-        parseRows(Csv.parse(text), today, sheet = null, requireHeader = false)
+    fun parse(text: String, today: LocalDate = LocalDate.now(), lang: Lang = Lang.RU): ImportParseResult =
+        parseRows(Csv.parse(text), today, sheet = null, requireHeader = false, lang = lang)
 
     /** Разбор таблицы долгов. Без заголовка колонки берутся по порядку шаблона (только если [requireHeader] = false). */
-    fun parseRows(table: List<List<String>>, today: LocalDate, sheet: String?, requireHeader: Boolean): ImportParseResult {
-        if (table.isEmpty()) return ImportParseResult(emptyList(), listOf(ImportError(0, "Файл пуст", sheet)))
+    fun parseRows(table: List<List<String>>, today: LocalDate, sheet: String?, requireHeader: Boolean, lang: Lang = Lang.RU): ImportParseResult {
+        if (table.isEmpty()) return ImportParseResult(emptyList(), listOf(ImportError(0, lang.t("Файл пуст", "The file is empty"), sheet)))
 
-        val firstNormalized = table[0].map { it.trim().lowercase() }
+        val firstNormalized = Headers.canon(table[0], TableKind.DEBTS)
         val hasHeader = DebtColumns.COUNTERPARTY.lowercase() in firstNormalized
-        if (!hasHeader && requireHeader) return ImportParseResult(emptyList(), listOf(ImportError(1, "Нет строки заголовков", sheet)))
+        if (!hasHeader && requireHeader) return ImportParseResult(emptyList(), listOf(ImportError(1, lang.t("Нет строки заголовков", "No header row"), sheet)))
         val columns: Map<String, Int> = if (hasHeader) {
             DebtColumns.IMPORTABLE.mapNotNull { name ->
                 firstNormalized.indexOf(name.lowercase()).takeIf { it >= 0 }?.let { name to it }
@@ -62,7 +68,10 @@ object DebtImport {
         val missing = listOf(DebtColumns.COUNTERPARTY, DebtColumns.DIRECTION, DebtColumns.CURRENCY, DebtColumns.AMOUNT)
             .filter { it !in columns }
         if (missing.isNotEmpty()) {
-            return ImportParseResult(emptyList(), listOf(ImportError(1, "Нет обязательных колонок: ${missing.joinToString(", ")}", sheet)))
+            return ImportParseResult(
+                emptyList(),
+                listOf(ImportError(1, lang.t("Нет обязательных колонок: ", "Missing required columns: ") + missing.joinToString(", ") { lang.h(it) }, sheet)),
+            )
         }
 
         val rows = mutableListOf<ImportRow>()
@@ -78,27 +87,27 @@ object DebtImport {
             val direction = parseDirection(get(DebtColumns.DIRECTION))
             val currency = parseCurrency(get(DebtColumns.CURRENCY))
             val problems = mutableListOf<String>()
-            if (name.isEmpty()) problems += "не указан контрагент"
-            else if (name.length > Limits.NAME) problems += "слишком длинное имя (максимум ${Limits.NAME} символов)"
-            if (direction == null) problems += "направление должно быть «мне должны» или «я должен»"
-            if (currency == null) problems += "неизвестная валюта «${get(DebtColumns.CURRENCY)}»"
+            if (name.isEmpty()) problems += lang.t("не указан контрагент", "counterparty is missing")
+            else if (name.length > Limits.NAME) problems += Importer.tooLong(lang)
+            if (direction == null) problems += lang.t("направление должно быть «мне должны» или «я должен»", "direction must be \"owed to me\" or \"I owe\"")
+            if (currency == null) problems += lang.t("неизвестная валюта «${get(DebtColumns.CURRENCY)}»", "unknown currency \"${get(DebtColumns.CURRENCY)}\"")
 
             val digits = currency?.let { Currencies.byCode(it)?.fractionDigits } ?: 2
             val principal = parseAmount(get(DebtColumns.AMOUNT), digits)
-            if (principal == null) problems += "некорректная сумма «${get(DebtColumns.AMOUNT)}»"
+            if (principal == null) problems += lang.t("некорректная сумма «${get(DebtColumns.AMOUNT)}»", "invalid amount \"${get(DebtColumns.AMOUNT)}\"")
 
             val paidText = get(DebtColumns.PAID)
             val paid = if (paidText.isEmpty() || isZero(paidText)) 0L else parseAmount(paidText, digits)
-            if (paid == null) problems += "некорректная сумма выплат «$paidText»"
-            else if (principal != null && paid > principal) problems += "выплачено больше суммы долга"
+            if (paid == null) problems += lang.t("некорректная сумма выплат «$paidText»", "invalid paid amount \"$paidText\"")
+            else if (principal != null && paid > principal) problems += lang.t("выплачено больше суммы долга", "paid amount exceeds the debt")
 
             val startText = get(DebtColumns.START)
             val startDate = if (startText.isEmpty()) today else parseDate(startText)
-            if (startDate == null) problems += "некорректная дата выдачи «$startText»"
+            if (startDate == null) problems += lang.t("некорректная дата выдачи «$startText»", "invalid start date \"$startText\"")
 
             val dueText = get(DebtColumns.DUE)
             val dueDate = if (dueText.isEmpty()) null else parseDate(dueText)
-            if (dueText.isNotEmpty() && dueDate == null) problems += "некорректный срок «$dueText»"
+            if (dueText.isNotEmpty() && dueDate == null) problems += lang.t("некорректный срок «$dueText»", "invalid due date \"$dueText\"")
 
             if (problems.isNotEmpty()) {
                 errors += ImportError(line, problems.joinToString("; "), sheet)
@@ -109,12 +118,13 @@ object DebtImport {
         return ImportParseResult(rows, errors)
     }
 
+    /** Направление долга на русском («мне должны», «я должен») и английском («owed to me», «I owe»). */
     fun parseDirection(text: String): Direction? {
         val t = text.trim().lowercase()
         return when {
             t.isEmpty() -> null
-            t == "+" || t == "in" || t.startsWith("мне") -> Direction.OWED_TO_ME
-            t == "-" || t == "−" || t == "out" || t.startsWith("я ") || t == "я" -> Direction.I_OWE
+            t == "+" || t == "in" || t.startsWith("мне") || t.startsWith("owed") || t.startsWith("they owe") -> Direction.OWED_TO_ME
+            t == "-" || t == "−" || t == "out" || t.startsWith("я ") || t == "я" || t.startsWith("i owe") -> Direction.I_OWE
             else -> null
         }
     }
@@ -137,7 +147,7 @@ object DebtImport {
 
     /** «0», «0,00», «0 ₽»: выгрузка записывает отсутствие выплат нулём. */
     private fun isZero(text: String): Boolean =
-        text.trim().trimEnd('₽', '₸', '$', '€').replace(" ", "").replace(" ", "").replace(',', '.')
+        text.trim().trimEnd('₽', '₸', '$', '€').replace(" ", "").replace(" ", "").replace(" ", "").replace(',', '.')
             .toBigDecimalOrNull()?.signum() == 0
 
     private fun parseAmount(text: String, digits: Int): Long? {

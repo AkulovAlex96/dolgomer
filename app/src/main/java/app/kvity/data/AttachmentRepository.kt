@@ -5,13 +5,14 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.core.content.FileProvider
+import app.kvity.exchange.Lang
 import java.io.File
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
-class AttachmentTooLargeException(val limitBytes: Long) : Exception("Файл больше ${limitBytes / 1024 / 1024} МБ")
+class AttachmentTooLargeException(val limitBytes: Long) : Exception(Lang.system().t("Файл больше ${limitBytes / 1024 / 1024} МБ", "File is larger than ${limitBytes / 1024 / 1024} MB"))
 
 /** Вложения (фото расписок, чеки, документы). Файлы копируются во внутреннее хранилище приложения. */
 class AttachmentRepository(private val context: Context, private val db: KvityDatabase) {
