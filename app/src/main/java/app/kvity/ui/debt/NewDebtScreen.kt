@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -28,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import app.kvity.data.DebtView
 import app.kvity.data.NewDebt
@@ -48,10 +50,11 @@ import app.kvity.ui.formatMoney
 import app.kvity.ui.minorToInput
 import java.time.LocalDate
 
-private val periodicities = listOf(
-    Periodicity.WEEK to "Раз в неделю",
-    Periodicity.MONTH to "Раз в месяц",
-    Periodicity.YEAR to "Раз в год",
+private val periodicityUnits = listOf(
+    Periodicity.DAYS to "дн.",
+    Periodicity.WEEK to "нед.",
+    Periodicity.MONTH to "мес.",
+    Periodicity.YEAR to "г.",
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,6 +78,9 @@ fun NewDebtScreen(
     var installmentText by rememberSaveable { mutableStateOf(minorText(d?.installmentMinor, d?.currency ?: defaultCurrency)) }
     var periodicity by rememberSaveable { mutableStateOf(d?.periodicity ?: Periodicity.MONTH) }
     var firstEpoch by rememberSaveable { mutableStateOf<Long?>(d?.firstDate?.toEpochDay()) }
+    var intervalText by rememberSaveable { mutableStateOf((d?.interval ?: 1).toString()) }
+    var dayText by rememberSaveable { mutableStateOf(d?.dayOfMonth?.toString() ?: "") }
+    var countText by rememberSaveable { mutableStateOf(d?.paymentCount?.toString() ?: "") }
     var note by rememberSaveable { mutableStateOf(d?.note ?: "") }
 
     val currency = currencyOf(currencyCode)
@@ -83,12 +89,22 @@ fun NewDebtScreen(
     val dueDate = dueEpoch?.let(LocalDate::ofEpochDay)
     val firstDate = firstEpoch?.let(LocalDate::ofEpochDay)
 
+    val interval = intervalText.toIntOrNull()?.takeIf { it in 1..1000 }
+    val usesDay = periodicity == Periodicity.MONTH || periodicity == Periodicity.YEAR
+    val dayOfMonth = if (usesDay) dayText.toIntOrNull()?.takeIf { it in 1..31 } else null
+    val dayValid = !usesDay || dayText.isBlank() || dayOfMonth != null
+    val count = countText.toIntOrNull()?.takeIf { it in 1..ScheduleGenerator.MAX_ITEMS }
+    val countValid = countText.isBlank() || count != null
+    val rule = if (installment != null && firstDate != null && interval != null) {
+        ScheduleRule(periodicity, installment, firstDate, interval, dayOfMonth, count)
+    } else null
+
     // слишком мелкий платёж: график обрывается на ScheduleGenerator.MAX_ITEMS и весь долг не покрывает
-    val scheduleTooLong = termType == TermType.SCHEDULE && principal != null && installment != null && firstDate != null &&
-        !ScheduleGenerator.covers(ScheduleRule(periodicity, installment, firstDate), principal)
+    val scheduleTooLong = termType == TermType.SCHEDULE && principal != null && rule != null &&
+        count == null && !ScheduleGenerator.covers(rule, principal)
     val valid = name.isNotBlank() && principal != null && !scheduleTooLong && when (termType) {
         TermType.ONE_TIME -> dueDate != null
-        TermType.SCHEDULE -> installment != null && firstDate != null
+        TermType.SCHEDULE -> rule != null && dayValid && countValid
         TermType.NONE -> true
     }
 
@@ -176,16 +192,49 @@ fun NewDebtScreen(
                         isError = installmentText.isNotBlank() && installment == null,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    PeriodicityMenu(periodicity, onSelect = { periodicity = it })
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Text("Каждые")
+                        OutlinedTextField(
+                            value = intervalText,
+                            onValueChange = { intervalText = it.filter(Char::isDigit).take(4) },
+                            singleLine = true,
+                            isError = interval == null,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(0.5f),
+                        )
+                        PeriodicityMenu(periodicity, onSelect = { periodicity = it }, modifier = Modifier.weight(0.7f))
+                    }
                     DatePickerField("Первый платёж", firstDate, { firstEpoch = it.toEpochDay() })
+                    if (usesDay) {
+                        OutlinedTextField(
+                            value = dayText,
+                            onValueChange = { dayText = it.filter(Char::isDigit).take(2) },
+                            label = { Text("День платежа («до 10 числа»), необязательно") },
+                            singleLine = true,
+                            isError = !dayValid,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            supportingText = { Text("Пусто: день первого платежа. В коротких месяцах платёж переносится на последний день.") },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    OutlinedTextField(
+                        value = countText,
+                        onValueChange = { countText = it.filter(Char::isDigit).take(4) },
+                        label = { Text("Количество платежей") },
+                        singleLine = true,
+                        isError = !countValid,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        supportingText = { Text("Пусто: до погашения долга.") },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
 
                     if (scheduleTooLong) {
                         Text(
                             "Слишком много платежей: в графике не больше ${ScheduleGenerator.MAX_ITEMS}. Увеличьте сумму платежа или выберите более редкий период.",
                             color = MaterialTheme.colorScheme.error,
                         )
-                    } else if (principal != null && installment != null && firstDate != null) {
-                        SchedulePreview(principal, installment, periodicity, firstDate, currencyCode)
+                    } else if (principal != null && rule != null) {
+                        SchedulePreview(principal, rule, currencyCode)
                     }
                 }
                 TermType.NONE -> Text(
@@ -215,6 +264,9 @@ fun NewDebtScreen(
                             termType = termType,
                             dueDate = dueDate.takeIf { termType == TermType.ONE_TIME },
                             periodicity = periodicity.takeIf { termType == TermType.SCHEDULE },
+                            interval = if (termType == TermType.SCHEDULE) interval ?: 1 else 1,
+                            dayOfMonth = dayOfMonth.takeIf { termType == TermType.SCHEDULE },
+                            paymentCount = count.takeIf { termType == TermType.SCHEDULE },
                             installmentMinor = installment.takeIf { termType == TermType.SCHEDULE },
                             firstDate = firstDate.takeIf { termType == TermType.SCHEDULE },
                             note = note.ifBlank { null },
@@ -229,12 +281,10 @@ fun NewDebtScreen(
 @Composable
 private fun SchedulePreview(
     principal: Long,
-    installment: Long,
-    periodicity: Periodicity,
-    firstDate: LocalDate,
+    rule: ScheduleRule,
     currencyCode: String,
 ) {
-    val plan = ScheduleGenerator.generate(ScheduleRule(periodicity, installment, firstDate), principal)
+    val plan = ScheduleGenerator.generate(rule, principal)
     SectionCard {
         Text("Будет создано платежей: ${plan.size}", style = MaterialTheme.typography.titleSmall)
         val shown = plan.take(4).joinToString(" · ") { formatDate(it.dueDate) }
@@ -270,14 +320,14 @@ private fun CurrencyMenu(selectedCode: String, codes: List<String>, onSelect: (S
 }
 
 @Composable
-private fun PeriodicityMenu(selected: Periodicity, onSelect: (Periodicity) -> Unit) {
+private fun PeriodicityMenu(selected: Periodicity, onSelect: (Periodicity) -> Unit, modifier: Modifier = Modifier) {
     var open by remember { mutableStateOf(false) }
-    Box {
+    Box(modifier) {
         OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) {
-            Text(periodicities.first { it.first == selected }.second)
+            Text(periodicityUnits.first { it.first == selected }.second)
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            periodicities.forEach { (p, label) ->
+            periodicityUnits.forEach { (p, label) ->
                 DropdownMenuItem(text = { Text(label) }, onClick = { onSelect(p); open = false })
             }
         }

@@ -51,6 +51,32 @@ class ScheduleTest {
         assertEquals(listOf(300L, 700L), plan.map { it.amountMinor })
     }
 
+    @Test fun `every two weeks and every three months`() {
+        val weeks = ScheduleRule(Periodicity.WEEK, 100, LocalDate.of(2026, 1, 1), interval = 2)
+        assertEquals(
+            listOf("2026-01-01", "2026-01-15", "2026-01-29"),
+            ScheduleGenerator.generate(weeks, 300).map { it.dueDate.toString() },
+        )
+        val months = ScheduleRule(Periodicity.MONTH, 100, LocalDate.of(2026, 1, 15), interval = 3)
+        assertEquals(
+            listOf("2026-01-15", "2026-04-15", "2026-07-15"),
+            ScheduleGenerator.generate(months, 300).map { it.dueDate.toString() },
+        )
+    }
+
+    @Test fun `day of month moves later payments and is clamped to month end`() {
+        val rule = ScheduleRule(Periodicity.MONTH, 100, LocalDate.of(2026, 1, 5), dayOfMonth = 31, count = 3)
+        assertEquals(
+            listOf("2026-01-05", "2026-02-28", "2026-03-31"),
+            ScheduleGenerator.generate(rule, 300).map { it.dueDate.toString() },
+        )
+    }
+
+    @Test fun `count larger than needed stops at full repayment`() {
+        val rule = ScheduleRule(Periodicity.MONTH, 100, LocalDate.of(2026, 1, 10), count = 20)
+        assertEquals(3, ScheduleGenerator.generate(rule, 300).size)
+    }
+
     @Test fun `yearly schedule and every N days`() {
         val yearly = ScheduleRule(Periodicity.YEAR, installmentMinor = 100, firstDate = LocalDate.of(2024, 2, 29), count = 2)
         assertEquals(

@@ -66,6 +66,21 @@ interface DebtDao {
 }
 
 @Dao
+interface PlannedPaymentDao {
+    @Insert suspend fun insert(item: PlannedPaymentEntity)
+    @Insert suspend fun insertMany(items: List<PlannedPaymentEntity>)
+    @Update suspend fun update(item: PlannedPaymentEntity)
+    @Query("DELETE FROM planned_payments WHERE id = :id") suspend fun delete(id: String)
+    @Query("DELETE FROM planned_payments WHERE debtId = :debtId") suspend fun deleteForDebt(debtId: String)
+    @Query("SELECT * FROM planned_payments WHERE id = :id") suspend fun get(id: String): PlannedPaymentEntity?
+    @Query("SELECT * FROM planned_payments WHERE debtId = :debtId") suspend fun forDebt(debtId: String): List<PlannedPaymentEntity>
+    @Query("SELECT * FROM planned_payments") fun observeAll(): Flow<List<PlannedPaymentEntity>>
+    @Query("SELECT * FROM planned_payments") suspend fun all(): List<PlannedPaymentEntity>
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insertAll(items: List<PlannedPaymentEntity>)
+    @Query("DELETE FROM planned_payments") suspend fun deleteAll()
+}
+
+@Dao
 interface PaymentDao {
     @Insert suspend fun insert(payment: PaymentEntity)
 
@@ -74,6 +89,12 @@ interface PaymentDao {
 
     @Query("DELETE FROM payments WHERE id = :id")
     suspend fun delete(id: String)
+
+    @Query("UPDATE payments SET plannedId = NULL WHERE plannedId = :plannedId")
+    suspend fun unlink(plannedId: String)
+
+    @Query("UPDATE payments SET plannedId = NULL WHERE debtId = :debtId")
+    suspend fun unlinkDebt(debtId: String)
 
     @Query("SELECT * FROM payments") suspend fun all(): List<PaymentEntity>
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insertAll(items: List<PaymentEntity>)
@@ -199,18 +220,19 @@ interface RateDao {
         SubscriptionEntity::class, SubscriptionShareEntity::class, SharePaymentEntity::class,
         AttachmentEntity::class, ReminderTemplateEntity::class, ReminderLogEntity::class,
         ExchangeRateEntity::class, ChargePaymentEntity::class,
-        SubscriptionPauseEntity::class, ShareAmountEntity::class,
+        SubscriptionPauseEntity::class, ShareAmountEntity::class, PlannedPaymentEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
     autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4),
-        AutoMigration(from = 4, to = 5, spec = Migration4To5::class)],
+        AutoMigration(from = 4, to = 5, spec = Migration4To5::class), AutoMigration(from = 5, to = 6)],
 )
 @TypeConverters(Converters::class)
 abstract class KvityDatabase : RoomDatabase() {
     abstract fun counterparties(): CounterpartyDao
     abstract fun debts(): DebtDao
     abstract fun payments(): PaymentDao
+    abstract fun plannedPayments(): PlannedPaymentDao
     abstract fun subscriptions(): SubscriptionDao
     abstract fun shares(): ShareDao
     abstract fun sharePayments(): SharePaymentDao

@@ -37,6 +37,7 @@ data class BackupData(
     val chargePayments: List<ChargePaymentEntity> = emptyList(),
     val pauses: List<SubscriptionPauseEntity> = emptyList(),
     val shareAmounts: List<ShareAmountEntity> = emptyList(),
+    val plannedPayments: List<PlannedPaymentEntity> = emptyList(),
 )
 
 class BackupFormatException(message: String) : Exception(message)

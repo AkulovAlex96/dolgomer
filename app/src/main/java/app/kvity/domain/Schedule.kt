@@ -18,7 +18,16 @@ data class ScheduleRule(
     val count: Int? = null,
 )
 
-data class PlannedPayment(val dueDate: LocalDate, val amountMinor: Long)
+/**
+ * Плановый платёж. [id] есть только у сохранённых в базе платежей (к ним можно привязать фактический платёж),
+ * [skipped] отмечает пропущенный платёж: он не участвует в расчёте.
+ */
+data class PlannedPayment(
+    val dueDate: LocalDate,
+    val amountMinor: Long,
+    val id: String? = null,
+    val skipped: Boolean = false,
+)
 
 object ScheduleGenerator {
     /** Больше платежей в графике не строится. */
